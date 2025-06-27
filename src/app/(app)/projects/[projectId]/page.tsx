@@ -209,27 +209,39 @@ export default function ProjectDetailsPage() {
             setFamilyHeads(lineageData);
 
             
-            // Acquisition Statuses
-            let initialAcquisitionStatuses: AcquisitionStatus[] = [];
+            // Acquisition Statuses - with robust handling of old data
+            let loadedStatuses: AcquisitionStatus[] = [];
             const savedAcquisition = localStorage.getItem(acquisitionStorageKey);
             if (savedAcquisition) {
-                 try {
+                try {
                     const parsedData = JSON.parse(savedAcquisition);
                     if (Array.isArray(parsedData) && parsedData.length > 0) {
-                        initialAcquisitionStatuses = parsedData;
+                        // Check for duplicate IDs, a sign of the old data structure
+                        const idSet = new Set(parsedData.map((d: AcquisitionStatus) => d.id));
+                        if (idSet.size === parsedData.length) {
+                            loadedStatuses = parsedData;
+                        }
                     }
-                } catch {
-                    initialAcquisitionStatuses = [];
+                } catch (e) {
+                    console.error("Failed to parse acquisition statuses from storage, will regenerate.", e);
+                    loadedStatuses = [];
                 }
             }
-            if (initialAcquisitionStatuses.length === 0) {
+
+            let finalStatuses: AcquisitionStatus[];
+            if (loadedStatuses.length === 0) {
                 const demoStatuses = siteSketchData.map((plot, index) => createDefaultAcquisitionStatus(projectId, plot, index));
-                initialAcquisitionStatuses = demoStatuses;
+                finalStatuses = demoStatuses;
+            } else {
+                finalStatuses = loadedStatuses;
             }
-            setAcquisitionStatuses(initialAcquisitionStatuses);
-            if (initialAcquisitionStatuses.length > 0 && !activeStatusId) {
-                setActiveStatusId(initialAcquisitionStatuses[0].id);
+            
+            setAcquisitionStatuses(finalStatuses);
+            
+            if (finalStatuses.length > 0 && (!activeStatusId || !finalStatuses.some(s => s.id === activeStatusId))) {
+                setActiveStatusId(finalStatuses[0].id);
             }
+
 
             // Document Folders
             const savedFolders = localStorage.getItem(folderStorageKey);
