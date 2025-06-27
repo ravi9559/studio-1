@@ -25,9 +25,7 @@ import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-// --- Versioning and Storage Keys ---
-const DATA_VERSION = "1.7"; 
-const DATA_VERSION_KEY = 'data-version';
+// --- Storage Keys ---
 const PROJECTS_STORAGE_KEY = 'projects';
 const USERS_STORAGE_KEY = 'users';
 
@@ -182,10 +180,6 @@ export default function ProjectDetailsPage() {
         setLoading(true);
 
         try {
-            // --- Data Versioning and Migration ---
-            const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
-            const versionMismatched = savedVersion !== DATA_VERSION;
-
             // --- Load Core Data (Users/Projects) ---
             const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
             if (!savedProjects) {
@@ -222,9 +216,8 @@ export default function ProjectDetailsPage() {
             
             const isInvalidData = !loadedOwners || !loadedStatuses || !loadedFolders;
 
-            if (isInvalidData || versionMismatched) {
-                if(versionMismatched) console.warn("Data version mismatch, regenerating project data.");
-                if(isInvalidData) console.warn("Invalid or missing data, regenerating project data.");
+            if (isInvalidData) {
+                console.warn("Invalid or missing data, regenerating project data.");
 
                 const ownersMap = createOwnersMap();
                 const initialHeads = createInitialOwners(ownersMap);

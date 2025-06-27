@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,8 +11,6 @@ import Link from 'next/link';
 import type { Project, User } from '@/types';
 import { Loader2 } from 'lucide-react';
 
-const DATA_VERSION = "1.6";
-const DATA_VERSION_KEY = 'data-version';
 const USERS_STORAGE_KEY = 'users';
 const PROJECTS_STORAGE_KEY = 'projects';
 
@@ -48,12 +45,6 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     try {
-      const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
-      if (savedVersion !== DATA_VERSION) {
-          localStorage.clear();
-          localStorage.setItem(DATA_VERSION_KEY, DATA_VERSION);
-      }
-
       // Initialize users if they don't exist
       let users: User[];
       const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
@@ -99,9 +90,13 @@ export default function ProjectsPage() {
       location: newProjectLocation,
       googleMapsLink: ''
     };
-    const updatedProjects = [...projects, newProject];
+    
+    const allProjectsFromStorage: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
+    const updatedProjects = [...allProjectsFromStorage, newProject];
+    
     localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
     setProjects(updatedProjects);
+    
     setNewProjectName('');
     setNewProjectSiteId('');
     setNewProjectLocation('');
