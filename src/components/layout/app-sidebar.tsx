@@ -37,36 +37,36 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarMenu className="flex-1">
         <SidebarMenuItem>
-          <Link href="/dashboard" legacyBehavior passHref>
-            <SidebarMenuButton isActive={pathname === '/dashboard'} tooltip="Dashboard">
+          <SidebarMenuButton asChild isActive={pathname === '/dashboard'} tooltip="Dashboard">
+            <Link href="/dashboard">
               <Home />
               <span>Dashboard</span>
-            </SidebarMenuButton>
-          </Link>
+            </Link>
+          </SidebarMenuButton>
         </SidebarMenuItem>
         <SidebarMenuItem>
-          <Link href="/projects" legacyBehavior passHref>
-            <SidebarMenuButton isActive={pathname.startsWith('/projects')} tooltip="Projects">
+          <SidebarMenuButton asChild isActive={pathname.startsWith('/projects')} tooltip="Projects">
+            <Link href="/projects">
               <FolderKanban />
               <span>Projects</span>
-            </SidebarMenuButton>
-          </Link>
+            </Link>
+          </SidebarMenuButton>
         </SidebarMenuItem>
         <SidebarMenuItem>
-          <Link href="/users" legacyBehavior passHref>
-            <SidebarMenuButton isActive={pathname.startsWith('/users')} tooltip="User Management">
+          <SidebarMenuButton asChild isActive={pathname.startsWith('/users')} tooltip="User Management">
+            <Link href="/users">
               <Users />
               <span>User Management</span>
-            </SidebarMenuButton>
-          </Link>
+            </Link>
+          </SidebarMenuButton>
         </SidebarMenuItem>
         <SidebarMenuItem>
-          <Link href="/settings" legacyBehavior passHref>
-            <SidebarMenuButton isActive={pathname.startsWith('/settings')} tooltip="Settings">
+          <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')} tooltip="Settings">
+            <Link href="/settings">
               <Settings />
               <span>Settings</span>
-            </SidebarMenuButton>
-          </Link>
+            </Link>
+          </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
       <SidebarFooter>
