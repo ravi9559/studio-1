@@ -27,6 +27,7 @@ export type Person = {
 interface PersonCardProps {
   person: Person;
   onAddHeir: (parentId: string, heirData: Omit<Person, 'id' | 'heirs'>) => void;
+  onUpdatePerson: (personId: string, personData: Omit<Person, 'id' | 'heirs'>) => void;
 }
 
 const statusColors: { [key in Person['status']]: string } = {
@@ -70,16 +71,16 @@ const AddHeirForm: FC<{ personName: string, parentId: string, onAddHeir: PersonC
             </DialogHeader>
             <div className="grid gap-4 py-4">
                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">Name</Label>
-                    <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" required />
+                    <Label htmlFor="add-name" className="text-right">Name</Label>
+                    <Input id="add-name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" required />
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="relation" className="text-right">Relation</Label>
-                    <Input id="relation" value={relation} placeholder="e.g., Son, Daughter" onChange={e => setRelation(e.target.value)} className="col-span-3" required />
+                    <Label htmlFor="add-relation" className="text-right">Relation</Label>
+                    <Input id="add-relation" value={relation} placeholder="e.g., Son, Daughter" onChange={e => setRelation(e.target.value)} className="col-span-3" required />
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="age" className="text-right">Age</Label>
-                    <Input id="age" type="number" value={age} onChange={e => setAge(e.target.value)} className="col-span-3" required />
+                    <Label htmlFor="add-age" className="text-right">Age</Label>
+                    <Input id="add-age" type="number" value={age} onChange={e => setAge(e.target.value)} className="col-span-3" required />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label className="text-right">Gender</Label>
@@ -122,11 +123,112 @@ const AddHeirForm: FC<{ personName: string, parentId: string, onAddHeir: PersonC
             </DialogFooter>
         </form>
     );
+};
+
+// A form component for editing a person
+const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUpdatePerson'], closeDialog: () => void }> = ({ person, onUpdatePerson, closeDialog }) => {
+    const [name, setName] = useState(person.name);
+    const [relation, setRelation] = useState(person.relation);
+    const [age, setAge] = useState(person.age.toString());
+    const [gender, setGender] = useState<Person['gender']>(person.gender);
+    const [maritalStatus, setMaritalStatus] = useState<Person['maritalStatus']>(person.maritalStatus);
+    const [status, setStatus] = useState<Person['status']>(person.status);
+    const [sourceOfLand, setSourceOfLand] = useState(person.sourceOfLand || '');
+    const [landDetails, setLandDetails] = useState(person.landDetails || '');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name || !relation || !age) return;
+
+        onUpdatePerson(person.id, {
+            name,
+            relation,
+            age: parseInt(age, 10),
+            gender,
+            maritalStatus,
+            status,
+            sourceOfLand,
+            landDetails,
+        });
+        closeDialog();
+    };
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <DialogHeader>
+              <DialogTitle>Edit Details for {person.name}</DialogTitle>
+              <DialogDescription>
+                Update the details for this person.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-name" className="text-right">Name</Label>
+                    <Input id="edit-name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" required />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-relation" className="text-right">Relation</Label>
+                    <Input id="edit-relation" value={relation} placeholder="e.g., Son, Daughter" onChange={e => setRelation(e.target.value)} className="col-span-3" required />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-age" className="text-right">Age</Label>
+                    <Input id="edit-age" type="number" value={age} onChange={e => setAge(e.target.value)} className="col-span-3" required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Gender</Label>
+                    <Select onValueChange={(v: Person['gender']) => setGender(v)} defaultValue={gender}>
+                        <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Marital Status</Label>
+                    <Select onValueChange={(v: Person['maritalStatus']) => setMaritalStatus(v)} defaultValue={maritalStatus}>
+                        <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Single">Single</SelectItem>
+                            <SelectItem value="Married">Married</SelectItem>
+                            <SelectItem value="Divorced">Divorced</SelectItem>
+                            <SelectItem value="Widowed">Widowed</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Status</Label>
+                    <Select onValueChange={(v: Person['status']) => setStatus(v)} defaultValue={status}>
+                        <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Alive">Alive</SelectItem>
+                            <SelectItem value="Died">Died</SelectItem>
+                            <SelectItem value="Missing">Missing</SelectItem>
+                            <SelectItem value="Unknown">Unknown</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-sourceOfLand" className="text-right">Source of Land</Label>
+                    <Input id="edit-sourceOfLand" value={sourceOfLand} onChange={e => setSourceOfLand(e.target.value)} className="col-span-3" />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-landDetails" className="text-right">Land Details</Label>
+                    <Input id="edit-landDetails" value={landDetails} onChange={e => setLandDetails(e.target.value)} className="col-span-3" />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+        </form>
+    );
 }
 
 
-export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir }) => {
+export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePerson }) => {
   const [isAddHeirOpen, setIsAddHeirOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   
   return (
     <Card className="bg-card/50 shadow-md">
@@ -156,7 +258,14 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir }) => {
         
       </CardContent>
       <CardFooter className="flex items-center justify-end gap-2 p-3">
-            <Button variant="ghost" size="sm"><Edit className="mr-1 h-3 w-3" /> Edit</Button>
+            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm"><Edit className="mr-1 h-3 w-3" /> Edit</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <EditPersonForm person={person} onUpdatePerson={onUpdatePerson} closeDialog={() => setIsEditOpen(false)} />
+                </DialogContent>
+            </Dialog>
             <Button variant="ghost" size="sm"><Trash2 className="mr-1 h-3 w-3" /> Delete</Button>
             <Dialog open={isAddHeirOpen} onOpenChange={setIsAddHeirOpen}>
                 <DialogTrigger asChild>
@@ -173,7 +282,7 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir }) => {
           <div className="pl-6 border-l-2 border-primary/20 ml-4 my-4 space-y-4">
               <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2 pt-4 -ml-1"><Milestone className="h-4 w-4" />Heirs</h4>
             {person.heirs.map((heir) => (
-              <PersonCard key={heir.id} person={heir} onAddHeir={onAddHeir} />
+              <PersonCard key={heir.id} person={heir} onAddHeir={onAddHeir} onUpdatePerson={onUpdatePerson} />
             ))}
           </div>
         </div>

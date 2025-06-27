@@ -70,17 +70,36 @@ const defaultFamilyHead: Person = {
 };
 
 // Recursive function to add an heir
-const addHeirToFamily = (family: Person, parentId: string, newHeir: Person): Person => {
-    if (family.id === parentId) {
-        return {
-            ...family,
-            heirs: [...family.heirs, newHeir],
-        };
-    }
-    return {
-        ...family,
-        heirs: family.heirs.map(h => addHeirToFamily(h, parentId, newHeir)),
+const addHeirToFamily = (family: Person, parentId: string, newHeirData: Omit<Person, 'id' | 'heirs'>): Person => {
+  if (family.id === parentId) {
+    const newHeir: Person = {
+      ...newHeirData,
+      id: `${parentId}.${family.heirs.length + 1}`,
+      heirs: [],
     };
+    return {
+      ...family,
+      heirs: [...family.heirs, newHeir],
+    };
+  }
+  return {
+    ...family,
+    heirs: family.heirs.map(h => addHeirToFamily(h, parentId, newHeirData)),
+  };
+};
+
+// Recursive function to update a person
+const updatePersonInFamily = (family: Person, personId: string, updatedData: Omit<Person, 'id' | 'heirs'>): Person => {
+  if (family.id === personId) {
+    return {
+      ...family,
+      ...updatedData,
+    };
+  }
+  return {
+    ...family,
+    heirs: family.heirs.map(h => updatePersonInFamily(h, personId, updatedData)),
+  };
 };
 
 export function LineageView() {
@@ -120,17 +139,16 @@ export function LineageView() {
 
   const handleAddHeir = (parentId: string, heirData: Omit<Person, 'id' | 'heirs'>) => {
     if (!familyHead) return;
-
-    const newHeir: Person = {
-        ...heirData,
-        id: `${parentId}.${Date.now()}`, // Simple unique ID
-        heirs: [],
-    };
-
-    const updatedFamilyHead = addHeirToFamily(familyHead, parentId, newHeir);
+    const updatedFamilyHead = addHeirToFamily(familyHead, parentId, heirData);
     setFamilyHead(updatedFamilyHead);
   };
   
+  const handleUpdatePerson = (personId: string, personData: Omit<Person, 'id' | 'heirs'>) => {
+    if (!familyHead) return;
+    const updatedFamilyHead = updatePersonInFamily(familyHead, personId, personData);
+    setFamilyHead(updatedFamilyHead);
+  };
+
   if (!familyHead || !isLoaded) {
     return (
         <div className="flex justify-center items-center h-64">
@@ -151,7 +169,7 @@ export function LineageView() {
             <CardDescription>Visual representation of the family lineage. Click "Add Heir" to expand the tree.</CardDescription>
           </CardHeader>
           <CardContent>
-            <PersonCard person={familyHead} onAddHeir={handleAddHeir} />
+            <PersonCard person={familyHead} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} />
           </CardContent>
         </Card>
       </div>
