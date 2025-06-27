@@ -39,6 +39,7 @@ const PlotCard = ({ plot, status, onSelectSurvey }: { plot: SiteSketchPlot, stat
         statusVariant === 'completed' && colorClasses.completed,
         statusVariant === 'inProgress' && colorClasses.inProgress,
         statusVariant === 'pending' && colorClasses.pending,
+        statusVariant === 'pending' && 'opacity-50 hover:opacity-100'
       )}
     >
       {surveyNumber}
