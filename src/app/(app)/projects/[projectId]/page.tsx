@@ -18,6 +18,7 @@ type Project = {
 };
 
 export default function ProjectDetailsPage({ params }: { params: { projectId: string } }) {
+    const { projectId } = params;
     const [project, setProject] = useState<Project | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -25,13 +26,13 @@ export default function ProjectDetailsPage({ params }: { params: { projectId: st
         const savedProjects = localStorage.getItem('projects');
         if (savedProjects) {
             const projects: Project[] = JSON.parse(savedProjects);
-            const currentProject = projects.find(p => p.id === params.projectId);
+            const currentProject = projects.find(p => p.id === projectId);
             if (currentProject) {
                 setProject(currentProject);
             }
         }
         setLoading(false);
-    }, [params.projectId]);
+    }, [projectId]);
 
     if (loading) {
         return (
