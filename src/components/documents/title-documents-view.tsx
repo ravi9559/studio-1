@@ -1,191 +1,220 @@
 'use client';
 
-import { useState, useEffect, useMemo, FC } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlusCircle, Trash2, Scale } from "lucide-react";
+import { useState, useEffect, FC } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Folder as FolderIcon, FolderPlus, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '../ui/label';
 
-// Define the type for a Survey Record
-type SurveyRecord = {
+// Define the type for a Folder
+export type Folder = {
   id: string;
-  surveyNumber: string;
-  acres: string; // Using string to handle form inputs easily
-  cents: string;
+  name: string;
+  children: Folder[];
 };
 
-// Initial mock data for new projects
-const initialSurveyRecords: SurveyRecord[] = [
-    { id: 'survey-1', surveyNumber: '123/A1', acres: '2', cents: '50' },
-    { id: 'survey-2', surveyNumber: '123/A2', acres: '1', cents: '75' },
+// Initial folder structure
+const initialFolders: Folder[] = [
+  {
+    id: 'folder-1',
+    name: 'Survey/Sub-Div',
+    children: [
+      {
+        id: 'folder-1-1',
+        name: 'Revenue Record',
+        children: [
+          {
+            id: 'folder-1-1-1',
+            name: 'SRO Records',
+            children: [
+              {
+                id: 'folder-1-1-1-1',
+                name: 'Seller KYC',
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
 ];
 
+// Recursive component to render folders
+const FolderView: FC<{
+  folder: Folder;
+  onAddFolder: (parentId: string, name: string) => void;
+  onDeleteFolder: (folderId: string) => void;
+  level: number;
+}> = ({ folder, onAddFolder, onDeleteFolder, level }) => {
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
 
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newFolderName.trim()) {
+      onAddFolder(folder.id, newFolderName.trim());
+      setNewFolderName('');
+      setIsAddDialogOpen(false);
+    }
+  };
+
+  return (
+    <div style={{ marginLeft: `${level * 20}px` }} className="mt-2">
+      <div className="flex items-center gap-2 p-2 rounded-md hover:bg-accent">
+        <FolderIcon className="h-5 w-5 text-primary" />
+        <span className="flex-grow font-medium">{folder.name}</span>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7">
+              <FolderPlus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <form onSubmit={handleAddSubmit}>
+              <DialogHeader>
+                <DialogTitle>Add New Folder</DialogTitle>
+                <DialogDescription>
+                  Enter a name for the new folder inside "{folder.name}".
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="folder-name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="folder-name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Add Folder</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDeleteFolder(folder.id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+      {folder.children.map((child) => (
+        <FolderView key={child.id} folder={child} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} level={level + 1} />
+      ))}
+    </div>
+  );
+};
+
+// Main component
 interface TitleDocumentsViewProps {
   projectId: string;
 }
 
 export function TitleDocumentsView({ projectId }: TitleDocumentsViewProps) {
-  const [surveyRecords, setSurveyRecords] = useState<SurveyRecord[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  
-  // State for the form inputs
-  const [newSurveyNumber, setNewSurveyNumber] = useState('');
-  const [newAcres, setNewAcres] = useState('');
-  const [newCents, setNewCents] = useState('');
 
-  const storageKey = `survey-records-${projectId}`;
+  const storageKey = `document-folders-${projectId}`;
 
-  // Load records from localStorage
+  // Load from localStorage
   useEffect(() => {
     if (!projectId) return;
     try {
-      const savedRecords = localStorage.getItem(storageKey);
-      if (savedRecords) {
-        setSurveyRecords(JSON.parse(savedRecords));
+      const savedFolders = localStorage.getItem(storageKey);
+      if (savedFolders) {
+        setFolders(JSON.parse(savedFolders));
       } else {
-        setSurveyRecords(initialSurveyRecords);
+        setFolders(initialFolders);
       }
     } catch (e) {
-      console.error("Could not load survey records", e);
-      setSurveyRecords(initialSurveyRecords);
+      console.error('Could not load folders', e);
+      setFolders(initialFolders);
     }
     setIsLoaded(true);
   }, [projectId, storageKey]);
 
-  // Save records to localStorage
+  // Save to localStorage
   useEffect(() => {
     if (isLoaded) {
       try {
-        localStorage.setItem(storageKey, JSON.stringify(surveyRecords));
+        localStorage.setItem(storageKey, JSON.stringify(folders));
       } catch (e) {
-        console.error("Could not save survey records", e);
+        console.error('Could not save folders', e);
       }
     }
-  }, [surveyRecords, isLoaded, storageKey]);
+  }, [folders, isLoaded, storageKey]);
 
-  const handleAddRecord = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSurveyNumber.trim() || (!newAcres.trim() && !newCents.trim())) {
-        // Basic validation
-        return;
-    }
-
-    const newRecord: SurveyRecord = {
-        id: `survey-${Date.now()}`,
-        surveyNumber: newSurveyNumber,
-        acres: newAcres,
-        cents: newCents,
-    };
-
-    setSurveyRecords(prevRecords => [...prevRecords, newRecord]);
-
-    // Reset form
-    setNewSurveyNumber('');
-    setNewAcres('');
-    setNewCents('');
+  // Recursive function to add a folder
+  const addFolderRecursive = (nodes: Folder[], parentId: string, newFolder: Folder): Folder[] => {
+    return nodes.map((node) => {
+      if (node.id === parentId) {
+        return { ...node, children: [...node.children, newFolder] };
+      }
+      if (node.children.length > 0) {
+        return { ...node, children: addFolderRecursive(node.children, parentId, newFolder) };
+      }
+      return node;
+    });
   };
 
-  const handleDeleteRecord = (recordId: string) => {
-    setSurveyRecords(records => records.filter(r => r.id !== recordId));
+  const handleAddFolder = (parentId: string, name: string) => {
+    const newFolder: Folder = {
+      id: `folder-${Date.now()}`,
+      name,
+      children: [],
+    };
+    if (parentId === 'root') {
+      setFolders((currentFolders) => [...currentFolders, newFolder]);
+    } else {
+      setFolders((currentFolders) => addFolderRecursive(currentFolders, parentId, newFolder));
+    }
   };
   
-  const totalExtent = useMemo(() => {
-    let totalAcres = 0;
-    let totalCents = 0;
+  // Recursive function to delete a folder
+  const deleteFolderRecursive = (nodes: Folder[], folderId: string): Folder[] => {
+      return nodes.filter(node => node.id !== folderId).map(node => {
+          if (node.children.length > 0) {
+              return { ...node, children: deleteFolderRecursive(node.children, folderId) };
+          }
+          return node;
+      });
+  };
 
-    surveyRecords.forEach(record => {
-        totalAcres += parseFloat(record.acres) || 0;
-        totalCents += parseFloat(record.cents) || 0;
-    });
+  const handleDeleteFolder = (folderId: string) => {
+      setFolders(currentFolders => deleteFolderRecursive(currentFolders, folderId));
+  };
 
-    // Convert cents to acres (assuming 100 cents = 1 acre)
-    if (totalCents >= 100) {
-        totalAcres += Math.floor(totalCents / 100);
-        totalCents = totalCents % 100;
-    }
-
-    return { acres: totalAcres, cents: parseFloat(totalCents.toFixed(2)) };
-  }, [surveyRecords]);
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Title Documents & Survey Details</CardTitle>
-        <CardDescription>Manage survey and sub-division records. The total extent is calculated automatically.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-8">
-        {/* Form for adding new records */}
-        <form onSubmit={handleAddRecord} className="p-4 border rounded-lg space-y-4">
-            <h4 className="font-medium text-lg">Add New Survey Record</h4>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div className="space-y-2">
-                    <Label htmlFor="survey-number">Survey/Sub-Div No.</Label>
-                    <Input id="survey-number" value={newSurveyNumber} onChange={e => setNewSurveyNumber(e.target.value)} placeholder="e.g., 256/2B" required />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="acres">Acres</Label>
-                    <Input id="acres" type="number" step="any" value={newAcres} onChange={e => setNewAcres(e.target.value)} placeholder="e.g., 5" />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="cents">Cents</Label>
-                    <Input id="cents" type="number" step="any" value={newCents} onChange={e => setNewCents(e.target.value)} placeholder="e.g., 50" />
-                </div>
-                <Button type="submit" className="w-full md:w-auto">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Record
-                </Button>
-            </div>
-        </form>
-
-        {/* Table of existing records */}
+      <CardHeader className="flex flex-row items-start justify-between">
         <div>
-            <h4 className="font-medium text-lg mb-4">Survey Records</h4>
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Survey/Sub-Div No.</TableHead>
-                            <TableHead className="text-right">Acres</TableHead>
-                            <TableHead className="text-right">Cents</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {surveyRecords.length > 0 ? (
-                            surveyRecords.map((record) => (
-                                <TableRow key={record.id}>
-                                    <TableCell className="font-medium">{record.surveyNumber}</TableCell>
-                                    <TableCell className="text-right">{record.acres || '0'}</TableCell>
-                                    <TableCell className="text-right">{record.cents || '0'}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteRecord(record.id)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
-                                    No survey records added yet.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+            <CardTitle>Title Documents</CardTitle>
+            <CardDescription>
+            Manage folders for title documents. Add or remove folders as needed.
+            </CardDescription>
         </div>
+        <Button onClick={() => handleAddFolder('root', 'New Root Folder')}>
+            <FolderPlus className="mr-2 h-4 w-4" /> Add Root Folder
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {folders.length > 0 ? (
+          folders.map((folder) => (
+            <FolderView key={folder.id} folder={folder} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} level={0} />
+          ))
+        ) : (
+          <div className="text-center text-muted-foreground p-8">
+            No folders found. Click "Add Root Folder" to start.
+          </div>
+        )}
       </CardContent>
-      <CardFooter className="bg-muted/50 p-4 rounded-b-lg flex items-center justify-end space-x-4">
-        <div className="flex items-center gap-2">
-            <Scale className="h-5 w-5 text-muted-foreground" />
-            <span className="font-semibold text-lg">Total Extent:</span>
-        </div>
-        <p className="text-xl font-bold text-primary">{totalExtent.acres} Acres, {totalExtent.cents} Cents</p>
-      </CardFooter>
     </Card>
   );
 }

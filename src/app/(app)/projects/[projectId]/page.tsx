@@ -9,6 +9,7 @@ import { FileManager } from "@/components/files/file-manager";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { TitleDocumentsView } from '@/components/documents/title-documents-view';
 
 // Define the type for a project
 type Project = {
@@ -25,6 +26,7 @@ export default function ProjectDetailsPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!projectId) return;
         const savedProjects = localStorage.getItem('projects');
         if (savedProjects) {
             const projects: Project[] = JSON.parse(savedProjects);
@@ -72,13 +74,17 @@ export default function ProjectDetailsPage() {
                 <p className="text-muted-foreground">{project.siteId} - {project.location}</p>
             </header>
             <Tabs defaultValue="lineage" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
+                <TabsList className="grid w-full grid-cols-4 md:w-auto md:inline-flex">
                     <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
+                    <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
                     <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                     <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
                 </TabsList>
                 <TabsContent value="lineage" className="mt-6">
                     <LineageView />
+                </TabsContent>
+                <TabsContent value="title-documents" className="mt-6">
+                    <TitleDocumentsView projectId={projectId} />
                 </TabsContent>
                 <TabsContent value="transactions" className="mt-6">
                     <TransactionHistory projectId={projectId} />
