@@ -140,6 +140,20 @@ const defaultFamilyHead: Person = {
           landRecords: [],
           heirs: [],
         },
+        {
+          id: '1.1.3',
+          name: 'Kavitha',
+          relation: 'Daughter',
+          gender: 'Female',
+          age: 30,
+          maritalStatus: 'Married',
+          status: 'Alive',
+          sourceOfLand: 'Legal Heir',
+          landRecords: [
+            { id: 'lr-1.1.3-1', surveyNumber: '456/C', acres: '3', cents: '0', landClassification: 'Dry' }
+          ],
+          heirs: [],
+        },
       ],
     },
     {
@@ -257,13 +271,44 @@ export default function ProjectDetailsPage() {
             }
 
             const savedAcquisition = localStorage.getItem(acquisitionStorageKey);
-             if (savedAcquisition) {
+            if (savedAcquisition) {
                 setAcquisitionStatuses(JSON.parse(savedAcquisition));
             } else {
-                const initialStatuses = allSurveyRecords.map(rec =>
-                    createDefaultAcquisitionStatus(projectId, rec, lineageData.name)
-                );
-                setAcquisitionStatuses(initialStatuses);
+                // Create a richer demo dataset for the acquisition tracker
+                const demoStatuses = allSurveyRecords.map(rec => {
+                    const baseStatus = createDefaultAcquisitionStatus(projectId, rec, lineageData.name);
+                    
+                    // Customize statuses for demo purposes
+                    if (rec.surveyNumber === '123/A') {
+                        baseStatus.financials = {
+                            advancePayment: 'Paid',
+                            agreementStatus: 'Signed',
+                        };
+                        baseStatus.operations = {
+                            meetingDate: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(),
+                            documentCollection: 'Fully Collected',
+                        };
+                         baseStatus.legal = {
+                            queryStatus: 'Cleared',
+                        };
+                    } else if (rec.surveyNumber === '123/B') {
+                        baseStatus.financials = {
+                            advancePayment: 'Paid',
+                            agreementStatus: 'Pending',
+                        };
+                        baseStatus.operations = {
+                            meetingDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(),
+                            documentCollection: 'Partially Collected',
+                        };
+                        baseStatus.legal = {
+                            queryStatus: 'On-Progress',
+                        };
+                    }
+                    // The third survey number ('456/C') will remain in its default "Pending" state.
+                    
+                    return baseStatus;
+                });
+                setAcquisitionStatuses(demoStatuses);
             }
 
         } catch (e) {
