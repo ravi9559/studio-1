@@ -36,6 +36,7 @@ export type DocumentFile = {
   type: string;
   size: string;
   uploaded: string;
+  url?: string;
 };
 
 export type Folder = {

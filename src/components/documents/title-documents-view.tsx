@@ -5,11 +5,12 @@ import { useState, FC } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Folder as FolderIcon, FolderPlus, File as FileIcon, FilePlus, Trash2 } from 'lucide-react';
+import { Folder as FolderIcon, FolderPlus, File as FileIcon, FilePlus, Trash2, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
 import type { Folder, DocumentFile } from '@/types';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 // --- DIALOGS ---
 
@@ -66,11 +67,15 @@ const AddFileDialog: FC<{
         const getFileExtension = (filename: string) => {
             return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
         }
+        const dummyContent = `This is a dummy file named ${fileName.trim()}.`;
+        const dataUrl = `data:text/plain;base64,${btoa(dummyContent)}`;
+
       onSave({
         name: fileName.trim(),
         type: getFileExtension(fileName.trim()).toUpperCase() || 'File',
         size: `${(Math.random() * 8 + 0.5).toFixed(1)} MB`,
         uploaded: new Date().toISOString(),
+        url: dataUrl,
       });
       setFileName('');
       onOpenChange(false);
@@ -113,6 +118,24 @@ const FolderView: FC<{
 }> = ({ folder, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile, level }) => {
   const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleDownload = (file: DocumentFile) => {
+    if (!file.url) {
+        toast({
+            variant: 'destructive',
+            title: 'Download Error',
+            description: 'This file does not have downloadable content.'
+        });
+        return;
+    }
+    const link = document.createElement('a');
+    link.href = file.url;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div style={{ marginLeft: `${level * 20}px` }} className="mt-2">
@@ -155,6 +178,9 @@ const FolderView: FC<{
             <span className="flex-grow">{file.name}</span>
             <span className="text-xs text-muted-foreground">{file.size}</span>
             <span className="text-xs text-muted-foreground">{format(new Date(file.uploaded), 'PP')}</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(file)} title="Download File" disabled={!file.url}>
+                <Download className="h-3.5 w-3.5" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDeleteFile(folder.id, file.id)} title="Delete File">
               <Trash2 className="h-3.5 w-3.5" />
             </Button>

@@ -1,3 +1,4 @@
+
 // src/lib/project-template.ts
 import type { Person, AcquisitionStatus, Folder, Task, Transaction, DocumentFile, SurveyRecord } from '@/types';
 import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
@@ -154,7 +155,15 @@ export function initializeNewProjectData(projectId: string) {
     localStorage.setItem(`transactions-${projectId}`, JSON.stringify(transactionsWithIds));
 
     // Initial Files
-    const filesWithIds: DocumentFile[] = initialFiles.map((file, i) => ({ ...file, id: `file-${Date.now()}-${i}`}));
+    const filesWithIds: DocumentFile[] = initialFiles.map((file, i) => {
+        const dummyContent = `This is a dummy file named ${file.name}.`;
+        const url = typeof window !== 'undefined' ? `data:text/plain;base64,${btoa(dummyContent)}` : undefined;
+        return {
+            ...file,
+            id: `file-${Date.now()}-${i}`,
+            url,
+        };
+    });
     localStorage.setItem(`files-${projectId}`, JSON.stringify(filesWithIds));
 
     // We don't initialize notes or legal notes, they should start empty.

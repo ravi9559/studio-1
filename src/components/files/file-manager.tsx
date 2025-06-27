@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,27 +10,22 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UploadCloud, FileText, Download, Trash2, HardDrive } from "lucide-react";
+import type { DocumentFile } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
-// Define the type for a file
-type File = {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploaded: string;
-};
 
 // Initial mock data for new projects is now handled by the project template
-const initialFiles: File[] = [];
+const initialFiles: DocumentFile[] = [];
 
 interface FileManagerProps {
     projectId: string;
 }
 
 export function FileManager({ projectId }: FileManagerProps) {
-    const [files, setFiles] = useState<File[]>([]);
+    const [files, setFiles] = useState<DocumentFile[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const { toast } = useToast();
 
     const storageKey = `files-${projectId}`;
 
@@ -70,15 +66,36 @@ export function FileManager({ projectId }: FileManagerProps) {
             return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
         }
 
-        const newFile: File = {
+        const dummyContent = `This is a dummy file named ${fileName}. It was created at ${new Date().toISOString()}.`;
+        const dataUrl = `data:text/plain;base64,${btoa(dummyContent)}`;
+
+        const newFile: DocumentFile = {
             id: `file-${Date.now()}`,
             name: fileName,
             type: getFileExtension(fileName).toUpperCase() || 'File',
             size: `${(Math.random() * 8 + 0.5).toFixed(1)} MB`,
             uploaded: new Date().toISOString().split('T')[0],
+            url: dataUrl,
         };
         setFiles([newFile, ...files]);
         setIsDialogOpen(false);
+    };
+
+    const handleDownload = (file: DocumentFile) => {
+        if (!file.url) {
+            toast({
+                variant: 'destructive',
+                title: 'Download Error',
+                description: 'This file does not have downloadable content.'
+            });
+            return;
+        }
+        const link = document.createElement('a');
+        link.href = file.url;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -90,7 +107,9 @@ export function FileManager({ projectId }: FileManagerProps) {
                         <CardDescription>Manage all related project documents.</CardDescription>
                     </div>
                     <div className="flex gap-2 w-full md:w-auto">
-                        <Button variant="outline" className="flex-1 md:flex-initial" disabled><HardDrive className="mr-2 h-4 w-4" /> Connect Google Drive</Button>
+                        <Button variant="outline" className="flex-1 md:flex-initial" onClick={() => toast({ title: 'Feature in Development', description: 'Connecting to Google Drive is not yet implemented.'})}>
+                            <HardDrive className="mr-2 h-4 w-4" /> Connect Google Drive
+                        </Button>
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button className="flex-1 md:flex-initial"><UploadCloud className="mr-2 h-4 w-4" /> Upload File</Button>
@@ -122,7 +141,9 @@ export function FileManager({ projectId }: FileManagerProps) {
                                         <TableCell>{file.size}</TableCell>
                                         <TableCell>{file.uploaded}</TableCell>
                                         <TableCell className="text-right space-x-2">
-                                            <Button variant="ghost" size="icon" disabled><Download className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleDownload(file)} disabled={!file.url}>
+                                                <Download className="h-4 w-4" />
+                                            </Button>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
                                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
