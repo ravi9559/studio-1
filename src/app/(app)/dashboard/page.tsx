@@ -14,14 +14,6 @@ import { Loader2 } from 'lucide-react';
 const USERS_STORAGE_KEY = 'users';
 const PROJECTS_STORAGE_KEY = 'projects';
 
-const initialUsers: User[] = [
-    { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
-    { id: 'user-1682600000002', name: 'SK Associates', email: 'lawyer@sk.com', password: 'password', role: 'Lawyer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
-    { id: 'user-1682600000003', name: 'Greenfield Corp', email: 'client@greenfield.com', password: 'password', role: 'Client', status: 'Active' },
-    { id: 'user-1682600000004', name: 'Land Investors Inc.', email: 'investor@land.com', password: 'password', role: 'Investor', status: 'Inactive'},
-    { id: 'user-1682600000005', name: 'Property Aggregators', email: 'aggregator@prop.com', password: 'password', role: 'Aggregator', status: 'Active' },
-];
-
 const initialProjects: Project[] = [
     {
         id: 'proj-1700000000000',
@@ -45,20 +37,16 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     try {
-      // Initialize users if they don't exist
-      let users: User[];
+      // Load current user
+      let users: User[] = [];
       const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      if (!savedUsers) {
-        users = initialUsers;
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-      } else {
+      if (savedUsers) {
         users = JSON.parse(savedUsers);
       }
-      
       const user = users.length > 0 ? users[0] : null;
       setCurrentUser(user);
 
-      // Initialize projects if they don't exist
+      // Load projects, creating initial if none exist
       let allProjects: Project[];
       const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
       if (!savedProjects) {
@@ -68,6 +56,7 @@ export default function ProjectsPage() {
         allProjects = JSON.parse(savedProjects);
       }
       
+      // Filter projects based on user role/assignment
       if (user && user.role !== 'Super Admin') {
         const assignedProjects = allProjects.filter(p => user.projectIds?.includes(p.id));
         setProjects(assignedProjects);
@@ -91,11 +80,14 @@ export default function ProjectsPage() {
       googleMapsLink: ''
     };
     
+    // Always add to the master list of projects in storage
     const allProjectsFromStorage: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
     const updatedProjects = [...allProjectsFromStorage, newProject];
     
     localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
-    setProjects(updatedProjects);
+
+    // Update the viewable projects state
+    setProjects(prevProjects => [...prevProjects, newProject]);
     
     setNewProjectName('');
     setNewProjectSiteId('');

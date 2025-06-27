@@ -13,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -23,6 +24,7 @@ import type { User } from '@/types';
 export function AppSidebar() {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { contextualMenu } = useSidebar();
 
   useEffect(() => {
     const loadUser = () => {
@@ -68,8 +70,8 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarMenu className="flex-1">
         <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={pathname === '/' || pathname.startsWith('/projects/')} tooltip="Projects">
-            <Link href="/">
+          <SidebarMenuButton asChild isActive={pathname === '/dashboard' || pathname.startsWith('/projects/')} tooltip="Projects">
+            <Link href="/dashboard">
               <FolderKanban />
               <span>Projects</span>
             </Link>
@@ -91,6 +93,7 @@ export function AppSidebar() {
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
+        {contextualMenu}
       </SidebarMenu>
       <SidebarFooter>
          <div className="flex items-center gap-3 p-2 transition-all duration-200 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center">

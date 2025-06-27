@@ -28,6 +28,8 @@ import { ProjectMap } from '@/components/project/project-map';
 import { roadData } from '@/lib/road-data';
 import { MindMapView } from '@/components/mindmap/mind-map-view';
 import { Progress } from "@/components/ui/progress";
+import { useSidebar } from '@/components/ui/sidebar';
+import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar';
 
 
 // --- Storage Keys ---
@@ -159,6 +161,7 @@ export default function ProjectDetailsPage() {
     const params = useParams();
     const projectId = params.projectId as string;
     const { toast } = useToast();
+    const { setContextualMenu } = useSidebar();
 
     const [project, setProject] = useState<Project | null>(null);
     const [owners, setOwners] = useState<Person[]>([]);
@@ -444,6 +447,65 @@ export default function ProjectDetailsPage() {
     const allSurveyNumbers = useMemo(() => Array.from(new Set(siteSketchData.map(d => d.surveyNumber))), []);
     const handleSelectSurvey = useCallback((statusId: string) => { setActiveStatusId(statusId); setActiveTab('acquisition-tracker'); }, []);
 
+    const currentUserRole = currentUser?.role;
+    const canSeeSensitiveTabs = currentUserRole === 'Super Admin';
+    const canSeeLegalNotes = currentUserRole === 'Super Admin' || currentUserRole === 'Lawyer';
+
+    useEffect(() => {
+        const projectMenu = (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Project Workspace</SidebarGroupLabel>
+              <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('mind-map')} isActive={activeTab === 'mind-map'}>Mind Map</SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('lineage')} isActive={activeTab === 'lineage'}>Family Lineage</SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('acquisition-tracker')} isActive={activeTab === 'acquisition-tracker'}>Acquisition Tracker</SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('title-documents')} isActive={activeTab === 'title-documents'}>Title Documents</SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('transactions')} isActive={activeTab === 'transactions'}>Transaction History</SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('files')} isActive={activeTab === 'files'}>Files &amp; Documents</SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {canSeeLegalNotes && 
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => setActiveTab('legal-notes')} isActive={activeTab === 'legal-notes'}>Legal Notes</SidebarMenuButton>
+                    </SidebarMenuItem>
+                  }
+                  {canSeeSensitiveTabs && (
+                      <>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton onClick={() => setActiveTab('notes')} isActive={activeTab === 'notes'}>Notes</SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <SidebarMenuButton onClick={() => setActiveTab('tasks')} isActive={activeTab === 'tasks'}>Tasks</SidebarMenuButton>
+                          </SidebarMenuItem>
+                      </>
+                  )}
+              </SidebarMenu>
+            </SidebarGroup>
+          </>
+        );
+
+        if (project?.name) { // only set if project is loaded
+            setContextualMenu(projectMenu);
+        }
+
+        return () => {
+            setContextualMenu(null);
+        }
+    }, [activeTab, project?.name, canSeeLegalNotes, canSeeSensitiveTabs, setContextualMenu, setActiveTab]);
+
+
     if (loading) {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>
     }
@@ -459,10 +521,6 @@ export default function ProjectDetailsPage() {
             </div>
         )
     }
-
-    const currentUserRole = currentUser?.role;
-    const canSeeSensitiveTabs = currentUserRole === 'Super Admin';
-    const canSeeLegalNotes = currentUserRole === 'Super Admin' || currentUserRole === 'Lawyer';
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -559,40 +617,20 @@ export default function ProjectDetailsPage() {
 
             <div className="pt-8">
                 <h2 className="text-2xl font-bold tracking-tight mb-4">Project Workspace</h2>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <aside className="md:col-span-1">
-                        <div className="flex flex-col space-y-2 sticky top-8">
-                            <Button variant={activeTab === 'mind-map' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('mind-map')} className="justify-start">Mind Map</Button>
-                            <Button variant={activeTab === 'lineage' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('lineage')} className="justify-start">Family Lineage</Button>
-                            <Button variant={activeTab === 'acquisition-tracker' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('acquisition-tracker')} className="justify-start">Acquisition Tracker</Button>
-                            <Button variant={activeTab === 'title-documents' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('title-documents')} className="justify-start">Title Documents</Button>
-                            <Button variant={activeTab === 'transactions' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('transactions')} className="justify-start">Transaction History</Button>
-                            <Button variant={activeTab === 'files' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('files')} className="justify-start">Files &amp; Documents</Button>
-                            {canSeeLegalNotes && <Button variant={activeTab === 'legal-notes' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('legal-notes')} className="justify-start">Legal Notes</Button>}
-                            {canSeeSensitiveTabs && (
-                                <>
-                                    <Button variant={activeTab === 'notes' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('notes')} className="justify-start">Notes</Button>
-                                    <Button variant={activeTab === 'tasks' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('tasks')} className="justify-start">Tasks</Button>
-                                </>
-                            )}
-                        </div>
-                    </aside>
-
-                    <main className="md:col-span-3">
-                        {activeTab === 'mind-map' && <MindMapView projectName={project.name} familyHeads={owners} />}
-                        {activeTab === 'lineage' && <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>}
-                        {activeTab === 'acquisition-tracker' && <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />}
-                        {activeTab === 'title-documents' && <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} />}
-                        {activeTab === 'transactions' && <TransactionHistory projectId={projectId} />}
-                        {activeTab === 'files' && <FileManager projectId={projectId} />}
-                        {canSeeLegalNotes && activeTab === 'legal-notes' && <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} />}
-                        {canSeeSensitiveTabs && (
-                            <>
-                                {activeTab === 'notes' && <Notes projectId={projectId} />}
-                                {activeTab === 'tasks' && <Tasks projectId={projectId} />}
-                            </>
-                        )}
-                    </main>
+                <div className="mt-6">
+                    {activeTab === 'mind-map' && <MindMapView projectName={project.name} familyHeads={owners} />}
+                    {activeTab === 'lineage' && <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>}
+                    {activeTab === 'acquisition-tracker' && <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />}
+                    {activeTab === 'title-documents' && <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} />}
+                    {activeTab === 'transactions' && <TransactionHistory projectId={projectId} />}
+                    {activeTab === 'files' && <FileManager projectId={projectId} />}
+                    {canSeeLegalNotes && activeTab === 'legal-notes' && <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} />}
+                    {canSeeSensitiveTabs && (
+                        <>
+                            {activeTab === 'notes' && <Notes projectId={projectId} />}
+                            {activeTab === 'tasks' && <Tasks projectId={projectId} />}
+                        </>
+                    )}
                 </div>
             </div>
         </div>
