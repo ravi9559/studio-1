@@ -72,14 +72,16 @@ const prompt = ai.definePrompt({
 
   **CRITICAL RULES FOR DATA VALIDATION AND STRUCTURE:**
   1.  **Strict Schema Adherence**: The final output MUST be a valid JSON that strictly adheres to the provided schema. No exceptions.
-  2.  **No Null Values for Required Fields**: Fields like 'relation', 'gender', 'age', 'maritalStatus', and 'status' are required. If the CSV data is missing for these fields, you MUST provide a valid default value. Do NOT use \`null\`.
-  3.  **Default Values**:
+  2.  **No Null or Undefined Values**: No field in the output JSON should have a value of \`null\` or \`undefined\`.
+  3.  **Default Values**: You MUST handle empty or missing data in the CSV by applying the following defaults:
       - If 'Relation' is empty for a person identified as a Family Head, you MUST set it to "Family Head". For an heir, it MUST be specified (e.g., "Son").
       - If 'Gender' is empty, default to "Male".
       - If 'Age' is empty or not a number, default to 40.
       - If 'MaritalStatus' is empty, default to "Married".
       - If 'Status' is empty, default to "Alive".
-      - If 'Acres' or 'Cents' is empty, you MUST use an empty string "" as the value.
+      - If 'SourceOfLand' is empty, you MUST provide an empty string "" as the value.
+      - If 'Acres' or 'Cents' is empty, you MUST provide an empty string "" as the value.
+      - If 'GoogleMapsLink' is empty or not a valid URL, you MUST omit the 'googleMapsLink' field entirely from that land record object. Do not include it with a \`null\` or empty string value.
   4.  **Hierarchy Construction**:
       - Identify all individuals with an empty 'ParentName' as "Family Heads". These will be the root objects in the output array.
       - For all other individuals, find their parent in the dataset using the 'ParentName' column and add them to that parent's 'heirs' array.
