@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineageView } from "@/components/lineage/lineage-view";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
@@ -17,8 +18,9 @@ type Project = {
   location: string;
 };
 
-export default function ProjectDetailsPage({ params }: { params: { projectId: string } }) {
-    const { projectId } = params;
+export default function ProjectDetailsPage() {
+    const params = useParams();
+    const projectId = params.projectId as string;
     const [project, setProject] = useState<Project | null>(null);
     const [loading, setLoading] = useState(true);
 
