@@ -25,7 +25,7 @@ import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 // --- Versioning and Storage Keys ---
-const DATA_VERSION = "1.5"; 
+const DATA_VERSION = "1.6"; 
 const DATA_VERSION_KEY = 'data-version';
 const PROJECTS_STORAGE_KEY = 'projects';
 const USERS_STORAGE_KEY = 'users';
@@ -186,15 +186,13 @@ export default function ProjectDetailsPage() {
             const versionMismatched = savedVersion !== DATA_VERSION;
 
             // --- Load Core Data (Users/Projects) ---
-            let allProjects: Project[];
             const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-            if (savedProjects) {
-                 allProjects = JSON.parse(savedProjects);
-            } else {
-                setProject(null);
-                setLoading(false);
-                return;
+            if (!savedProjects) {
+                 setProject(null);
+                 setLoading(false);
+                 return;
             }
+            const allProjects: Project[] = JSON.parse(savedProjects);
             
             const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
             if (savedUsers) {
@@ -220,7 +218,7 @@ export default function ProjectDetailsPage() {
             let loadedStatuses = JSON.parse(localStorage.getItem(acquisitionStorageKey) || 'null');
             let loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || 'null');
             
-            const isInvalidData = !loadedOwners || !loadedStatuses || !loadedFolders || !Array.isArray(loadedOwners) || loadedOwners.length === 0;
+            const isInvalidData = !loadedOwners || !loadedStatuses || !loadedFolders;
 
             if (isInvalidData || versionMismatched) {
                 if(versionMismatched) console.warn("Data version mismatch, regenerating project data.");
@@ -284,9 +282,9 @@ export default function ProjectDetailsPage() {
         if (!project || !editedProjectName || !editedProjectSiteId || !editedProjectLocation) return;
         const updatedProjectData: Project = { ...project, name: editedProjectName, siteId: editedProjectSiteId, location: editedProjectLocation };
         try {
-            const projects: Project[] = JSON.parse(localStorage.getItem('projects') || '[]');
+            const projects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
             const updatedProjects = projects.map(p => p.id === projectId ? updatedProjectData : p);
-            localStorage.setItem('projects', JSON.stringify(updatedProjects));
+            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
             setProject(updatedProjectData);
             setIsEditProjectDialogOpen(false);
             toast({ title: 'Project Updated', description: 'The project details have been successfully saved.' });
@@ -395,7 +393,7 @@ export default function ProjectDetailsPage() {
         return (
             <div className="p-4 sm:p-6 lg:p-8 text-center">
                 <Button variant="ghost" asChild className="mb-4">
-                    <Link href="/">
+                    <Link href="/dashboard">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Projects
                     </Link>
