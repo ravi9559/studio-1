@@ -1,10 +1,13 @@
 // src/types/index.ts
 
+export type LandClassification = 'Wet' | 'Dry' | 'Unclassified';
+
 export type SurveyRecord = {
   id: string;
   surveyNumber: string;
   acres: string;
   cents: string;
+  landClassification: LandClassification;
 };
 
 export type Person = {
@@ -47,6 +50,7 @@ export type User = {
   status: 'Active' | 'Inactive';
   avatarUrl?: string;
   projectIds?: string[];
+  accountType?: 'Individual' | 'Corporate';
 };
 
 export type LegalNote = {
@@ -56,5 +60,25 @@ export type LegalNote = {
   author: {
     id: string;
     name: string;
+  };
+};
+
+export type AcquisitionStatus = {
+  id: string; // e.g., `${projectId}-${surveyNumber}`
+  projectId: string;
+  surveyNumber: string;
+  familyHeadName: string;
+  extent: { acres: string; cents: string };
+  landClassification: LandClassification;
+  financials: {
+    advancePayment: 'Paid' | 'Pending';
+    agreementStatus: 'Signed' | 'Pending';
+  };
+  operations: {
+    meetingDate: string | null; // ISO date string or null
+    documentCollection: 'Fully Collected' | 'Partially Collected' | 'Pending';
+  };
+  legal: {
+    queryStatus: 'Cleared' | 'Awaiting' | 'On-Progress' | 'Not Started';
   };
 };

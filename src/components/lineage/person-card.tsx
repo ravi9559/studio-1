@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from '../ui/separator';
-import type { Person, SurveyRecord } from '@/types';
+import type { Person, SurveyRecord, LandClassification } from '@/types';
 
 interface PersonCardProps {
   person: Person;
@@ -130,6 +130,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
     const [newSurveyNumber, setNewSurveyNumber] = useState('');
     const [newAcres, setNewAcres] = useState('');
     const [newCents, setNewCents] = useState('');
+    const [newLandClassification, setNewLandClassification] = useState<LandClassification>('Unclassified');
 
     const handleAddLandRecord = () => {
         if (!newSurveyNumber.trim() || (!newAcres.trim() && !newCents.trim())) return;
@@ -138,11 +139,13 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
             surveyNumber: newSurveyNumber,
             acres: newAcres,
             cents: newCents,
+            landClassification: newLandClassification
         };
         setLandRecords([...landRecords, newRecord]);
         setNewSurveyNumber('');
         setNewAcres('');
         setNewCents('');
+        setNewLandClassification('Unclassified');
     };
 
     const handleDeleteLandRecord = (recordId: string) => {
@@ -237,7 +240,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
 
                     <div className="p-4 border rounded-lg space-y-4">
                         <h5 className="font-medium">Add New Survey Record</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="survey-number">Survey/Sub-Div No.</Label>
                                 <Input id="survey-number" value={newSurveyNumber} onChange={e => setNewSurveyNumber(e.target.value)} placeholder="e.g., 256/2B" />
@@ -250,6 +253,17 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                 <Label htmlFor="cents">Cents</Label>
                                 <Input id="cents" type="number" step="any" value={newCents} onChange={e => setNewCents(e.target.value)} placeholder="e.g., 50" />
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="land-classification">Classification</Label>
+                                <Select onValueChange={(v: LandClassification) => setNewLandClassification(v)} value={newLandClassification}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Unclassified">Unclassified</SelectItem>
+                                        <SelectItem value="Wet">Wet</SelectItem>
+                                        <SelectItem value="Dry">Dry</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         <Button type="button" onClick={handleAddLandRecord}>Add Record</Button>
                     </div>
@@ -261,6 +275,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                     <TableHead>Survey No.</TableHead>
                                     <TableHead>Acres</TableHead>
                                     <TableHead>Cents</TableHead>
+                                    <TableHead>Classification</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -271,6 +286,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                             <TableCell>{rec.surveyNumber}</TableCell>
                                             <TableCell>{rec.acres || '0'}</TableCell>
                                             <TableCell>{rec.cents || '0'}</TableCell>
+                                            <TableCell><Badge variant="outline">{rec.landClassification}</Badge></TableCell>
                                             <TableCell className="text-right">
                                                 <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteLandRecord(rec.id)}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -279,7 +295,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={4} className="h-24 text-center">No land records.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={5} className="h-24 text-center">No land records.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -349,6 +365,7 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
                                 <TableHead>Survey No.</TableHead>
                                 <TableHead className="text-right">Acres</TableHead>
                                 <TableHead className="text-right">Cents</TableHead>
+                                <TableHead>Class</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -357,6 +374,7 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
                                     <TableCell>{rec.surveyNumber}</TableCell>
                                     <TableCell className="text-right">{rec.acres || '0'}</TableCell>
                                     <TableCell className="text-right">{rec.cents || '0'}</TableCell>
+                                    <TableCell><Badge variant="outline">{rec.landClassification}</Badge></TableCell>
                                 </TableRow>
                            ))}
                         </TableBody>

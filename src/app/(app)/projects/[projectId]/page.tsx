@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineageView } from "@/components/lineage/lineage-view";
@@ -13,7 +13,8 @@ import { TitleDocumentsView } from '@/components/documents/title-documents-view'
 import { Notes } from '@/components/project/notes';
 import { Tasks } from '@/components/project/tasks';
 import { LegalNotes } from '@/components/project/legal-notes';
-import type { User, Project, Person, Folder } from '@/types';
+import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
+import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord } from '@/types';
 
 // Recursive function to find a person in the family tree
 const findPerson = (family: Person, personId: string): Person | null => {
@@ -99,7 +100,7 @@ const defaultFamilyHead: Person = {
   status: 'Died',
   sourceOfLand: 'Purchase',
   landRecords: [
-      { id: 'lr-1-1', surveyNumber: '123/A', acres: '5', cents: '20' }
+      { id: 'lr-1-1', surveyNumber: '123/A', acres: '5', cents: '20', landClassification: 'Dry' }
   ],
   heirs: [
     {
@@ -112,7 +113,7 @@ const defaultFamilyHead: Person = {
       status: 'Alive',
       sourceOfLand: 'Legal Heir',
       landRecords: [
-        { id: 'lr-1.1-1', surveyNumber: '123/A', acres: '2', cents: '60' }
+        { id: 'lr-1.1-1', surveyNumber: '123/A', acres: '2', cents: '60', landClassification: 'Dry' }
       ],
       heirs: [
         {
@@ -151,12 +152,34 @@ const defaultFamilyHead: Person = {
       status: 'Alive',
       sourceOfLand: 'Gift',
       landRecords: [
-         { id: 'lr-1.2-1', surveyNumber: '123/B', acres: '2', cents: '60' }
+         { id: 'lr-1.2-1', surveyNumber: '123/B', acres: '2', cents: '60', landClassification: 'Wet' }
       ],
       heirs: [],
     },
   ],
 };
+
+function createDefaultAcquisitionStatus(projectId: string, surveyRecord: SurveyRecord, familyHeadName: string): AcquisitionStatus {
+    return {
+        id: `${projectId}-${surveyRecord.surveyNumber}`,
+        projectId: projectId,
+        surveyNumber: surveyRecord.surveyNumber,
+        familyHeadName,
+        extent: { acres: surveyRecord.acres, cents: surveyRecord.cents },
+        landClassification: surveyRecord.landClassification,
+        financials: {
+            advancePayment: 'Pending',
+            agreementStatus: 'Pending',
+        },
+        operations: {
+            meetingDate: null,
+            documentCollection: 'Pending',
+        },
+        legal: {
+            queryStatus: 'Not Started',
+        },
+    };
+}
 
 export default function ProjectDetailsPage() {
     const params = useParams();
@@ -165,17 +188,18 @@ export default function ProjectDetailsPage() {
     const [project, setProject] = useState<Project | null>(null);
     const [familyHead, setFamilyHead] = useState<Person | null>(null);
     const [folders, setFolders] = useState<Folder[]>([]);
+    const [acquisitionStatuses, setAcquisitionStatuses] = useState<AcquisitionStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [isLoaded, setIsLoaded] = useState(false);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     const lineageStorageKey = `lineage-data-${projectId}`;
     const folderStorageKey = `document-folders-${projectId}`;
+    const acquisitionStorageKey = `acquisition-status-${projectId}`;
 
     useEffect(() => {
         if (!projectId) return;
         try {
-            // Load project details
             const savedProjects = localStorage.getItem('projects');
             if (savedProjects) {
                 const projects: Project[] = JSON.parse(savedProjects);
@@ -183,34 +207,34 @@ export default function ProjectDetailsPage() {
                 if (currentProject) setProject(currentProject);
             }
 
-            // Load user role (assuming first user is logged in)
             const savedUsers = localStorage.getItem('users');
             if (savedUsers) {
                 const users: User[] = JSON.parse(savedUsers);
-                if (users.length > 0) {
-                    setCurrentUser(users[0]);
-                }
+                if (users.length > 0) setCurrentUser(users[0]);
             }
 
-            // Load lineage data
             const savedLineage = localStorage.getItem(lineageStorageKey);
             const lineageData = savedLineage ? JSON.parse(savedLineage) : defaultFamilyHead;
             setFamilyHead(lineageData);
 
-            // Load folder data
+            // Collect all unique survey numbers from lineage
+            const surveyRecordsMap = new Map<string, SurveyRecord>();
+            const collectSurveyRecords = (person: Person) => {
+                (person.landRecords || []).forEach(rec => {
+                    if (!surveyRecordsMap.has(rec.surveyNumber)) {
+                        surveyRecordsMap.set(rec.surveyNumber, rec);
+                    }
+                });
+                (person.heirs || []).forEach(collectSurveyRecords);
+            };
+            collectSurveyRecords(lineageData);
+            const allSurveyRecords = Array.from(surveyRecordsMap.values());
+
             const savedFolders = localStorage.getItem(folderStorageKey);
             if (savedFolders) {
                 setFolders(JSON.parse(savedFolders));
             } else {
-                // Auto-generate folders from initial lineage data if no folders are saved
-                const initialSurveyNumbers = new Set<string>();
-                const collectSurveyNumbers = (person: Person) => {
-                    (person.landRecords || []).forEach(rec => initialSurveyNumbers.add(rec.surveyNumber));
-                    (person.heirs || []).forEach(collectSurveyNumbers);
-                };
-                collectSurveyNumbers(lineageData);
-                const surveyFolders = Array.from(initialSurveyNumbers).map(createSurveyFolder);
-
+                 const surveyFolders = allSurveyRecords.map(r => createSurveyFolder(r.surveyNumber));
                 const familyMembers: string[] = [];
                 const collectFamilyMembers = (person: Person) => {
                     familyMembers.push(person.name);
@@ -231,23 +255,35 @@ export default function ProjectDetailsPage() {
                 };
                 setFolders([...surveyFolders, kycFolder]);
             }
+
+            const savedAcquisition = localStorage.getItem(acquisitionStorageKey);
+             if (savedAcquisition) {
+                setAcquisitionStatuses(JSON.parse(savedAcquisition));
+            } else {
+                const initialStatuses = allSurveyRecords.map(rec =>
+                    createDefaultAcquisitionStatus(projectId, rec, lineageData.name)
+                );
+                setAcquisitionStatuses(initialStatuses);
+            }
+
         } catch (e) {
             console.error("Could not load project data", e);
         }
         setLoading(false);
         setIsLoaded(true);
-    }, [projectId, lineageStorageKey, folderStorageKey]);
+    }, [projectId, lineageStorageKey, folderStorageKey, acquisitionStorageKey]);
 
     useEffect(() => {
-        if (isLoaded && familyHead) {
+        if (isLoaded) {
             try {
-                localStorage.setItem(lineageStorageKey, JSON.stringify(familyHead));
-                localStorage.setItem(folderStorageKey, JSON.stringify(folders));
+                if (familyHead) localStorage.setItem(lineageStorageKey, JSON.stringify(familyHead));
+                if (folders.length > 0) localStorage.setItem(folderStorageKey, JSON.stringify(folders));
+                if (acquisitionStatuses.length > 0) localStorage.setItem(acquisitionStorageKey, JSON.stringify(acquisitionStatuses));
             } catch (e) {
                 console.error("Could not save project data to local storage", e);
             }
         }
-    }, [familyHead, folders, isLoaded, lineageStorageKey, folderStorageKey]);
+    }, [familyHead, folders, acquisitionStatuses, isLoaded, lineageStorageKey, folderStorageKey, acquisitionStorageKey]);
 
     const handleAddHeir = useCallback((parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
         if (!familyHead) return;
@@ -287,6 +323,27 @@ export default function ProjectDetailsPage() {
         const updatedFamilyHead = updatePersonInFamily(familyHead, personId, personData);
         setFamilyHead(updatedFamilyHead);
 
+        // Update acquisition status if land records changed
+        setAcquisitionStatuses(currentStatuses => {
+            const newStatuses = [...currentStatuses];
+            (personData.landRecords || []).forEach(record => {
+                const existingStatusIndex = newStatuses.findIndex(s => s.surveyNumber === record.surveyNumber);
+                if (existingStatusIndex > -1) {
+                    // Update existing status
+                    newStatuses[existingStatusIndex] = {
+                        ...newStatuses[existingStatusIndex],
+                        extent: { acres: record.acres, cents: record.cents },
+                        landClassification: record.landClassification,
+                        familyHeadName: familyHead.name,
+                    };
+                } else {
+                    // Add new status if a new survey number was added
+                    newStatuses.push(createDefaultAcquisitionStatus(projectId, record, familyHead.name));
+                }
+            });
+            return newStatuses;
+        });
+
         const newSurveyNumbers = new Set((personData.landRecords || []).map(lr => lr.surveyNumber));
         const addedSurveyNumbers = [...newSurveyNumbers].filter(sn => !oldSurveyNumbers.has(sn));
 
@@ -320,7 +377,7 @@ export default function ProjectDetailsPage() {
             }
             return updatedFolders;
         });
-    }, [familyHead]);
+    }, [familyHead, projectId]);
 
     const handleAddFolder = useCallback((parentId: string, name: string) => {
         const newFolder: Folder = {
@@ -414,6 +471,7 @@ export default function ProjectDetailsPage() {
             <Tabs defaultValue="lineage" className="w-full">
                 <TabsList className="grid w-full sm:inline-flex sm:w-auto">
                     <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
+                    <TabsTrigger value="acquisition-tracker">Acquisition Tracker</TabsTrigger>
                     <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
                     <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                     <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
@@ -433,6 +491,9 @@ export default function ProjectDetailsPage() {
                         onAddHeir={handleAddHeir}
                         onUpdatePerson={handleUpdatePerson}
                     />
+                </TabsContent>
+                 <TabsContent value="acquisition-tracker" className="mt-6">
+                    <AcquisitionTrackerView statuses={acquisitionStatuses} />
                 </TabsContent>
                 <TabsContent value="title-documents" className="mt-6">
                     <TitleDocumentsView
