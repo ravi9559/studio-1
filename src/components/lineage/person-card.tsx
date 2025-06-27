@@ -12,26 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from '../ui/separator';
-
-export type SurveyRecord = {
-  id: string;
-  surveyNumber: string;
-  acres: string;
-  cents: string;
-};
-
-export type Person = {
-  id: string;
-  name: string;
-  relation: string;
-  gender: 'Male' | 'Female' | 'Other';
-  age: number;
-  maritalStatus: 'Married' | 'Single' | 'Divorced' | 'Widowed';
-  status: 'Alive' | 'Died' | 'Unknown' | 'Missing';
-  sourceOfLand?: string;
-  landRecords: SurveyRecord[];
-  heirs: Person[];
-};
+import type { Person, SurveyRecord } from '@/types';
 
 interface PersonCardProps {
   person: Person;
@@ -284,7 +265,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {landRecords.length > 0 ? (
+                                {landRecords && landRecords.length > 0 ? (
                                     landRecords.map(rec => (
                                         <TableRow key={rec.id}>
                                             <TableCell>{rec.surveyNumber}</TableCell>

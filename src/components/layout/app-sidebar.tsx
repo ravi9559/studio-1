@@ -21,15 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { useState, useEffect } from 'react';
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: 'Active' | 'Inactive';
-  avatarUrl?: string;
-};
+import type { User } from '@/types';
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -79,8 +71,8 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarMenu className="flex-1">
         <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={pathname === '/dashboard' || pathname.startsWith('/projects')} tooltip="Projects">
-            <Link href="/dashboard">
+          <SidebarMenuButton asChild isActive={pathname.startsWith('/projects')} tooltip="Projects">
+            <Link href="/projects">
               <FolderKanban />
               <span>Projects</span>
             </Link>

@@ -7,13 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Folder as FolderIcon, FolderPlus, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
-
-// Define the type for a Folder
-export type Folder = {
-  id: string;
-  name: string;
-  children: Folder[];
-};
+import type { Folder } from '@/types';
 
 // Recursive component to render folders
 const FolderView: FC<{

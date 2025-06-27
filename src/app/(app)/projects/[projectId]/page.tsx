@@ -9,27 +9,11 @@ import { FileManager } from "@/components/files/file-manager";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { TitleDocumentsView, type Folder } from '@/components/documents/title-documents-view';
-import type { Person } from '@/components/lineage/person-card';
+import { TitleDocumentsView } from '@/components/documents/title-documents-view';
 import { Notes } from '@/components/project/notes';
 import { Tasks } from '@/components/project/tasks';
-
-// Define the type for a user
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: 'Active' | 'Inactive';
-};
-
-// Define the type for a project
-type Project = {
-  id: string;
-  name: string;
-  siteId: string;
-  location: string;
-};
+import { LegalNotes } from '@/components/project/legal-notes';
+import type { User, Project, Person, Folder } from '@/types';
 
 // Recursive function to find a person in the family tree
 const findPerson = (family: Person, personId: string): Person | null => {
@@ -183,8 +167,7 @@ export default function ProjectDetailsPage() {
     const [folders, setFolders] = useState<Folder[]>([]);
     const [loading, setLoading] = useState(true);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [currentUserRole, setCurrentUserRole] = useState<User['role'] | null>(null);
-
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     const lineageStorageKey = `lineage-data-${projectId}`;
     const folderStorageKey = `document-folders-${projectId}`;
@@ -205,7 +188,7 @@ export default function ProjectDetailsPage() {
             if (savedUsers) {
                 const users: User[] = JSON.parse(savedUsers);
                 if (users.length > 0) {
-                    setCurrentUserRole(users[0].role);
+                    setCurrentUser(users[0]);
                 }
             }
 
@@ -376,6 +359,18 @@ export default function ProjectDetailsPage() {
         setFolders(currentFolders => deleteFolderRecursive(currentFolders, folderId));
     }, []);
 
+    const allSurveyNumbers = useMemo(() => {
+        if (!familyHead) return [];
+        const surveyNumbers = new Set<string>();
+        const collect = (person: Person) => {
+            (person.landRecords || []).forEach(lr => surveyNumbers.add(lr.surveyNumber));
+            (person.heirs || []).forEach(collect);
+        };
+        collect(familyHead);
+        return Array.from(surveyNumbers);
+    }, [familyHead]);
+
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -388,7 +383,7 @@ export default function ProjectDetailsPage() {
         return (
             <div className="p-4 sm:p-6 lg:p-8 text-center">
                 <Button variant="ghost" asChild className="mb-4">
-                    <Link href="/dashboard">
+                    <Link href="/projects">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Projects
                     </Link>
@@ -399,11 +394,16 @@ export default function ProjectDetailsPage() {
         )
     }
 
+    const currentUserRole = currentUser?.role;
+    const canSeeSensitiveTabs = currentUserRole === 'Super Admin';
+    const canSeeLegalNotes = currentUserRole === 'Super Admin' || currentUserRole === 'Lawyer';
+
+
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <header className="mb-6">
                 <Button variant="ghost" asChild className="mb-4 -ml-4">
-                    <Link href="/dashboard">
+                    <Link href="/projects">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Projects
                     </Link>
@@ -417,7 +417,10 @@ export default function ProjectDetailsPage() {
                     <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
                     <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                     <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
-                    {currentUserRole === 'Super Admin' && (
+                    {canSeeLegalNotes && (
+                         <TabsTrigger value="legal-notes">Legal Notes</TabsTrigger>
+                    )}
+                    {canSeeSensitiveTabs && (
                         <>
                             <TabsTrigger value="notes">Notes</TabsTrigger>
                             <TabsTrigger value="tasks">Tasks</TabsTrigger>
@@ -444,7 +447,16 @@ export default function ProjectDetailsPage() {
                 <TabsContent value="files" className="mt-6">
                     <FileManager projectId={projectId} />
                 </TabsContent>
-                 {currentUserRole === 'Super Admin' && (
+                {canSeeLegalNotes && (
+                    <TabsContent value="legal-notes" className="mt-6">
+                        <LegalNotes
+                            projectId={projectId}
+                            surveyNumbers={allSurveyNumbers}
+                            currentUser={currentUser}
+                        />
+                    </TabsContent>
+                 )}
+                 {canSeeSensitiveTabs && (
                     <>
                         <TabsContent value="notes" className="mt-6">
                             <Notes projectId={projectId} />

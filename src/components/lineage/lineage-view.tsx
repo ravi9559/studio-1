@@ -1,9 +1,10 @@
 'use client';
 
-import { PersonCard, type Person } from './person-card';
+import { PersonCard } from './person-card';
 import { LineageSuggestion } from './lineage-suggestion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Loader2 } from 'lucide-react';
+import type { Person } from '@/types';
 
 interface LineageViewProps {
     familyHead: Person | null;

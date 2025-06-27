@@ -8,16 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LandPlot } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  password?: string;
-  role: string;
-  status: 'Active' | 'Inactive';
-  avatarUrl?: string;
-};
+import type { User } from '@/types';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -35,8 +26,13 @@ export default function LoginPage() {
 
             if (user) {
                 if (user.status === 'Active') {
-                    // Successful login
-                    router.push('/dashboard');
+                    // On successful login, we need to make sure the logged-in user is the first in the array
+                    // so other parts of the app can identify them.
+                    const otherUsers = users.filter(u => u.id !== user.id);
+                    const reorderedUsers = [user, ...otherUsers];
+                    localStorage.setItem('users', JSON.stringify(reorderedUsers));
+
+                    router.push('/projects');
                 } else {
                     toast({
                         variant: "destructive",

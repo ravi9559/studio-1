@@ -13,49 +13,39 @@ import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-
-// Define the type for a user
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  password?: string;
-  role: string;
-  status: 'Active' | 'Inactive';
-  avatarUrl?: string;
-};
-
-// Define Role type
-type Role = {
-    id: string;
-    name: string;
-}
+import type { User, Role, Project } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Initial mock data
 const initialUsers: User[] = [
     { id: 'user-1682600000001', name: 'Super Admin', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
     { id: 'user-1682600000002', name: 'Transaction Manager', email: 'manager@o2o.com', password: 'password', role: 'Transaction Manager', status: 'Active' },
     { id: 'user-1682600000003', name: 'Read Only User', email: 'viewer@o2o.com', password: 'password', role: 'Viewer', status: 'Inactive' },
+    { id: 'user-1682600000004', name: 'Lawyer', email: 'lawyer@o2o.com', password: 'password', role: 'Lawyer', status: 'Active' },
 ];
 
 const initialRoles: Role[] = [
     { id: 'role-super-admin', name: 'Super Admin' },
     { id: 'role-manager', name: 'Transaction Manager' },
     { id: 'role-viewer', name: 'Viewer' },
+    { id: 'role-lawyer', name: 'Lawyer' },
 ];
 
 const USERS_STORAGE_KEY = 'users';
 const ROLES_STORAGE_KEY = 'user-roles';
+const PROJECTS_STORAGE_KEY = 'projects';
 
 export default function UsersPage() {
     const { toast } = useToast();
     const [users, setUsers] = useState<User[]>([]);
     const [roles, setRoles] = useState<Role[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
-    // Load users and roles from localStorage
+    // Load users, roles, and projects from localStorage
     useEffect(() => {
         try {
             const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
@@ -71,10 +61,17 @@ export default function UsersPage() {
             } else {
                 setRoles(initialRoles);
             }
+
+            const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
+            if(savedProjects) {
+                setProjects(JSON.parse(savedProjects));
+            }
+
         } catch (e) {
             console.error("Could not load data from local storage", e);
             setUsers(initialUsers);
             setRoles(initialRoles);
+            setProjects([]);
         }
         setIsLoaded(true);
     }, []);
@@ -205,6 +202,7 @@ export default function UsersPage() {
                 onSave={handleSaveUser}
                 user={userToEdit}
                 roles={roles}
+                projects={projects}
             />
         </div>
     );
@@ -217,15 +215,17 @@ interface UserFormDialogProps {
     onSave: (userData: Omit<User, 'id'>) => void;
     user: User | null;
     roles: Role[];
+    projects: Project[];
 }
 
-function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles }: UserFormDialogProps) {
+function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles, projects }: UserFormDialogProps) {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<string>('');
     const [status, setStatus] = useState<User['status']>('Active');
     const [avatarUrl, setAvatarUrl] = useState('');
+    const [assignedProjectIds, setAssignedProjectIds] = useState<string[]>([]);
 
     useEffect(() => {
         const defaultRole = roles.length > 0 ? roles[roles.length - 1].name : 'Viewer';
@@ -237,6 +237,7 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles }: UserFormD
             setStatus(user.status);
             setAvatarUrl(user.avatarUrl || '');
             setPassword(''); // Don't pre-fill password for editing
+            setAssignedProjectIds(user.projectIds || []);
         } else {
             // Reset form for new user
             setName('');
@@ -245,17 +246,29 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles }: UserFormD
             setRole(defaultRole);
             setStatus('Active');
             setAvatarUrl('');
+            setAssignedProjectIds([]);
         }
     }, [user, isOpen, roles]);
 
+    const handleProjectAssignment = (projectId: string) => {
+        setAssignedProjectIds(prev =>
+            prev.includes(projectId)
+                ? prev.filter(id => id !== projectId)
+                : [...prev, projectId]
+        );
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ name, email, password, role, status, avatarUrl });
+        onSave({ name, email, password, role, status, avatarUrl, projectIds: assignedProjectIds });
     };
+
+    const isSuperAdmin = role === 'Super Admin';
+
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-xl">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>{user ? 'Edit User' : 'Add New User'}</DialogTitle>
@@ -263,7 +276,7 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles }: UserFormD
                             {user ? 'Update the user details below.' : 'Enter the details for the new user.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">Name</Label>
                             <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" required />
@@ -301,8 +314,44 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles }: UserFormD
                                 </SelectContent>
                             </Select>
                         </div>
+                        
+                        <div className="grid grid-cols-4 items-start gap-4 pt-2">
+                            <Label className="text-right pt-2">Project Access</Label>
+                            <div className="col-span-3">
+                                {isSuperAdmin ? (
+                                    <p className="text-sm text-muted-foreground p-2 bg-muted rounded-md">Super Admins have access to all projects automatically.</p>
+                                ) : (
+                                    <Card>
+                                        <CardContent className="p-2">
+                                             <ScrollArea className="h-40">
+                                                <div className="space-y-2 p-2">
+                                                    {projects.length > 0 ? projects.map(p => (
+                                                        <div key={p.id} className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                id={`project-${p.id}`}
+                                                                checked={assignedProjectIds.includes(p.id)}
+                                                                onCheckedChange={() => handleProjectAssignment(p.id)}
+                                                            />
+                                                            <label
+                                                                htmlFor={`project-${p.id}`}
+                                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                            >
+                                                                {p.name}
+                                                            </label>
+                                                        </div>
+                                                    )) : (
+                                                        <p className="text-sm text-muted-foreground text-center p-4">No projects available to assign.</p>
+                                                    )}
+                                                </div>
+                                            </ScrollArea>
+                                        </CardContent>
+                                    </Card>
+                                )}
+                            </div>
+                        </div>
+
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="border-t pt-4 mt-4">
                         <Button type="submit">Save</Button>
                     </DialogFooter>
                 </form>

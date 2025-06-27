@@ -12,25 +12,13 @@ import { Moon, Sun, Trash2, User as UserIcon, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: 'Active' | 'Inactive';
-  avatarUrl?: string;
-};
-
-type Role = {
-    id: string;
-    name: string;
-}
+import type { User, Role } from '@/types';
 
 const initialRoles: Role[] = [
     { id: 'role-super-admin', name: 'Super Admin' },
     { id: 'role-manager', name: 'Transaction Manager' },
     { id: 'role-viewer', name: 'Viewer' },
+    { id: 'role-lawyer', name: 'Lawyer' },
 ];
 
 const ROLES_STORAGE_KEY = 'user-roles';
