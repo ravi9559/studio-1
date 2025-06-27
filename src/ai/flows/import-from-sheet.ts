@@ -27,50 +27,51 @@ const prompt = ai.definePrompt({
   name: 'importFromSheetPrompt',
   input: { schema: ImportFromSheetInputSchema },
   output: { schema: ImportFromSheetOutputSchema },
-  prompt: `You are an expert data processor specializing in genealogical and land ownership data.
-  Your task is to parse the provided CSV data, which represents a family tree, and transform it into a hierarchical JSON structure that strictly adheres to the provided schema.
+  prompt: `You are an expert data processor specializing in genealogical and land ownership data. Your task is to parse the provided CSV data and transform it into a hierarchical JSON structure.
 
-  The CSV has the following columns:
-  - Name: The name of the person.
-  - Relation: Their relation to their parent (e.g., 'Son', 'Daughter', 'Family Head').
-  - Gender: 'Male', 'Female', or 'Other'.
-  - Age: The person's age.
-  - MaritalStatus: 'Single', 'Married', 'Divorced', 'Widowed'.
-  - Status: 'Alive', 'Died', 'Missing', 'Unknown'.
-  - SourceOfLand: How the land was acquired (e.g., 'Purchase', 'Inheritance').
-  - HoldingPattern: The pattern of land ownership (e.g., 'Joint', 'Individual').
-  - ParentName: The name of the parent. This is CRUCIAL for building the hierarchy. If empty, this person is a Family Head.
-  - SurveyNumber: The survey number of a land parcel they own.
-  - Acres: Acres of the parcel.
-  - Cents: Cents of the parcel.
-  - Classification: 'Wet', 'Dry', or 'Unclassified'.
+**THE ABSOLUTE MOST IMPORTANT RULE: IGNORE INVALID ROWS**
+Before you do anything else, you must validate each row of the CSV.
+A row is considered **INVALID** and **MUST BE DISCARDED** if:
+- The row is completely empty.
+- The 'Name' column is empty, blank, or contains only whitespace.
 
-  **CRITICAL RULES FOR DATA VALIDATION AND STRUCTURE:**
-  1.  **Row Validation**: Before processing a row, you MUST validate it. If a row is completely empty or if the 'Name' column is empty, **you MUST completely ignore that row** and not create any JSON object for it.
-  2.  **Strict Schema Adherence**: The final output MUST be a valid JSON that strictly adheres to the provided schema. No exceptions.
-  3.  **No Null or Undefined Values**: No field in the output JSON should have a value of \`null\` or \`undefined\`. This is the most important rule.
-  4.  **Default Values**: You MUST handle empty or missing data in the CSV by applying the following defaults for every valid person record. Do not leave fields out.
-      - If 'Relation' is empty for a person without a 'ParentName', you MUST set it to "Family Head". For an heir, it MUST be specified (e.g., "Son").
-      - If 'Gender' is empty, default to "Male".
-      - If 'Age' is empty or not a number, default to 40.
-      - If 'MaritalStatus' is empty, default to "Married".
-      - If 'Status' is empty, default to "Alive".
-      - If 'SourceOfLand' is empty, you MUST provide an empty string "" as the value.
-      - If 'HoldingPattern' is empty, you MUST provide an empty string "" as the value.
-      - If 'Acres' is empty, you MUST provide an empty string "" as the value.
-      - If 'Cents' is empty, you MUST provide an empty string "" as the value.
-      - If 'Classification' is empty, you MUST default it to "Unclassified".
-  5.  **Hierarchy Construction**:
-      - Identify all individuals with an empty 'ParentName' as "Family Heads". These will be the root objects in the output array.
-      - For all other individuals, find their parent in the dataset using the 'ParentName' column and add them to that parent's 'heirs' array.
-  6.  **Data Aggregation**:
-      - For each person, aggregate all land records associated with them into their 'landRecords' array. A person can own multiple land parcels, which might appear on different rows with the same name.
-  7.  **Unique IDs**:
-      - Generate a unique 'id' for each person. A good format is 'person-[name]-[random_number]'.
-      - Generate a unique 'id' for each land record. A good format is 'lr-[survey_number]-[person_id]'.
+If a row is invalid, you must ignore it completely. Do not create a person object for it, and do not create any land records from it. This rule is more important than any other.
 
-  CSV Data to process:
-  {{{csvData}}}
+**DATA SCHEMA AND HIERARCHY**
+For every **VALID** row, you will create or update person objects according to these rules:
+
+**CSV Columns:**
+- Name, Relation, Gender, Age, MaritalStatus, Status, SourceOfLand, HoldingPattern, ParentName, SurveyNumber, Acres, Cents, Classification.
+
+**Hierarchy Construction:**
+1.  **Family Heads**: Individuals with an empty 'ParentName' are "Family Heads" and should be the root objects in the final \`familyHeads\` array.
+2.  **Heirs**: All other individuals are heirs. Find their parent using the 'ParentName' and add them to the parent's 'heirs' array.
+3.  **Data Aggregation**: A person can appear on multiple rows. Aggregate all land records for the same person into their 'landRecords' array.
+
+**DATA FORMATTING AND DEFAULTS (CRITICAL)**
+You must strictly adhere to the following formatting rules for every person object you create:
+1.  **NO NULLS**: No field in the output JSON should ever be \`null\` or \`undefined\`.
+2.  **Default Person Values**:
+    - If 'Relation' is empty for a Family Head, set it to "Family Head".
+    - If 'Gender' is empty, default to "Male".
+    - If 'Age' is empty or not a number, default to 40.
+    - If 'MaritalStatus' is empty, default to "Married".
+    - If 'Status' is empty, default to "Alive".
+    - If 'SourceOfLand' is empty, provide an empty string "".
+    - If 'HoldingPattern' is empty, provide an empty string "".
+3.  **Default Land Record Values**: If a row contains a \`SurveyNumber\`:
+    - If 'Acres' is empty, provide an empty string "".
+    - If 'Cents' is empty, provide an empty string "".
+    - If 'Classification' is empty, default to "Unclassified".
+4.  **Unique IDs**:
+    - Generate a unique 'id' for each person (e.g., 'person-[name]-[random_number]').
+    - Generate a unique 'id' for each land record (e.g., 'lr-[survey_number]-[person_id]').
+
+**Final Output:**
+The final output must be a valid JSON object with a single key, \`familyHeads\`, which is an array of the family head objects you have constructed.
+
+CSV Data to process:
+{{{csvData}}}
   `,
 });
 
