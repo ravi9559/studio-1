@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
@@ -51,8 +51,11 @@ export default function ProjectDetailsPage() {
     const [acquisitionStatuses, setAcquisitionStatuses] = useState<AcquisitionStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [activeTab, setActiveTab] = useState('mind-map');
+    
+    // --- Navigation State ---
     const [activeStatusId, setActiveStatusId] = useState<string | undefined>(undefined);
+    const [visibleSection, setVisibleSection] = useState('mind-map');
+    
     const [siteSketchPdf, setSiteSketchPdf] = useState<string | null>(null);
     
     const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
@@ -371,11 +374,41 @@ export default function ProjectDetailsPage() {
 
 
     const allSurveyNumbers = useMemo(() => Array.from(new Set(siteSketchData.map(d => d.surveyNumber))), []);
-    const handleSelectSurvey = useCallback((statusId: string) => { setActiveStatusId(statusId); setActiveTab('acquisition-tracker'); }, []);
+    
+    const scrollToSection = (sectionId: string) => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setVisibleSection(sectionId); // Eagerly set active state
+        }
+    };
+    
+    const handleSelectSurvey = useCallback((statusId: string) => { 
+        setActiveStatusId(statusId);
+        scrollToSection('acquisition-tracker');
+    }, []);
 
     const currentUserRole = currentUser?.role;
     const canSeeSensitiveTabs = currentUserRole === 'Super Admin';
     const canSeeLegalNotes = currentUserRole === 'Super Admin' || currentUserRole === 'Lawyer';
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        setVisibleSection(entry.target.id);
+                    }
+                });
+            },
+            { rootMargin: '-20% 0px -75% 0px' } // Trigger when a section is in the top quarter of the viewport
+        );
+
+        const sections = document.querySelectorAll('.workspace-section');
+        sections.forEach(section => observer.observe(section));
+
+        return () => sections.forEach(section => observer.unobserve(section));
+    }, [loading]); // Re-run observer when loading is finished and sections are in the DOM
 
     useEffect(() => {
         const projectMenu = (
@@ -385,35 +418,35 @@ export default function ProjectDetailsPage() {
               <SidebarGroupLabel>Project Workspace</SidebarGroupLabel>
               <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setActiveTab('mind-map')} isActive={activeTab === 'mind-map'}>Mind Map</SidebarMenuButton>
+                    <SidebarMenuButton onClick={() => scrollToSection('mind-map')} isActive={visibleSection === 'mind-map'}>Mind Map</SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setActiveTab('lineage')} isActive={activeTab === 'lineage'}>Family Lineage</SidebarMenuButton>
+                    <SidebarMenuButton onClick={() => scrollToSection('lineage')} isActive={visibleSection === 'lineage'}>Family Lineage</SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setActiveTab('acquisition-tracker')} isActive={activeTab === 'acquisition-tracker'}>Acquisition Tracker</SidebarMenuButton>
+                    <SidebarMenuButton onClick={() => scrollToSection('acquisition-tracker')} isActive={visibleSection === 'acquisition-tracker'}>Acquisition Tracker</SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setActiveTab('title-documents')} isActive={activeTab === 'title-documents'}>Title Documents</SidebarMenuButton>
+                    <SidebarMenuButton onClick={() => scrollToSection('title-documents')} isActive={visibleSection === 'title-documents'}>Title Documents</SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setActiveTab('transactions')} isActive={activeTab === 'transactions'}>Transaction History</SidebarMenuButton>
+                    <SidebarMenuButton onClick={() => scrollToSection('transactions')} isActive={visibleSection === 'transactions'}>Transaction History</SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setActiveTab('files')} isActive={activeTab === 'files'}>Files &amp; Documents</SidebarMenuButton>
+                    <SidebarMenuButton onClick={() => scrollToSection('files')} isActive={visibleSection === 'files'}>Files &amp; Documents</SidebarMenuButton>
                   </SidebarMenuItem>
                   {canSeeLegalNotes && 
                     <SidebarMenuItem>
-                        <SidebarMenuButton onClick={() => setActiveTab('legal-notes')} isActive={activeTab === 'legal-notes'}>Legal Notes</SidebarMenuButton>
+                        <SidebarMenuButton onClick={() => scrollToSection('legal-notes')} isActive={visibleSection === 'legal-notes'}>Legal Notes</SidebarMenuButton>
                     </SidebarMenuItem>
                   }
                   {canSeeSensitiveTabs && (
                       <>
                           <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => setActiveTab('notes')} isActive={activeTab === 'notes'}>Notes</SidebarMenuButton>
+                            <SidebarMenuButton onClick={() => scrollToSection('notes')} isActive={visibleSection === 'notes'}>Notes</SidebarMenuButton>
                           </SidebarMenuItem>
                           <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => setActiveTab('tasks')} isActive={activeTab === 'tasks'}>Tasks</SidebarMenuButton>
+                            <SidebarMenuButton onClick={() => scrollToSection('tasks')} isActive={visibleSection === 'tasks'}>Tasks</SidebarMenuButton>
                           </SidebarMenuItem>
                       </>
                   )}
@@ -429,7 +462,7 @@ export default function ProjectDetailsPage() {
         return () => {
             setContextualMenu(null);
         }
-    }, [activeTab, project?.name, canSeeLegalNotes, canSeeSensitiveTabs, setContextualMenu, setActiveTab]);
+    }, [visibleSection, project?.name, canSeeLegalNotes, canSeeSensitiveTabs, setContextualMenu]);
 
 
     if (loading) {
@@ -540,24 +573,41 @@ export default function ProjectDetailsPage() {
                     </CardContent>
                 </Card>
             </div>
-
-            <div className="pt-8">
-                <h2 className="text-2xl font-bold tracking-tight mb-4">Project Workspace</h2>
-                <div className="mt-6">
-                    {activeTab === 'mind-map' && <MindMapView projectName={project.name} familyHeads={owners} />}
-                    {activeTab === 'lineage' && <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>}
-                    {activeTab === 'acquisition-tracker' && <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />}
-                    {activeTab === 'title-documents' && <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} onAddFile={handleAddFileToFolder} onDeleteFile={handleDeleteFileFromFolder} />}
-                    {activeTab === 'transactions' && <TransactionHistory projectId={projectId} />}
-                    {activeTab === 'files' && <FileManager projectId={projectId} />}
-                    {canSeeLegalNotes && activeTab === 'legal-notes' && <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} />}
-                    {canSeeSensitiveTabs && (
-                        <>
-                            {activeTab === 'notes' && <Notes projectId={projectId} />}
-                            {activeTab === 'tasks' && <Tasks projectId={projectId} />}
-                        </>
-                    )}
+            
+            <div className="space-y-12">
+                <div id="mind-map" className="workspace-section pt-8">
+                    <MindMapView projectName={project.name} familyHeads={owners} />
                 </div>
+                <div id="lineage" className="workspace-section pt-8">
+                    <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>
+                </div>
+                <div id="acquisition-tracker" className="workspace-section pt-8">
+                    <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />
+                </div>
+                <div id="title-documents" className="workspace-section pt-8">
+                    <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} onAddFile={handleAddFileToFolder} onDeleteFile={handleDeleteFileFromFolder} />
+                </div>
+                <div id="transactions" className="workspace-section pt-8">
+                    <TransactionHistory projectId={projectId} />
+                </div>
+                <div id="files" className="workspace-section pt-8">
+                    <FileManager projectId={projectId} />
+                </div>
+                {canSeeLegalNotes && (
+                    <div id="legal-notes" className="workspace-section pt-8">
+                        <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} />
+                    </div>
+                )}
+                 {canSeeSensitiveTabs && (
+                    <>
+                        <div id="notes" className="workspace-section pt-8">
+                            <Notes projectId={projectId} />
+                        </div>
+                        <div id="tasks" className="workspace-section pt-8">
+                            <Tasks projectId={projectId} />
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
