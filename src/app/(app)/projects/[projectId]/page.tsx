@@ -19,7 +19,7 @@ import { Notes } from '@/components/project/notes';
 import { Tasks } from '@/components/project/tasks';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
-import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord } from '@/types';
+import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord, DocumentFile } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -104,9 +104,9 @@ function createDefaultAcquisitionStatus(projectId: string, plot: SiteSketchPlot,
 function createDefaultFolders(owners: Person[], oldFolders: Folder[] = []): Folder[] {
   const findOldFolder = (path: string[]) => {
       let currentLevel = oldFolders;
-      let found = null;
+      let found: Folder | null = null;
       for (const name of path) {
-          found = currentLevel.find(f => f.name === name);
+          found = currentLevel.find(f => f.name === name) ?? null;
           if (found) {
               currentLevel = found.children;
           } else {
@@ -117,7 +117,6 @@ function createDefaultFolders(owners: Person[], oldFolders: Folder[] = []): Fold
   };
     
   return owners.map((owner, ownerIndex) => {
-    // Collect all survey numbers from the head and all their heirs recursively
     const allSurveyNumbers = new Set<string>();
     const collectSurveyNumbers = (person: Person) => {
         (person.landRecords || []).forEach(lr => allSurveyNumbers.add(lr.surveyNumber));
@@ -131,7 +130,8 @@ function createDefaultFolders(owners: Person[], oldFolders: Folder[] = []): Fold
         return {
             id: `revenue-survey-${sn.replace(/[^a-zA-Z0-9]/g, '-')}-${owner.id}-${snIndex}`,
             name: sn,
-            children: oldSubFolder ? oldSubFolder.children : [], // Preserve children
+            children: oldSubFolder?.children || [],
+            files: oldSubFolder?.files || [],
         };
     });
     const sroSurveyFolders = surveyNumbersForFamily.map((sn, snIndex) => {
@@ -139,16 +139,20 @@ function createDefaultFolders(owners: Person[], oldFolders: Folder[] = []): Fold
         return {
             id: `sro-survey-${sn.replace(/[^a-zA-Z0-9]/g, '-')}-${owner.id}-${snIndex}`,
             name: sn,
-            children: oldSubFolder ? oldSubFolder.children : [], // Preserve children
+            children: oldSubFolder?.children || [],
+            files: oldSubFolder?.files || [],
         };
     });
+    
+    const oldOwnerFolder = findOldFolder([owner.name]);
 
     return {
       id: `head-${owner.id}-${ownerIndex}`,
       name: owner.name,
+      files: oldOwnerFolder?.files || [],
       children: [
-        { id: `revenue-${owner.id}`, name: 'Revenue Records', children: revenueSurveyFolders },
-        { id: `sro-${owner.id}`, name: 'SRO Documents', children: sroSurveyFolders },
+        { id: `revenue-${owner.id}`, name: 'Revenue Records', children: revenueSurveyFolders, files: findOldFolder([owner.name, 'Revenue Records'])?.files || [] },
+        { id: `sro-${owner.id}`, name: 'SRO Documents', children: sroSurveyFolders, files: findOldFolder([owner.name, 'SRO Documents'])?.files || [] },
       ],
     };
   });
@@ -350,7 +354,7 @@ export default function ProjectDetailsPage() {
     }, [acquisitionStatuses, acquisitionStorageKey]);
 
     const handleAddFolder = useCallback((parentId: string, name: string) => {
-        const newFolder: Folder = { id: `folder-${Date.now()}`, name, children: [] };
+        const newFolder: Folder = { id: `folder-${Date.now()}`, name, children: [], files: [] };
         let updatedFolders;
         if (parentId === 'root') {
           updatedFolders = [...folders, newFolder];
@@ -375,6 +379,46 @@ export default function ProjectDetailsPage() {
         setFolders(updatedFolders);
         localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
     }, [folders, folderStorageKey]);
+
+     const handleAddFileToFolder = useCallback((folderId: string, fileData: Omit<DocumentFile, 'id'>) => {
+        const newFile: DocumentFile = { id: `file-${Date.now()}`, ...fileData };
+
+        const addFileRecursive = (nodes: Folder[]): Folder[] => {
+            return nodes.map(node => {
+                if (node.id === folderId) {
+                    return { ...node, files: [...(node.files || []), newFile] };
+                }
+                if (node.children?.length > 0) {
+                    return { ...node, children: addFileRecursive(node.children) };
+                }
+                return node;
+            });
+        };
+        
+        const updatedFolders = addFileRecursive(folders);
+        setFolders(updatedFolders);
+        localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
+    }, [folders, folderStorageKey]);
+
+    const handleDeleteFileFromFolder = useCallback((folderId: string, fileId: string) => {
+        const deleteFileRecursive = (nodes: Folder[]): Folder[] => {
+            return nodes.map(node => {
+                if (node.id === folderId) {
+                    const updatedFiles = (node.files || []).filter(file => file.id !== fileId);
+                    return { ...node, files: updatedFiles };
+                }
+                if (node.children?.length > 0) {
+                    return { ...node, children: deleteFileRecursive(node.children) };
+                }
+                return node;
+            });
+        };
+        
+        const updatedFolders = deleteFileRecursive(folders);
+        setFolders(updatedFolders);
+        localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
+    }, [folders, folderStorageKey]);
+
 
     const handlePdfUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -621,7 +665,7 @@ export default function ProjectDetailsPage() {
                     {activeTab === 'mind-map' && <MindMapView projectName={project.name} familyHeads={owners} />}
                     {activeTab === 'lineage' && <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>}
                     {activeTab === 'acquisition-tracker' && <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />}
-                    {activeTab === 'title-documents' && <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} />}
+                    {activeTab === 'title-documents' && <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} onAddFile={handleAddFileToFolder} onDeleteFile={handleDeleteFileFromFolder} />}
                     {activeTab === 'transactions' && <TransactionHistory projectId={projectId} />}
                     {activeTab === 'files' && <FileManager projectId={projectId} />}
                     {canSeeLegalNotes && activeTab === 'legal-notes' && <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} />}

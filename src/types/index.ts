@@ -30,10 +30,19 @@ export type Person = {
   heirs: Person[];
 };
 
+export type DocumentFile = {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  uploaded: string;
+};
+
 export type Folder = {
   id: string;
   name: string;
   children: Folder[];
+  files: DocumentFile[];
 };
 
 export type Project = {
