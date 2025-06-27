@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { PersonCard } from './person-card';
 import { LineageSuggestion } from './lineage-suggestion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Loader2, Search, FileInput } from 'lucide-react';
 import type { Person } from '@/types';
 import { Input } from '../ui/input';
@@ -40,36 +40,31 @@ export function LineageView({ familyHeads, onAddHeir, onUpdatePerson, onImport }
   return (
     <>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Owner & Lineage Management</CardTitle>
-                  <CardDescription>
-                      A list of all landowners for this project. 
-                      You can search by name, manage details, add heirs, or import from a Google Sheet.
-                  </CardDescription>
-                </div>
-                 <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-                    <FileInput className="mr-2 h-4 w-4" />
-                    Import from Sheet
-                 </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-                <div className="relative">
+        <div className="lg:col-span-2 space-y-6">
+           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Owner & Lineage Management</h2>
+              <p className="text-muted-foreground">
+                  Search by name, manage details, add heirs, or import from a Google Sheet.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="relative w-full md:w-64">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Search for an owner by name..."
+                    placeholder="Search for an owner..."
                     className="w-full pl-8"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-            </CardContent>
-          </Card>
+                 <Button onClick={() => setIsImportOpen(true)}>
+                    <FileInput className="mr-2 h-4 w-4" />
+                    Import
+                 </Button>
+            </div>
+          </div>
           
           {filteredHeads.length > 0 ? (
             filteredHeads.map(person => (
