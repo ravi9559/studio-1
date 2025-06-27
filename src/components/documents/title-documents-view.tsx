@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, FC } from 'react';
@@ -88,16 +89,13 @@ interface TitleDocumentsViewProps {
 export function TitleDocumentsView({ folders, onAddFolder, onDeleteFolder }: TitleDocumentsViewProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between">
+      <CardHeader>
         <div>
             <CardTitle>Title Documents</CardTitle>
             <CardDescription>
-            Folders are auto-generated when you add land records in the Family Lineage tab. You can add or remove sub-folders here.
+            Folders are automatically generated based on the family heads and their land records from the Family Lineage tab. You can add or remove sub-folders within the survey number folders.
             </CardDescription>
         </div>
-        <Button onClick={() => onAddFolder('root', 'New Root Folder')}>
-            <FolderPlus className="mr-2 h-4 w-4" /> Add Root Folder
-        </Button>
       </CardHeader>
       <CardContent>
         {folders.length > 0 ? (

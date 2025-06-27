@@ -115,31 +115,57 @@ function createDefaultAcquisitionStatus(projectId: string, plot: SiteSketchPlot,
     return status;
 }
 
-function createDefaultFolders(owners: Person[]): Folder[] {
-  const allSurveyNumbers = new Set<string>();
-  const allOwnerNames = new Set<string>();
+function createDefaultFolders(owners: Person[], oldFolders: Folder[] = []): Folder[] {
+  const findOldFolder = (path: string[]) => {
+      let currentLevel = oldFolders;
+      let found = null;
+      for (const name of path) {
+          found = currentLevel.find(f => f.name === name);
+          if (found) {
+              currentLevel = found.children;
+          } else {
+              return null;
+          }
+      }
+      return found;
+  };
+    
+  return owners.map((owner, ownerIndex) => {
+    // Collect all survey numbers from the head and all their heirs recursively
+    const allSurveyNumbers = new Set<string>();
+    const collectSurveyNumbers = (person: Person) => {
+        (person.landRecords || []).forEach(lr => allSurveyNumbers.add(lr.surveyNumber));
+        (person.heirs || []).forEach(collectSurveyNumbers);
+    };
+    collectSurveyNumbers(owner);
+    const surveyNumbersForFamily = Array.from(allSurveyNumbers);
 
-  owners.forEach(owner => {
-    allOwnerNames.add(owner.name);
-    (owner.landRecords || []).forEach(lr => allSurveyNumbers.add(lr.surveyNumber));
-  });
+    const revenueSurveyFolders = surveyNumbersForFamily.map((sn, snIndex) => {
+        const oldSubFolder = findOldFolder([owner.name, 'Revenue Records', sn]);
+        return {
+            id: `revenue-survey-${sn.replace(/[^a-zA-Z0-9]/g, '-')}-${owner.id}-${snIndex}`,
+            name: sn,
+            children: oldSubFolder ? oldSubFolder.children : [], // Preserve children
+        };
+    });
+    const sroSurveyFolders = surveyNumbersForFamily.map((sn, snIndex) => {
+        const oldSubFolder = findOldFolder([owner.name, 'SRO Documents', sn]);
+        return {
+            id: `sro-survey-${sn.replace(/[^a-zA-Z0-9]/g, '-')}-${owner.id}-${snIndex}`,
+            name: sn,
+            children: oldSubFolder ? oldSubFolder.children : [], // Preserve children
+        };
+    });
 
-  const surveyFolders = Array.from(allSurveyNumbers).map(sn => {
-    const sanitizedSurvey = sn.replace(/[^a-zA-Z0-9]/g, '-');
     return {
-      id: `survey-${sanitizedSurvey}-${Date.now()}`, name: sn,
-      children: [{ id: `rev-${sanitizedSurvey}-${Date.now()}`, name: 'Revenue Record', children: [] }],
+      id: `head-${owner.id}-${ownerIndex}`,
+      name: owner.name,
+      children: [
+        { id: `revenue-${owner.id}`, name: 'Revenue Records', children: revenueSurveyFolders },
+        { id: `sro-${owner.id}`, name: 'SRO Documents', children: sroSurveyFolders },
+      ],
     };
   });
-
-  const kycFolder: Folder = {
-    id: `kyc-root-${Date.now()}`, name: 'Seller KYC',
-    children: Array.from(allOwnerNames).map((name, i) => ({
-      id: `kyc-member-${name.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now() + i}`, name: name, children: [],
-    })),
-  };
-
-  return [...surveyFolders, kycFolder];
 }
 
 
@@ -252,17 +278,29 @@ export default function ProjectDetailsPage() {
         setLoading(false);
     }, [projectId, ownersStorageKey, folderStorageKey, acquisitionStorageKey, activeStatusId, toast]);
 
+    const updateAndPersistOwners = useCallback((newOwners: Person[]) => {
+        setOwners(newOwners);
+        localStorage.setItem(ownersStorageKey, JSON.stringify(newOwners));
+    }, [ownersStorageKey]);
 
-    // --- Data Persistence for changes during session ---
-    const persistData = useCallback(() => {
-        // This function is complex due to useEffect dependencies, so we make it a no-op for now.
-        // Persistence is handled on initial load and by handler functions directly.
-    }, []);
-
+    // This effect will run whenever `owners` data changes, ensuring folders stay in sync while preserving user additions.
     useEffect(() => {
-        persistData();
-    }, [owners, folders, acquisitionStatuses, persistData]);
-    
+        if (owners && owners.length > 0) {
+            // Use the functional form of setState to get the previous state
+            // to avoid listing `folders` in the dependency array and causing loops.
+            setFolders(currentFolders => {
+                const newFolders = createDefaultFolders(owners, currentFolders);
+
+                // Avoid unnecessary writes if the structure hasn't changed.
+                if (JSON.stringify(newFolders) !== JSON.stringify(currentFolders)) {
+                    localStorage.setItem(folderStorageKey, JSON.stringify(newFolders));
+                    return newFolders;
+                }
+                return currentFolders;
+            });
+        }
+    }, [owners, folderStorageKey]);
+
     
     const handleUpdateProject = (e: React.FormEvent) => {
         e.preventDefault();
@@ -281,11 +319,6 @@ export default function ProjectDetailsPage() {
         }
     };
     
-    const updateAndPersistOwners = (newOwners: Person[]) => {
-        setOwners(newOwners);
-        localStorage.setItem(ownersStorageKey, JSON.stringify(newOwners));
-    };
-
     const handleAddHeir = useCallback((parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
         const newOwners = JSON.parse(JSON.stringify(owners));
         let parentFound = false;
@@ -309,19 +342,8 @@ export default function ProjectDetailsPage() {
         
         if (parentFound) {
             updateAndPersistOwners(newOwners);
-
-            // Add KYC folder for new heir
-            const newMemberFolder: Folder = { id: `kyc-member-${heirData.name.replace(/\s+/g, '-')}-${Date.now()}`, name: heirData.name, children: [] };
-            const updatedFolders = folders.map(folder => {
-                if (folder.name === 'Seller KYC' && !folder.children.some(child => child.name === heirData.name)) {
-                    return { ...folder, children: [...folder.children, newMemberFolder] };
-                }
-                return folder;
-            });
-            setFolders(updatedFolders);
-            localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
         }
-    }, [owners, folders, ownersStorageKey, folderStorageKey]);
+    }, [owners, updateAndPersistOwners]);
 
     const handleUpdatePerson = useCallback((personId: string, personData: Omit<Person, 'id' | 'heirs'>) => {
         const newOwners = JSON.parse(JSON.stringify(owners));
@@ -345,7 +367,7 @@ export default function ProjectDetailsPage() {
         if(personFound) {
              updateAndPersistOwners(newOwners);
         }
-    }, [owners, ownersStorageKey]);
+    }, [owners, updateAndPersistOwners]);
 
     const handleUpdateAcquisitionStatus = useCallback((updatedStatus: AcquisitionStatus) => {
         const newStatuses = acquisitionStatuses.map(status => status.id === updatedStatus.id ? updatedStatus : status);
