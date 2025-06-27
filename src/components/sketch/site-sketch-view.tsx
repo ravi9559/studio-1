@@ -35,7 +35,7 @@ const PlotCard = ({ data, onSelectSurvey }: { data: AcquisitionStatus, onSelectS
   return (
     <div
       className={cn(
-        'flex h-full flex-col justify-between rounded-lg border p-2 text-xs shadow-sm transition-all hover:shadow-md hover:scale-[1.03] hover:z-10',
+        'flex h-full flex-col justify-between rounded-lg border p-2 text-xs shadow-sm transition-all hover:shadow-md hover:scale-[1.03] hover:z-10 overflow-hidden',
         statusVariant === 'default' && 'bg-green-100 dark:bg-green-900/50 border-green-400',
         statusVariant === 'secondary' && 'bg-blue-100 dark:bg-blue-900/50 border-blue-400',
         statusVariant === 'destructive' && 'bg-pink-100 dark:bg-pink-900/50 border-pink-400',
@@ -102,5 +102,3 @@ export function SiteSketchView({ acquisitionStatuses, onSelectSurvey }: SiteSket
     </Card>
   );
 }
-
-    
