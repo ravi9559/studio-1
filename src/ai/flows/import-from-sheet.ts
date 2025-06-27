@@ -2,7 +2,7 @@
 // src/ai/flows/import-from-sheet.ts
 'use server';
 /**
- * @fileOverview An AI-powered tool that imports and structures family lineage data from a Google Sheet.
+ * @fileOverview An AI-powered tool that imports and structures family lineage data from a CSV file.
  *
  * - importFromSheet - A function that handles the import process.
  * - ImportFromSheetInput - The input type for the importFromSheet function.
@@ -14,7 +14,7 @@ import { z } from 'genkit';
 import { PersonSchema } from '@/types/zod';
 
 const ImportFromSheetInputSchema = z.object({
-  sheetUrl: z.string().describe("The public URL of a Google Sheet, published to the web as a CSV."),
+  csvData: z.string().describe("The text content of the CSV file."),
 });
 export type ImportFromSheetInput = z.infer<typeof ImportFromSheetInputSchema>;
 
@@ -25,7 +25,7 @@ export type ImportFromSheetOutput = z.infer<typeof ImportFromSheetOutputSchema>;
 
 const prompt = ai.definePrompt({
   name: 'importFromSheetPrompt',
-  input: { schema: z.object({ csvData: z.string() }) },
+  input: { schema: ImportFromSheetInputSchema },
   output: { schema: ImportFromSheetOutputSchema },
   prompt: `You are an expert data processor specializing in genealogical and land ownership data.
   Your task is to parse the provided CSV data, which represents a family tree, and transform it into a hierarchical JSON structure that strictly adheres to the provided schema.
@@ -80,25 +80,13 @@ const importFromSheetFlow = ai.defineFlow(
     inputSchema: ImportFromSheetInputSchema,
     outputSchema: ImportFromSheetOutputSchema,
   },
-  async ({ sheetUrl }) => {
-    let csvText;
-    try {
-        const response = await fetch(sheetUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch Google Sheet CSV. Status: ${response.status}. Please ensure the URL is correct and published to the web.`);
-        }
-        csvText = await response.text();
-    } catch (e: any) {
-        console.error("Failed to fetch or read CSV from URL:", e);
-        throw new Error(`Could not retrieve data from the provided URL. Please verify it's a valid, published Google Sheet CSV link. Error: ${e.message}`);
-    }
-    
-    // Check if CSV is empty or just headers
-    if (!csvText || csvText.split('\n').filter(line => line.trim() !== '').length <= 1) {
-        throw new Error("The Google Sheet appears to be empty or contains only a header row. Please add data to import.");
+  async ({ csvData }) => {
+    // Check if CSV data is empty or just headers
+    if (!csvData || csvData.split('\n').filter(line => line.trim() !== '').length <= 1) {
+        throw new Error("The CSV file appears to be empty or contains only a header row. Please provide a valid CSV file.");
     }
 
-    const { output } = await prompt({ csvData: csvText });
+    const { output } = await prompt({ csvData });
     if (!output) {
       throw new Error("The AI failed to generate a valid family tree structure from the provided data.");
     }
