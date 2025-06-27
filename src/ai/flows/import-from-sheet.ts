@@ -46,23 +46,26 @@ const prompt = ai.definePrompt({
   - Classification: 'Wet', 'Dry', or 'Unclassified'.
 
   **CRITICAL RULES FOR DATA VALIDATION AND STRUCTURE:**
-  1.  **Strict Schema Adherence**: The final output MUST be a valid JSON that strictly adheres to the provided schema. No exceptions.
-  2.  **No Null or Undefined Values**: No field in the output JSON should have a value of \`null\` or \`undefined\`. This is the most important rule.
-  3.  **Default Values**: You MUST handle empty or missing data in the CSV by applying the following defaults. Do not leave fields out unless specified.
-      - If 'Relation' is empty for a person, you MUST set it to "Family Head". For an heir, it MUST be specified (e.g., "Son").
+  1.  **Row Validation**: Before processing a row, you MUST validate it. If a row is completely empty or if the 'Name' column is empty, **you MUST completely ignore that row** and not create any JSON object for it.
+  2.  **Strict Schema Adherence**: The final output MUST be a valid JSON that strictly adheres to the provided schema. No exceptions.
+  3.  **No Null or Undefined Values**: No field in the output JSON should have a value of \`null\` or \`undefined\`. This is the most important rule.
+  4.  **Default Values**: You MUST handle empty or missing data in the CSV by applying the following defaults for every valid person record. Do not leave fields out.
+      - If 'Relation' is empty for a person without a 'ParentName', you MUST set it to "Family Head". For an heir, it MUST be specified (e.g., "Son").
       - If 'Gender' is empty, default to "Male".
       - If 'Age' is empty or not a number, default to 40.
       - If 'MaritalStatus' is empty, default to "Married".
       - If 'Status' is empty, default to "Alive".
       - If 'SourceOfLand' is empty, you MUST provide an empty string "" as the value.
       - If 'HoldingPattern' is empty, you MUST provide an empty string "" as the value.
-      - If 'Acres' or 'Cents' is empty, you MUST provide an empty string "" as the value.
-  4.  **Hierarchy Construction**:
+      - If 'Acres' is empty, you MUST provide an empty string "" as the value.
+      - If 'Cents' is empty, you MUST provide an empty string "" as the value.
+      - If 'Classification' is empty, you MUST default it to "Unclassified".
+  5.  **Hierarchy Construction**:
       - Identify all individuals with an empty 'ParentName' as "Family Heads". These will be the root objects in the output array.
       - For all other individuals, find their parent in the dataset using the 'ParentName' column and add them to that parent's 'heirs' array.
-  5.  **Data Aggregation**:
-      - Aggregate all land records (SurveyNumber, Acres, Cents, etc.) for each person into their 'landRecords' array. A person can own multiple land parcels.
-  6.  **Unique IDs**:
+  6.  **Data Aggregation**:
+      - For each person, aggregate all land records associated with them into their 'landRecords' array. A person can own multiple land parcels, which might appear on different rows with the same name.
+  7.  **Unique IDs**:
       - Generate a unique 'id' for each person. A good format is 'person-[name]-[random_number]'.
       - Generate a unique 'id' for each land record. A good format is 'lr-[survey_number]-[person_id]'.
 
