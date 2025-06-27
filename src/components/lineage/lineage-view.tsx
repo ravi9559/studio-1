@@ -17,7 +17,9 @@ const defaultFamilyHead: Person = {
   maritalStatus: 'Married',
   status: 'Died',
   sourceOfLand: 'Purchase',
-  landDetails: 'Survey 123/A, 5.2 Acres',
+  landRecords: [
+      { id: 'lr-1-1', surveyNumber: '123/A', acres: '5', cents: '20' }
+  ],
   heirs: [
     {
       id: '1.1',
@@ -28,7 +30,9 @@ const defaultFamilyHead: Person = {
       maritalStatus: 'Married',
       status: 'Alive',
       sourceOfLand: 'Legal Heir',
-      landDetails: 'Survey 123/A, 2.6 Acres',
+      landRecords: [
+        { id: 'lr-1.1-1', surveyNumber: '123/A', acres: '2', cents: '60' }
+      ],
       heirs: [
         {
           id: '1.1.1',
@@ -39,6 +43,7 @@ const defaultFamilyHead: Person = {
           maritalStatus: 'Married',
           status: 'Alive',
           sourceOfLand: 'Legal Heir',
+          landRecords: [],
           heirs: [],
         },
         {
@@ -50,6 +55,7 @@ const defaultFamilyHead: Person = {
           maritalStatus: 'Married',
           status: 'Alive',
           sourceOfLand: 'Legal Heir',
+          landRecords: [],
           heirs: [],
         },
       ],
@@ -63,18 +69,21 @@ const defaultFamilyHead: Person = {
       maritalStatus: 'Married',
       status: 'Alive',
       sourceOfLand: 'Gift',
-      landDetails: 'Survey 123/B, 2.6 Acres',
+      landRecords: [
+         { id: 'lr-1.2-1', surveyNumber: '123/B', acres: '2', cents: '60' }
+      ],
       heirs: [],
     },
   ],
 };
 
 // Recursive function to add an heir
-const addHeirToFamily = (family: Person, parentId: string, newHeirData: Omit<Person, 'id' | 'heirs'>): Person => {
+const addHeirToFamily = (family: Person, parentId: string, newHeirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>): Person => {
   if (family.id === parentId) {
     const newHeir: Person = {
       ...newHeirData,
       id: `${parentId}.${family.heirs.length + 1}`,
+      landRecords: [],
       heirs: [],
     };
     return {
@@ -137,7 +146,7 @@ export function LineageView() {
     }
   }, [familyHead, isLoaded, storageKey]);
 
-  const handleAddHeir = (parentId: string, heirData: Omit<Person, 'id' | 'heirs'>) => {
+  const handleAddHeir = (parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
     if (!familyHead) return;
     const updatedFamilyHead = addHeirToFamily(familyHead, parentId, heirData);
     setFamilyHead(updatedFamilyHead);
@@ -166,7 +175,7 @@ export function LineageView() {
         <Card>
           <CardHeader>
             <CardTitle>Family Tree</CardTitle>
-            <CardDescription>Visual representation of the family lineage. Click "Add Heir" to expand the tree.</CardDescription>
+            <CardDescription>Visual representation of the family lineage. Edit a person to manage their land details.</CardDescription>
           </CardHeader>
           <CardContent>
             <PersonCard person={familyHead} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} />
