@@ -84,7 +84,7 @@ export default function ProjectDetailsPage() {
                     <TransactionHistory projectId={projectId} />
                 </TabsContent>
                 <TabsContent value="files" className="mt-6">
-                    <FileManager />
+                    <FileManager projectId={projectId} />
                 </TabsContent>
             </Tabs>
         </div>
