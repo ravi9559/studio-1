@@ -47,6 +47,8 @@ export type User = {
   status: 'Active' | 'Inactive';
   avatarUrl?: string;
   projectIds?: string[];
+  accountType?: 'Corporate' | 'Sub-user';
+  parentId?: string | null;
 };
 
 export type LegalNote = {

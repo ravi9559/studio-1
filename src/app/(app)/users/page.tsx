@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, UserSquare2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import type { User, Role, Project } from '@/types';
@@ -19,10 +19,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Initial mock data
 const initialUsers: User[] = [
-    { id: 'user-1682600000001', name: 'Super Admin', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
-    { id: 'user-1682600000002', name: 'Transaction Manager', email: 'manager@o2o.com', password: 'password', role: 'Transaction Manager', status: 'Active' },
-    { id: 'user-1682600000003', name: 'Read Only User', email: 'viewer@o2o.com', password: 'password', role: 'Viewer', status: 'Inactive' },
-    { id: 'user-1682600000004', name: 'Lawyer', email: 'lawyer@o2o.com', password: 'password', role: 'Lawyer', status: 'Active' },
+    { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png', accountType: 'Corporate', parentId: null },
+    { id: 'user-1682600000002', name: 'Admin Sub-User', email: 'subadmin@o2o.com', password: 'password', role: 'Viewer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png', accountType: 'Sub-user', parentId: 'user-1682600000001' },
+    { id: 'user-1682600000003', name: 'Greenfield Corp', email: 'manager@greenfield.com', password: 'password', role: 'Transaction Manager', status: 'Active', accountType: 'Corporate', parentId: null },
+    { id: 'user-1682600000004', name: 'Manager Sub-User', email: 'viewer@greenfield.com', password: 'password', role: 'Viewer', status: 'Inactive', accountType: 'Sub-user', parentId: 'user-1682600000003' },
+    { id: 'user-1682600000005', name: 'Legal Firm LLC', email: 'lawyer@legalfirm.com', password: 'password', role: 'Lawyer', status: 'Active', accountType: 'Corporate', parentId: null },
 ];
 
 const initialRoles: Role[] = [
@@ -87,6 +88,21 @@ export default function UsersPage() {
         }
     }, [users, isLoaded]);
 
+    const displayUsers = useMemo(() => {
+        const corporate = users.filter(u => u.accountType === 'Corporate' || !u.accountType).sort((a,b) => a.name.localeCompare(b.name));
+        const sub = users.filter(u => u.accountType === 'Sub-user');
+
+        const sorted: User[] = [];
+        corporate.forEach(c => {
+            sorted.push(c);
+            sub.filter(s => s.parentId === c.id).sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
+                sorted.push(s);
+            })
+        });
+        return sorted;
+    }, [users]);
+
+
     const handleAddUser = () => {
         setUserToEdit(null);
         setIsDialogOpen(true);
@@ -98,8 +114,17 @@ export default function UsersPage() {
     };
 
     const handleDeleteUser = (userId: string) => {
-        setUsers(users.filter(user => user.id !== userId));
-        toast({ title: "User Deleted", description: "The user has been successfully removed." });
+        const userToDelete = users.find(user => user.id === userId);
+        if (!userToDelete) return;
+
+        let usersToDeleteIds = [userId];
+        if (userToDelete.accountType === 'Corporate') {
+            const subUsersToDelete = users.filter(u => u.parentId === userId).map(u => u.id);
+            usersToDeleteIds = [...usersToDeleteIds, ...subUsersToDelete];
+        }
+        
+        setUsers(users.filter(user => !usersToDeleteIds.includes(user.id)));
+        toast({ title: "User(s) Deleted", description: "The selected user and any sub-accounts have been removed." });
     };
 
     const handleSaveUser = (userData: Omit<User, 'id'>) => {
@@ -130,7 +155,7 @@ export default function UsersPage() {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>User Management</CardTitle>
-                        <CardDescription>Add, edit, or remove users from the system.</CardDescription>
+                        <CardDescription>Add, edit, or remove corporate and sub-user accounts.</CardDescription>
                     </div>
                     <Button onClick={handleAddUser}>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -143,15 +168,16 @@ export default function UsersPage() {
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Email</TableHead>
+                                <TableHead>Account Type</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {users.map(user => (
-                                <TableRow key={user.id}>
-                                    <TableCell className="font-medium flex items-center gap-2">
+                            {displayUsers.map(user => (
+                                <TableRow key={user.id} data-state={user.accountType === 'Sub-user' ? 'sub-user' : ''} className="data-[state=sub-user]:bg-muted/50">
+                                    <TableCell className={`font-medium flex items-center gap-2 ${user.accountType === 'Sub-user' ? 'pl-10' : ''}`}>
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="profile person" />
                                             <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
@@ -159,6 +185,12 @@ export default function UsersPage() {
                                         {user.name}
                                     </TableCell>
                                     <TableCell>{user.email}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={user.accountType === 'Corporate' ? 'outline' : 'secondary'} className="gap-1.5">
+                                            <UserSquare2 className="h-3 w-3" />
+                                            {user.accountType || 'Corporate'}
+                                        </Badge>
+                                    </TableCell>
                                     <TableCell>{user.role}</TableCell>
                                     <TableCell>
                                         <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
@@ -180,6 +212,7 @@ export default function UsersPage() {
                                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                     <AlertDialogDescription>
                                                         This action cannot be undone. This will permanently delete the user account.
+                                                        {user.accountType === 'Corporate' && ' All associated sub-user accounts will also be deleted.'}
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
@@ -203,6 +236,7 @@ export default function UsersPage() {
                 user={userToEdit}
                 roles={roles}
                 projects={projects}
+                users={users}
             />
         </div>
     );
@@ -216,9 +250,11 @@ interface UserFormDialogProps {
     user: User | null;
     roles: Role[];
     projects: Project[];
+    users: User[];
 }
 
-function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles, projects }: UserFormDialogProps) {
+function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles, projects, users }: UserFormDialogProps) {
+    const { toast } = useToast();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -226,6 +262,10 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles, projects }:
     const [status, setStatus] = useState<User['status']>('Active');
     const [avatarUrl, setAvatarUrl] = useState('');
     const [assignedProjectIds, setAssignedProjectIds] = useState<string[]>([]);
+    const [accountType, setAccountType] = useState<User['accountType']>('Corporate');
+    const [parentId, setParentId] = useState<string | null>(null);
+
+    const corporateUsers = users.filter(u => u.accountType === 'Corporate' && u.id !== user?.id);
 
     useEffect(() => {
         const defaultRole = roles.length > 0 ? roles[roles.length - 1].name : 'Viewer';
@@ -238,6 +278,8 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles, projects }:
             setAvatarUrl(user.avatarUrl || '');
             setPassword(''); // Don't pre-fill password for editing
             setAssignedProjectIds(user.projectIds || []);
+            setAccountType(user.accountType || 'Corporate');
+            setParentId(user.parentId || null);
         } else {
             // Reset form for new user
             setName('');
@@ -247,6 +289,8 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles, projects }:
             setStatus('Active');
             setAvatarUrl('');
             setAssignedProjectIds([]);
+            setAccountType('Corporate');
+            setParentId(null);
         }
     }, [user, isOpen, roles]);
 
@@ -260,7 +304,25 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles, projects }:
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ name, email, password, role, status, avatarUrl, projectIds: assignedProjectIds });
+        if (accountType === 'Sub-user' && !parentId) {
+            toast({
+                variant: 'destructive',
+                title: 'Parent Account Required',
+                description: 'Please select a parent corporate account for a sub-user.',
+            });
+            return;
+        }
+        onSave({ 
+            name, 
+            email, 
+            password, 
+            role, 
+            status, 
+            avatarUrl, 
+            projectIds: assignedProjectIds, 
+            accountType, 
+            parentId: accountType === 'Corporate' ? null : parentId 
+        });
     };
 
     const isSuperAdmin = role === 'Super Admin';
@@ -293,6 +355,29 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles, projects }:
                             <Label htmlFor="avatarUrl" className="text-right">Avatar URL</Label>
                             <Input id="avatarUrl" value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} className="col-span-3" placeholder="https://..." />
                         </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Account Type</Label>
+                            <Select onValueChange={(v: User['accountType']) => setAccountType(v)} value={accountType}>
+                                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Corporate">Corporate</SelectItem>
+                                    <SelectItem value="Sub-user">Sub-user</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {accountType === 'Sub-user' && (
+                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">Parent Account</Label>
+                                <Select onValueChange={(v) => setParentId(v)} value={parentId || ''} required={accountType === 'Sub-user'}>
+                                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a parent account" /></SelectTrigger>
+                                    <SelectContent>
+                                        {corporateUsers.map(c => (
+                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right">Role</Label>
                             <Select onValueChange={(v: string) => setRole(v)} value={role}>
