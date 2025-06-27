@@ -111,7 +111,7 @@ function MindMapFlow({ projectName, familyHeads }: { projectName: string; family
                         },
                         position: { x: 0, y: 0 },
                     });
-                    newEdges.push({ id: `e-${parentId}-${person.id}`, source: parentId, target: person.id });
+                    newEdges.push({ id: `e-${parentId}-${person.id}`, source: parentId, target: person.id, type: 'smoothstep', animated: true, style: { strokeWidth: 1.5 } });
 
                     if (expandedNodes.has(person.id)) {
                         // Add children if expanded
@@ -128,7 +128,7 @@ function MindMapFlow({ projectName, familyHeads }: { projectName: string; family
                                 },
                                 position: { x: 0, y: 0 },
                             });
-                            newEdges.push({ id: `e-${person.id}-${lr.id}`, source: person.id, target: lr.id });
+                            newEdges.push({ id: `e-${person.id}-${lr.id}`, source: person.id, target: lr.id, type: 'smoothstep', animated: true, style: { strokeWidth: 1.5 } });
                         });
                     }
                 });
