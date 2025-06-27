@@ -37,6 +37,7 @@ const prompt = ai.definePrompt({
   - MaritalStatus: 'Single', 'Married', 'Divorced', 'Widowed'.
   - Status: 'Alive', 'Died', 'Missing', 'Unknown'.
   - SourceOfLand: How the land was acquired (e.g., 'Purchase', 'Inheritance').
+  - HoldingPattern: The pattern of land ownership (e.g., 'Joint', 'Individual').
   - ParentName: The name of the parent. This is CRUCIAL for building the hierarchy. If empty, this person is a Family Head.
   - SurveyNumber: The survey number of a land parcel they own.
   - Acres: Acres of the parcel.
@@ -46,14 +47,15 @@ const prompt = ai.definePrompt({
 
   **CRITICAL RULES FOR DATA VALIDATION AND STRUCTURE:**
   1.  **Strict Schema Adherence**: The final output MUST be a valid JSON that strictly adheres to the provided schema. No exceptions.
-  2.  **No Null or Undefined Values**: No field in the output JSON should have a value of \`null\` or \`undefined\`.
-  3.  **Default Values**: You MUST handle empty or missing data in the CSV by applying the following defaults:
-      - If 'Relation' is empty for a person identified as a Family Head, you MUST set it to "Family Head". For an heir, it MUST be specified (e.g., "Son").
+  2.  **No Null or Undefined Values**: No field in the output JSON should have a value of \`null\` or \`undefined\`. This is the most important rule.
+  3.  **Default Values**: You MUST handle empty or missing data in the CSV by applying the following defaults. Do not leave fields out unless specified.
+      - If 'Relation' is empty for a person, you MUST set it to "Family Head". For an heir, it MUST be specified (e.g., "Son").
       - If 'Gender' is empty, default to "Male".
       - If 'Age' is empty or not a number, default to 40.
       - If 'MaritalStatus' is empty, default to "Married".
       - If 'Status' is empty, default to "Alive".
       - If 'SourceOfLand' is empty, you MUST provide an empty string "" as the value.
+      - If 'HoldingPattern' is empty, you MUST provide an empty string "" as the value.
       - If 'Acres' or 'Cents' is empty, you MUST provide an empty string "" as the value.
       - If 'GoogleMapsLink' is empty or not a valid URL, you MUST omit the 'googleMapsLink' field entirely from that land record object. Do not include it with a \`null\` or empty string value.
   4.  **Hierarchy Construction**:

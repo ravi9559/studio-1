@@ -26,6 +26,7 @@ export type Person = {
   maritalStatus: 'Married' | 'Single' | 'Divorced' | 'Widowed';
   status: 'Alive' | 'Died' | 'Unknown' | 'Missing';
   sourceOfLand?: string;
+  holdingPattern?: string;
   landRecords: SurveyRecord[];
   heirs: Person[];
 };

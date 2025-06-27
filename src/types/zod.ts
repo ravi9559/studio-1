@@ -22,6 +22,7 @@ export const PersonSchema: z.ZodType<import('./index').Person> = z.lazy(() => z.
   maritalStatus: z.enum(['Married', 'Single', 'Divorced', 'Widowed']),
   status: z.enum(['Alive', 'Died', 'Unknown', 'Missing']),
   sourceOfLand: z.string().optional(),
+  holdingPattern: z.string().optional(),
   landRecords: z.array(SurveyRecordSchema),
   heirs: z.array(PersonSchema),
 }));

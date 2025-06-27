@@ -127,6 +127,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
     const [maritalStatus, setMaritalStatus] = useState<Person['maritalStatus']>(person.maritalStatus);
     const [status, setStatus] = useState<Person['status']>(person.status);
     const [sourceOfLand, setSourceOfLand] = useState(person.sourceOfLand || '');
+    const [holdingPattern, setHoldingPattern] = useState(person.holdingPattern || '');
     
     // Land records management state
     const [landRecords, setLandRecords] = useState<SurveyRecord[]>(person.landRecords || []);
@@ -171,6 +172,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
             maritalStatus,
             status,
             sourceOfLand,
+            holdingPattern,
             landRecords,
         });
         closeDialog();
@@ -243,6 +245,10 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="edit-sourceOfLand" className="text-right">Source of Land</Label>
                         <Input id="edit-sourceOfLand" value={sourceOfLand} onChange={e => setSourceOfLand(e.target.value)} className="col-span-3" placeholder="e.g., Purchase, Legal Heir" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="edit-holdingPattern" className="text-right">Holding Pattern</Label>
+                        <Input id="edit-holdingPattern" value={holdingPattern} onChange={e => setHoldingPattern(e.target.value)} className="col-span-3" placeholder="e.g., Joint, Individual" />
                     </div>
 
                     <div className="p-4 border rounded-lg space-y-4">
@@ -372,6 +378,7 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
             <div><span className="font-semibold">Age:</span> {person.age}</div>
             <div><span className="font-semibold">Marital Status:</span> {person.maritalStatus}</div>
             {person.sourceOfLand && <div><span className="font-semibold">Source of Land:</span> {person.sourceOfLand}</div>}
+            {person.holdingPattern && <div><span className="font-semibold">Holding Pattern:</span> {person.holdingPattern}</div>}
         </div>
         
         {person.landRecords && person.landRecords.length > 0 && (
