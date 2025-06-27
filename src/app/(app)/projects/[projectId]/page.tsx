@@ -26,6 +26,8 @@ import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { ProjectMap } from '@/components/project/project-map';
+import { roadData } from '@/lib/road-data';
 
 
 // --- Storage Keys ---
@@ -420,19 +422,6 @@ export default function ProjectDetailsPage() {
     const allSurveyNumbers = useMemo(() => Array.from(new Set(siteSketchData.map(d => d.surveyNumber))), []);
     const handleSelectSurvey = useCallback((statusId: string) => { setActiveStatusId(statusId); setActiveTab('acquisition-tracker'); }, []);
 
-    const mapEmbedUrl = useMemo(() => {
-        if (!project?.googleMapsLink) return null;
-        try {
-            const url = new URL(project.googleMapsLink);
-            if (url.hostname.includes('google.com') && url.pathname.includes('/maps/')) {
-                return project.googleMapsLink.replace('/view', '/embed').replace('/place/', '/embed/place/');
-            }
-            return project.googleMapsLink;
-        } catch (e) {
-            return null;
-        }
-    }, [project?.googleMapsLink]);
-
     if (loading) {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>
     }
@@ -487,12 +476,30 @@ export default function ProjectDetailsPage() {
             
              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                 <div className="lg:col-span-3">
-                    {mapEmbedUrl && <Card className="overflow-hidden"><CardHeader><CardTitle className="flex items-center gap-2"><MapPin /> Site Location</CardTitle></CardHeader><CardContent><div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500"><iframe width="100%" height="100%" loading="lazy" allowFullScreen referrerPolicy="no-referrer-when-downgrade" src={mapEmbedUrl}></iframe></div></CardContent></Card>}
+                    <Card className="overflow-hidden">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><MapPin /> Site Location & Major Roads</CardTitle>
+                             <CardDescription>
+                                Showing project context with key transportation corridors.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500">
+                                <ProjectMap />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
+                                {roadData.map(road => (
+                                    <div key={road.name} className="flex items-center gap-2">
+                                        <span className="h-4 w-4 rounded" style={{ backgroundColor: road.color }} />
+                                        <span>{road.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 space-y-8">
                     <Card><CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader><CardContent>{siteSketchPdf ? (<div className="aspect-[4/5]"><iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/></div>) : (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center"><FileUp className="h-10 w-10 text-muted-foreground mb-4" /><p className="mb-4 font-semibold">No Site Sketch Uploaded</p><Button asChild size="sm"><label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label></Button><Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} /></div>)}</CardContent></Card>
-                </div>
-                <div className="lg:col-span-5">
                     <Card><CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader><CardContent><Carousel className="w-full"><CarouselContent>{Array.from({ length: 3 }).map((_, index) => (<CarouselItem key={index}><div className="p-1"><Card><CardContent className="flex aspect-video items-center justify-center p-0"><Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" /></CardContent></Card></div></CarouselItem>))}</CarouselContent><CarouselPrevious /><CarouselNext /></Carousel></CardContent></Card>
                 </div>
             </div>
