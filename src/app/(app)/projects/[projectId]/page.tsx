@@ -10,7 +10,7 @@ import { FileManager } from "@/components/files/file-manager";
 import { ArrowLeft, Loader2, Edit } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
@@ -19,9 +19,23 @@ import { Notes } from '@/components/project/notes';
 import { Tasks } from '@/components/project/tasks';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
-import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord, SurveyRecordWithOwner } from '@/types';
+import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 import { siteSketchData } from '@/lib/site-sketch-data';
+
+// --- Default Data Constants ---
+const PROJECTS_STORAGE_KEY = 'projects';
+const USERS_STORAGE_KEY = 'users';
+
+const initialProjects: Project[] = [
+    {
+        id: 'proj-1700000000000',
+        name: 'Greenfield Valley',
+        siteId: 'GV-001',
+        location: 'Coimbatore',
+    }
+];
+
 
 // --- Data Initialization Functions ---
 
@@ -170,19 +184,33 @@ export default function ProjectDetailsPage() {
     useEffect(() => {
         if (!projectId) return;
         try {
-            const savedProjects = localStorage.getItem('projects');
+            // --- Project Data Loading (Robust Initialization) ---
+            let allProjects: Project[] = [];
+            const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
             if (savedProjects) {
-                const projects: Project[] = JSON.parse(savedProjects);
-                const currentProject = projects.find(p => p.id === projectId);
-                if (currentProject) {
-                    setProject(currentProject);
-                    setEditedProjectName(currentProject.name);
-                    setEditedProjectSiteId(currentProject.siteId);
-                    setEditedProjectLocation(currentProject.location);
+                try {
+                    allProjects = JSON.parse(savedProjects);
+                } catch {
+                    allProjects = []; // Handle potential JSON parsing errors
                 }
             }
+            
+            // If local storage is empty or invalid, initialize with default projects
+            if (allProjects.length === 0) {
+                allProjects = initialProjects;
+                localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
+            }
+            
+            const currentProject = allProjects.find(p => p.id === projectId);
+            if (currentProject) {
+                setProject(currentProject);
+                setEditedProjectName(currentProject.name);
+                setEditedProjectSiteId(currentProject.siteId);
+                setEditedProjectLocation(currentProject.location);
+            }
 
-            const savedUsers = localStorage.getItem('users');
+            // --- Other Data Loading ---
+            const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
             if (savedUsers) {
                 const users: User[] = JSON.parse(savedUsers);
                 if (users.length > 0) setCurrentUser(users[0]);
@@ -220,6 +248,10 @@ export default function ProjectDetailsPage() {
                         const idSet = new Set(parsedData.map((d: AcquisitionStatus) => d.id));
                         if (idSet.size === parsedData.length) {
                             loadedStatuses = parsedData;
+                        } else {
+                             // This is old data, regenerate it
+                             loadedStatuses = [];
+                             localStorage.removeItem(acquisitionStorageKey);
                         }
                     }
                 } catch (e) {
