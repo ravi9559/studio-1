@@ -56,7 +56,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
 const CustomNode = ({ data }: { data: { label: string, type: string, icon: React.ReactNode, level?: number } }) => (
   <Card className={cn(
-    "w-[250px] h-[70px] shadow-md flex items-center p-3 border-primary/40 bg-card/80 backdrop-blur-sm transition-opacity duration-300",
+    "w-[250px] h-[70px] shadow-md flex items-center p-3 bg-card/80 backdrop-blur-sm transition-opacity duration-300",
     (data.level && data.level >= 3) ? "opacity-60" : "opacity-100"
   )}>
     <div className="flex items-center gap-3">
@@ -115,21 +115,25 @@ function MindMapFlow({ projectName, familyHeads }: { projectName: string; family
 
                     if (expandedNodes.has(person.id)) {
                         // Add children if expanded
-                        buildGraph(person.heirs, person.id, level + 1);
-                        person.landRecords.forEach(lr => {
-                            newNodes.push({
-                                id: lr.id,
-                                type: 'custom',
-                                data: { 
-                                    label: `S.No: ${lr.surveyNumber}`, 
-                                    type: `${lr.acres || '0'}ac, ${lr.cents || '0'}c`, 
-                                    icon: <LandPlot size={24} />,
-                                    level: level + 1
-                                },
-                                position: { x: 0, y: 0 },
+                        if (person.heirs && person.heirs.length > 0) {
+                            buildGraph(person.heirs, person.id, level + 1);
+                        }
+                        if (person.landRecords && person.landRecords.length > 0) {
+                            person.landRecords.forEach(lr => {
+                                newNodes.push({
+                                    id: lr.id,
+                                    type: 'custom',
+                                    data: { 
+                                        label: `S.No: ${lr.surveyNumber}`, 
+                                        type: `${lr.acres || '0'}ac, ${lr.cents || '0'}c`, 
+                                        icon: <LandPlot size={24} />,
+                                        level: level + 1
+                                    },
+                                    position: { x: 0, y: 0 },
+                                });
+                                newEdges.push({ id: `e-${person.id}-${lr.id}`, source: person.id, target: lr.id, type: 'smoothstep', animated: true, style: { strokeWidth: 1.5 } });
                             });
-                            newEdges.push({ id: `e-${person.id}-${lr.id}`, source: person.id, target: lr.id, type: 'smoothstep', animated: true, style: { strokeWidth: 1.5 } });
-                        });
+                        }
                     }
                 });
             };
@@ -161,7 +165,9 @@ function MindMapFlow({ projectName, familyHeads }: { projectName: string; family
                 if(person) {
                     const collectIds = (p: Person) => {
                         idsToCollapse.add(p.id);
-                        p.heirs.forEach(collectIds);
+                        if (p.heirs) {
+                           p.heirs.forEach(collectIds);
+                        }
                     }
                     collectIds(person);
                 } else {
@@ -181,8 +187,10 @@ function MindMapFlow({ projectName, familyHeads }: { projectName: string; family
     const findPerson = (people: Person[], id: string): Person | null => {
         for (const person of people) {
             if (person.id === id) return person;
-            const found = findPerson(person.heirs, id);
-            if (found) return found;
+            if (person.heirs && person.heirs.length > 0) {
+              const found = findPerson(person.heirs, id);
+              if (found) return found;
+            }
         }
         return null;
     };
