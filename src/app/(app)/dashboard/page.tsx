@@ -9,15 +9,19 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, ArrowRight } from "lucide-react";
 import Link from 'next/link';
 
-// Initial projects data
-const initialProjects = [
-  { id: 'proj-1', name: 'Greenfield Valley', siteId: 'GV-001', location: 'Coimbatore' },
-  { id: 'proj-2', name: 'Riverbend Estates', siteId: 'RB-024', location: 'Chennai' },
-  { id: 'proj-3', name: 'Mountain View', siteId: 'MV-078', location: 'Erode' },
-];
+// Define the type for a project
+type Project = {
+  id: string;
+  name: string;
+  siteId: string;
+  location: string;
+};
+
+// Start with an empty array of projects
+const initialProjects: Project[] = [];
 
 export default function DashboardPage() {
-  const [projects, setProjects] = useState(initialProjects);
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const [newProjectName, setNewProjectName] = useState('');
@@ -28,7 +32,7 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!newProjectName || !newProjectSiteId || !newProjectLocation) return;
 
-    const newProject = {
+    const newProject: Project = {
       id: `proj-${Date.now()}`, // Simple unique ID for now
       name: newProjectName,
       siteId: newProjectSiteId,
@@ -137,8 +141,9 @@ export default function DashboardPage() {
           ))
         ) : (
           <Card className="md:col-span-2 lg:col-span-3">
-            <CardContent className="flex h-40 items-center justify-center p-6">
-              <p className="text-muted-foreground">No projects found. Click "Add New Project" to get started.</p>
+            <CardContent className="flex h-40 flex-col items-center justify-center p-6 text-center">
+              <h3 className="text-lg font-semibold">No Projects Yet</h3>
+              <p className="text-muted-foreground mt-1">Click "Add New Project" to get started.</p>
             </CardContent>
           </Card>
         )}
