@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineageView } from "@/components/lineage/lineage-view";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { FileManager } from "@/components/files/file-manager";
-import { ArrowLeft, Loader2, Edit } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, MapPin } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,9 +23,10 @@ import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord } f
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // --- Versioning and Storage Keys ---
-const DATA_VERSION = "1.6"; 
+const DATA_VERSION = "1.7"; 
 const DATA_VERSION_KEY = 'data-version';
 const PROJECTS_STORAGE_KEY = 'projects';
 const USERS_STORAGE_KEY = 'users';
@@ -44,7 +45,6 @@ const createOwnersMap = () => {
         acres: plot.acres,
         cents: plot.cents,
         landClassification: plot.classification,
-        googleMapsLink: plot.googleMapsLink,
       });
     }
     return acc;
@@ -61,6 +61,7 @@ const createInitialOwners = (ownersMap: Record<string, SurveyRecord[]>): Person[
     maritalStatus: 'Married',
     status: 'Alive',
     sourceOfLand: 'Purchase',
+    holdingPattern: 'Individual',
     landRecords: ownersMap[ownerName],
     heirs: [],
   }));
@@ -74,7 +75,6 @@ function createDefaultAcquisitionStatus(projectId: string, plot: SiteSketchPlot,
         familyHeadName: plot.ownerName,
         extent: { acres: plot.acres, cents: plot.cents },
         landClassification: plot.classification,
-        googleMapsLink: plot.googleMapsLink,
         financials: { advancePayment: 'Pending', agreementStatus: 'Pending' },
         operations: { meetingDate: null, documentCollection: 'Pending' },
         legal: { queryStatus: 'Not Started' },
@@ -170,6 +170,7 @@ export default function ProjectDetailsPage() {
     const [editedProjectName, setEditedProjectName] = useState('');
     const [editedProjectSiteId, setEditedProjectSiteId] = useState('');
     const [editedProjectLocation, setEditedProjectLocation] = useState('');
+    const [editedGoogleMapsLink, setEditedGoogleMapsLink] = useState('');
 
     const ownersStorageKey = useMemo(() => `lineage-data-${projectId}`, [projectId]);
     const folderStorageKey = useMemo(() => `document-folders-${projectId}`, [projectId]);
@@ -207,6 +208,7 @@ export default function ProjectDetailsPage() {
                 setEditedProjectName(currentProject.name);
                 setEditedProjectSiteId(currentProject.siteId);
                 setEditedProjectLocation(currentProject.location);
+                setEditedGoogleMapsLink(currentProject.googleMapsLink || '');
             } else {
                 setProject(null);
                 setLoading(false);
@@ -280,7 +282,7 @@ export default function ProjectDetailsPage() {
     const handleUpdateProject = (e: React.FormEvent) => {
         e.preventDefault();
         if (!project || !editedProjectName || !editedProjectSiteId || !editedProjectLocation) return;
-        const updatedProjectData: Project = { ...project, name: editedProjectName, siteId: editedProjectSiteId, location: editedProjectLocation };
+        const updatedProjectData: Project = { ...project, name: editedProjectName, siteId: editedProjectSiteId, location: editedProjectLocation, googleMapsLink: editedGoogleMapsLink };
         try {
             const projects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
             const updatedProjects = projects.map(p => p.id === projectId ? updatedProjectData : p);
@@ -380,6 +382,18 @@ export default function ProjectDetailsPage() {
     const allSurveyNumbers = useMemo(() => Array.from(new Set(siteSketchData.map(d => d.surveyNumber))), []);
     const handleSelectSurvey = useCallback((statusId: string) => { setActiveStatusId(statusId); setActiveTab('acquisition-tracker'); }, []);
 
+    const mapEmbedUrl = useMemo(() => {
+        if (!project?.googleMapsLink) return null;
+        try {
+            const url = new URL(project.googleMapsLink);
+            if (url.hostname.includes('google.com') && url.pathname.includes('/maps/')) {
+                return project.googleMapsLink.replace('/view', '/embed').replace('/place/', '/embed/place/');
+            }
+            return project.googleMapsLink;
+        } catch (e) {
+            return null; // Invalid URL
+        }
+    }, [project?.googleMapsLink]);
 
     if (loading) {
         return (
@@ -430,7 +444,7 @@ export default function ProjectDetailsPage() {
                                 Edit Project
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="sm:max-w-xl">
                             <DialogHeader>
                                 <DialogTitle>Edit Project Details</DialogTitle>
                                 <DialogDescription>
@@ -450,6 +464,10 @@ export default function ProjectDetailsPage() {
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="edit-location" className="text-right">Location</Label>
                                         <Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label>
+                                        <Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" placeholder="Google Maps URL..."/>
                                     </div>
                                 </div>
                                 <DialogFooter>
@@ -509,6 +527,25 @@ export default function ProjectDetailsPage() {
                     </>
                 )}
             </Tabs>
+            {mapEmbedUrl && (
+                <Card className="mt-6">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><MapPin /> Project Location</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="aspect-video w-full rounded-md overflow-hidden border">
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                loading="lazy"
+                                allowFullScreen
+                                referrerPolicy="no-referrer-when-downgrade"
+                                src={mapEmbedUrl}>
+                            </iframe>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

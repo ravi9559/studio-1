@@ -9,13 +9,12 @@ export type SiteSketchPlot = {
   acres: string;
   cents: string;
   gridClass: string;
-  googleMapsLink?: string;
 };
 
 // This is the single source of truth for the site sketch layout and initial data.
 export const siteSketchData: SiteSketchPlot[] = [
   // Top Row
-  { surveyNumber: '10/1', classification: 'Wet', ownerName: 'Marimuthu Pillai', status: 'Sale Advance', acres: '0', cents: '30', gridClass: 'col-start-1 col-span-2 row-start-1', googleMapsLink: 'https://maps.app.goo.gl/example1' },
+  { surveyNumber: '10/1', classification: 'Wet', ownerName: 'Marimuthu Pillai', status: 'Sale Advance', acres: '0', cents: '30', gridClass: 'col-start-1 col-span-2 row-start-1' },
   { surveyNumber: '10/2', classification: 'Wet', ownerName: 'Alaghakesan', status: 'Sale Advance', acres: '0', cents: '44', gridClass: 'col-start-3 col-span-1 row-start-1' },
   { surveyNumber: '10/3A1', classification: 'Wet', ownerName: 'Alaghakesan', status: 'Sale Advance', acres: '0', cents: '9', gridClass: 'col-start-4 col-span-1 row-start-1' },
   { surveyNumber: '10/3A2', classification: 'Wet', ownerName: 'Marimuthu Pillai', status: 'Sale Advance', acres: '0', cents: 'N/A', gridClass: 'col-start-5 col-span-1 row-start-1' },

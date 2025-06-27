@@ -12,7 +12,7 @@ import Link from 'next/link';
 import type { Project, User } from '@/types';
 import { Loader2 } from 'lucide-react';
 
-const DATA_VERSION = "1.5";
+const DATA_VERSION = "1.7";
 const DATA_VERSION_KEY = 'data-version';
 const USERS_STORAGE_KEY = 'users';
 const PROJECTS_STORAGE_KEY = 'projects';
@@ -31,6 +31,7 @@ const initialProjects: Project[] = [
         name: 'Greenfield Valley',
         siteId: 'GV-001',
         location: 'Coimbatore',
+        googleMapsLink: 'https://maps.app.goo.gl/uJ5vG2BvX3Y8Z6aA6'
     }
 ];
 
@@ -49,8 +50,7 @@ export default function ProjectsPage() {
     try {
       const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
       if (savedVersion !== DATA_VERSION) {
-          // Non-destructive update. The project details page will handle its own data migration.
-          // We just stamp the new version here.
+          localStorage.clear();
           localStorage.setItem(DATA_VERSION_KEY, DATA_VERSION);
       }
 
@@ -97,6 +97,7 @@ export default function ProjectsPage() {
       name: newProjectName,
       siteId: newProjectSiteId,
       location: newProjectLocation,
+      googleMapsLink: ''
     };
     const updatedProjects = [...projects, newProject];
     localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));

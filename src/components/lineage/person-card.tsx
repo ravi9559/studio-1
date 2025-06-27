@@ -38,6 +38,8 @@ const AddHeirForm: FC<{ personName: string, parentId: string, onAddHeir: PersonC
     const [gender, setGender] = useState<Person['gender']>('Male');
     const [maritalStatus, setMaritalStatus] = useState<Person['maritalStatus']>('Single');
     const [status, setStatus] = useState<Person['status']>('Alive');
+    const [sourceOfLand, setSourceOfLand] = useState('');
+    const [holdingPattern, setHoldingPattern] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -50,6 +52,8 @@ const AddHeirForm: FC<{ personName: string, parentId: string, onAddHeir: PersonC
             gender,
             maritalStatus,
             status,
+            sourceOfLand,
+            holdingPattern,
         });
         closeDialog();
     };
@@ -110,6 +114,14 @@ const AddHeirForm: FC<{ personName: string, parentId: string, onAddHeir: PersonC
                         </SelectContent>
                     </Select>
                 </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="add-sourceOfLand" className="text-right">Source of Land</Label>
+                    <Input id="add-sourceOfLand" value={sourceOfLand} onChange={e => setSourceOfLand(e.target.value)} className="col-span-3" placeholder="e.g., Purchase, Legal Heir" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="add-holdingPattern" className="text-right">Holding Pattern</Label>
+                    <Input id="add-holdingPattern" value={holdingPattern} onChange={e => setHoldingPattern(e.target.value)} className="col-span-3" placeholder="e.g., Joint, Individual" />
+                </div>
             </div>
             <DialogFooter>
                 <Button type="submit">Save Heir</Button>
@@ -135,7 +147,6 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
     const [newAcres, setNewAcres] = useState('');
     const [newCents, setNewCents] = useState('');
     const [newLandClassification, setNewLandClassification] = useState<LandClassification>('Unclassified');
-    const [newGoogleMapsLink, setNewGoogleMapsLink] = useState('');
 
 
     const handleAddLandRecord = () => {
@@ -146,14 +157,12 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
             acres: newAcres,
             cents: newCents,
             landClassification: newLandClassification,
-            googleMapsLink: newGoogleMapsLink,
         };
         setLandRecords([...landRecords, newRecord]);
         setNewSurveyNumber('');
         setNewAcres('');
         setNewCents('');
         setNewLandClassification('Unclassified');
-        setNewGoogleMapsLink('');
     };
 
     const handleDeleteLandRecord = (recordId: string) => {
@@ -277,10 +286,6 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                     </SelectContent>
                                 </Select>
                             </div>
-                             <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="google-maps-link">Google Maps Link</Label>
-                                <Input id="google-maps-link" value={newGoogleMapsLink} onChange={e => setNewGoogleMapsLink(e.target.value)} placeholder="https://maps.app.goo.gl/..." />
-                            </div>
                         </div>
                         <Button type="button" onClick={handleAddLandRecord}>Add Record</Button>
                     </div>
@@ -292,7 +297,6 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                     <TableHead>Survey No.</TableHead>
                                     <TableHead>Extent</TableHead>
                                     <TableHead>Class</TableHead>
-                                    <TableHead>Map</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -303,15 +307,6 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                             <TableCell>{rec.surveyNumber}</TableCell>
                                             <TableCell>{rec.acres || '0'}ac {rec.cents || '0'}c</TableCell>
                                             <TableCell><Badge variant="outline">{rec.landClassification}</Badge></TableCell>
-                                             <TableCell>
-                                                {rec.googleMapsLink ? (
-                                                    <Link href={rec.googleMapsLink} target="_blank">
-                                                        <MapPin className="h-4 w-4 text-primary" />
-                                                    </Link>
-                                                ) : (
-                                                    <MapPin className="h-4 w-4 text-muted-foreground/50" />
-                                                )}
-                                            </TableCell>
                                             <TableCell className="text-right">
                                                 <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteLandRecord(rec.id)}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -320,7 +315,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={5} className="h-24 text-center">No land records.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={4} className="h-24 text-center">No land records.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -391,7 +386,6 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
                                 <TableHead>Survey No.</TableHead>
                                 <TableHead>Extent</TableHead>
                                 <TableHead>Class</TableHead>
-                                <TableHead>Map</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -400,15 +394,6 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
                                     <TableCell>{rec.surveyNumber}</TableCell>
                                     <TableCell>{rec.acres || '0'}ac {rec.cents || '0'}c</TableCell>
                                     <TableCell><Badge variant="outline">{rec.landClassification}</Badge></TableCell>
-                                    <TableCell>
-                                        {rec.googleMapsLink ? (
-                                            <Link href={rec.googleMapsLink} target="_blank">
-                                                <MapPin className="h-4 w-4 text-primary" />
-                                            </Link>
-                                        ) : (
-                                            <MapPin className="h-4 w-4 text-muted-foreground/50" />
-                                        )}
-                                    </TableCell>
                                 </TableRow>
                            ))}
                         </TableBody>

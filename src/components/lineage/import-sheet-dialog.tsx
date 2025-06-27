@@ -1,3 +1,4 @@
+
 // src/components/lineage/import-sheet-dialog.tsx
 'use client';
 
@@ -74,7 +75,7 @@ export function ImportSheetDialog({ isOpen, onOpenChange, onImportSuccess }: Imp
                 <li>In Google Sheets, go to <strong>File &gt; Share &gt; Publish to web</strong>.</li>
                 <li>Select the specific sheet, and choose <strong>Comma-separated values (.csv)</strong>.</li>
                 <li>Click <strong>Publish</strong> and copy the generated URL.</li>
-                <li>Your sheet must contain the following headers: <code className="font-mono bg-muted p-1 rounded">Name, Relation, Gender, Age, MaritalStatus, Status, SourceOfLand, ParentName, SurveyNumber, Acres, Cents, Classification, GoogleMapsLink</code></li>
+                <li>Your sheet must contain the following headers: <code className="font-mono bg-muted p-1 rounded">Name, Relation, Gender, Age, MaritalStatus, Status, SourceOfLand, HoldingPattern, ParentName, SurveyNumber, Acres, Cents, Classification</code></li>
               </ol>
             </AlertDescription>
           </Alert>

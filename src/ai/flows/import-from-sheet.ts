@@ -1,3 +1,4 @@
+
 // src/ai/flows/import-from-sheet.ts
 'use server';
 /**
@@ -13,7 +14,7 @@ import { z } from 'genkit';
 import { PersonSchema } from '@/types/zod';
 
 const ImportFromSheetInputSchema = z.object({
-  sheetUrl: z.string().url().describe("The public URL of a Google Sheet, published to the web as a CSV."),
+  sheetUrl: z.string().describe("The public URL of a Google Sheet, published to the web as a CSV."),
 });
 export type ImportFromSheetInput = z.infer<typeof ImportFromSheetInputSchema>;
 
@@ -43,7 +44,6 @@ const prompt = ai.definePrompt({
   - Acres: Acres of the parcel.
   - Cents: Cents of the parcel.
   - Classification: 'Wet', 'Dry', or 'Unclassified'.
-  - GoogleMapsLink: A URL to the location on a map.
 
   **CRITICAL RULES FOR DATA VALIDATION AND STRUCTURE:**
   1.  **Strict Schema Adherence**: The final output MUST be a valid JSON that strictly adheres to the provided schema. No exceptions.
@@ -57,7 +57,6 @@ const prompt = ai.definePrompt({
       - If 'SourceOfLand' is empty, you MUST provide an empty string "" as the value.
       - If 'HoldingPattern' is empty, you MUST provide an empty string "" as the value.
       - If 'Acres' or 'Cents' is empty, you MUST provide an empty string "" as the value.
-      - If 'GoogleMapsLink' is empty or not a valid URL, you MUST omit the 'googleMapsLink' field entirely from that land record object. Do not include it with a \`null\` or empty string value.
   4.  **Hierarchy Construction**:
       - Identify all individuals with an empty 'ParentName' as "Family Heads". These will be the root objects in the output array.
       - For all other individuals, find their parent in the dataset using the 'ParentName' column and add them to that parent's 'heirs' array.

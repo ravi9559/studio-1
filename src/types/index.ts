@@ -9,7 +9,6 @@ export type SurveyRecord = {
   acres: string;
   cents: string;
   landClassification: LandClassification;
-  googleMapsLink?: string;
 };
 
 export type SurveyRecordWithOwner = SurveyRecord & {
@@ -42,6 +41,7 @@ export type Project = {
   name: string;
   siteId: string;
   location: string;
+  googleMapsLink?: string;
 };
 
 export type Role = {
@@ -78,7 +78,6 @@ export type AcquisitionStatus = {
   familyHeadName: string;
   extent: { acres: string; cents: string };
   landClassification: LandClassification;
-  googleMapsLink?: string;
   financials: {
     advancePayment: 'Paid' | 'Pending';
     agreementStatus: 'Signed' | 'Pending';
