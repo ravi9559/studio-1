@@ -9,7 +9,7 @@ export const SurveyRecordSchema = z.object({
   acres: z.string(),
   cents: z.string(),
   landClassification: LandClassificationSchema,
-  googleMapsLink: z.string().url().optional(),
+  googleMapsLink: z.string().optional(),
 });
 
 // We need a lazy schema for Person because it's recursive
