@@ -53,7 +53,7 @@ const prompt = ai.definePrompt({
   output: { schema: ImportFromSheetOutputSchema },
   tools: [fetchCsvFromUrl],
   prompt: `You are an expert data processor specializing in genealogical and land ownership data.
-  Your task is to parse the provided CSV data, which represents a family tree, and transform it into a hierarchical JSON structure.
+  Your task is to parse the provided CSV data, which represents a family tree, and transform it into a hierarchical JSON structure that strictly adheres to the provided schema.
 
   The CSV has the following columns:
   - Name: The name of the person.
@@ -70,14 +70,24 @@ const prompt = ai.definePrompt({
   - Classification: 'Wet', 'Dry', or 'Unclassified'.
   - GoogleMapsLink: A URL to the location on a map.
 
-  RULES:
-  1.  Identify all individuals with an empty 'ParentName' as "Family Heads". These will be the root objects in the output array.
-  2.  For all other individuals, find their parent in the dataset using the 'ParentName' column and add them to the parent's 'heirs' array.
-  3.  Aggregate all land records (SurveyNumber, Acres, Cents, etc.) for each person into their 'landRecords' array. A person can have multiple land records.
-  4.  Generate a unique 'id' for each person. A good format is 'person-[name]-[random_number]'.
-  5.  Generate a unique 'id' for each land record. A good format is 'lr-[survey_number]-[person_id]'.
-  6.  Carefully construct the nested 'heirs' array to represent the family structure accurately.
-  7.  Ensure the final output strictly adheres to the provided JSON schema for 'familyHeads'.
+  **CRITICAL RULES FOR DATA VALIDATION AND STRUCTURE:**
+  1.  **Strict Schema Adherence**: The final output MUST be a valid JSON that strictly adheres to the provided schema. No exceptions.
+  2.  **No Null Values for Required Fields**: Fields like 'relation', 'gender', 'age', 'maritalStatus', and 'status' are required. If the CSV data is missing for these fields, you MUST provide a valid default value. Do NOT use \`null\`.
+  3.  **Default Values**:
+      - If 'Relation' is empty for a person identified as a Family Head, you MUST set it to "Family Head". For an heir, it MUST be specified (e.g., "Son").
+      - If 'Gender' is empty, default to "Male".
+      - If 'Age' is empty or not a number, default to 40.
+      - If 'MaritalStatus' is empty, default to "Married".
+      - If 'Status' is empty, default to "Alive".
+      - If 'Acres' or 'Cents' is empty, you MUST use an empty string "" as the value.
+  4.  **Hierarchy Construction**:
+      - Identify all individuals with an empty 'ParentName' as "Family Heads". These will be the root objects in the output array.
+      - For all other individuals, find their parent in the dataset using the 'ParentName' column and add them to that parent's 'heirs' array.
+  5.  **Data Aggregation**:
+      - Aggregate all land records (SurveyNumber, Acres, Cents, etc.) for each person into their 'landRecords' array. A person can own multiple land parcels.
+  6.  **Unique IDs**:
+      - Generate a unique 'id' for each person. A good format is 'person-[name]-[random_number]'.
+      - Generate a unique 'id' for each land record. A good format is 'lr-[survey_number]-[person_id]'.
 
   CSV Data to process:
   {{{csvData}}}
