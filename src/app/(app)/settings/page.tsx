@@ -16,8 +16,11 @@ import type { User, Role } from '@/types';
 
 const initialRoles: Role[] = [
     { id: 'role-super-admin', name: 'Super Admin' },
-    { id: 'role-manager', name: 'Transaction Manager' },
-    { id: 'role-viewer', name: 'Viewer' },
+    { id: 'role-tx-partner', name: 'Transaction Partner' },
+    { id: 'role-investor', name: 'Investor' },
+    { id: 'role-aggregator', name: 'Aggregator' },
+    { id: 'role-co-aggregator', name: 'Co-Aggregator' },
+    { id: 'role-client', name: 'Client' },
     { id: 'role-lawyer', name: 'Lawyer' },
 ];
 
