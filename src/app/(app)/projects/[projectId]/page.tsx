@@ -379,6 +379,14 @@ export default function ProjectDetailsPage() {
         });
     }, [familyHead, projectId]);
 
+    const handleUpdateAcquisitionStatus = useCallback((updatedStatus: AcquisitionStatus) => {
+        setAcquisitionStatuses(currentStatuses =>
+            currentStatuses.map(status =>
+                status.id === updatedStatus.id ? updatedStatus : status
+            )
+        );
+    }, []);
+
     const handleAddFolder = useCallback((parentId: string, name: string) => {
         const newFolder: Folder = {
           id: `folder-${Date.now()}`,
@@ -493,7 +501,10 @@ export default function ProjectDetailsPage() {
                     />
                 </TabsContent>
                  <TabsContent value="acquisition-tracker" className="mt-6">
-                    <AcquisitionTrackerView statuses={acquisitionStatuses} />
+                    <AcquisitionTrackerView 
+                        statuses={acquisitionStatuses} 
+                        onUpdateStatus={handleUpdateAcquisitionStatus}
+                    />
                 </TabsContent>
                 <TabsContent value="title-documents" className="mt-6">
                     <TitleDocumentsView

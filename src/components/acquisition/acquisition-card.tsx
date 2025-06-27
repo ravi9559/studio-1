@@ -1,9 +1,8 @@
-
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { CheckCircle2, Circle, CircleDashed, FileCheck, FileClock, FileQuestion, FileX, HandCoins, Landmark, LandPlot, Scale, SquareUserRound, Users, Calendar as CalendarIcon, Wallet, FilePen, Microscope } from 'lucide-react';
 import type { AcquisitionStatus } from '@/types';
 import { cn } from '@/lib/utils';
@@ -11,6 +10,7 @@ import { format, isValid } from 'date-fns';
 
 interface AcquisitionCardProps {
   status: AcquisitionStatus;
+  onEdit: (status: AcquisitionStatus) => void;
 }
 
 const statusMap = {
@@ -66,7 +66,7 @@ const StatusBadge = ({ status }: { status: keyof typeof statusMap }) => {
 };
 
 
-export function AcquisitionCard({ status }: AcquisitionCardProps) {
+export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
 
   const getStageStatus = (stage: 'financials' | 'operations' | 'legal') => {
       if (stage === 'financials') {
@@ -90,10 +90,18 @@ export function AcquisitionCard({ status }: AcquisitionCardProps) {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Acquisition Status for S.No: {status.surveyNumber}</CardTitle>
-        <CardDescription>
-          A visual game-like overview of the acquisition process for this land parcel.
-        </CardDescription>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>Acquisition Status for S.No: {status.surveyNumber}</CardTitle>
+            <CardDescription>
+              A visual game-like overview of the acquisition process for this land parcel.
+            </CardDescription>
+          </div>
+          <Button variant="outline" onClick={() => onEdit(status)}>
+            <FilePen className="mr-2 h-4 w-4" />
+            Edit Status
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         
