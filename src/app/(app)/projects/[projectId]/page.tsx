@@ -205,10 +205,24 @@ export default function ProjectDetailsPage() {
                 };
                 collectSurveyNumbers(lineageData);
                 const surveyFolders = Array.from(initialSurveyNumbers).map(createSurveyFolder);
+
+                const familyMembers: string[] = [];
+                const collectFamilyMembers = (person: Person) => {
+                    familyMembers.push(person.name);
+                    (person.heirs || []).forEach(collectFamilyMembers);
+                };
+                collectFamilyMembers(lineageData);
+
+                const kycSubFolders: Folder[] = familyMembers.map((name, index) => ({
+                    id: `kyc-member-${name.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now() + index}`,
+                    name: name,
+                    children: [],
+                }));
+
                 const kycFolder: Folder = {
                     id: `kyc-root-${Date.now()}`,
                     name: 'Seller KYC',
-                    children: [],
+                    children: kycSubFolders,
                 };
                 setFolders([...surveyFolders, kycFolder]);
             }
@@ -234,12 +248,35 @@ export default function ProjectDetailsPage() {
         if (!familyHead) return;
         const updatedFamilyHead = addHeirToFamily(familyHead, parentId, heirData);
         setFamilyHead(updatedFamilyHead);
+
+        setFolders(currentFolders => {
+            const newMemberFolder: Folder = {
+                id: `kyc-member-${heirData.name.replace(/\s+/g, '-')}-${Date.now()}`,
+                name: heirData.name,
+                children: []
+            };
+            const addKycSubfolder = (nodes: Folder[]): Folder[] => {
+                return nodes.map(folder => {
+                    if (folder.name === 'Seller KYC') {
+                        if (folder.children.some(child => child.name === heirData.name)) {
+                            return folder;
+                        }
+                        const updatedChildren = [...folder.children, newMemberFolder];
+                        return { ...folder, children: updatedChildren };
+                    }
+                    return folder;
+                });
+            };
+            return addKycSubfolder(currentFolders);
+        });
     }, [familyHead]);
 
     const handleUpdatePerson = useCallback((personId: string, personData: Omit<Person, 'id' | 'heirs'>) => {
         if (!familyHead) return;
 
         const oldPersonState = findPerson(familyHead, personId);
+        if (!oldPersonState) return;
+        
         const oldSurveyNumbers = new Set(oldPersonState?.landRecords.map(lr => lr.surveyNumber) || []);
         
         const updatedFamilyHead = updatePersonInFamily(familyHead, personId, personData);
@@ -248,15 +285,36 @@ export default function ProjectDetailsPage() {
         const newSurveyNumbers = new Set(personData.landRecords.map(lr => lr.surveyNumber));
         const addedSurveyNumbers = [...newSurveyNumbers].filter(sn => !oldSurveyNumbers.has(sn));
 
-        if (addedSurveyNumbers.length > 0) {
-            setFolders(currentFolders => {
-                const existingFolderNames = new Set(currentFolders.map(f => f.name));
+        setFolders(currentFolders => {
+            let updatedFolders = [...currentFolders];
+
+            if (addedSurveyNumbers.length > 0) {
+                const existingFolderNames = new Set(updatedFolders.map(f => f.name));
                 const newFoldersToAdd = addedSurveyNumbers
                     .filter(surveyNumber => !existingFolderNames.has(surveyNumber))
                     .map(createSurveyFolder);
-                return [...currentFolders, ...newFoldersToAdd];
-            });
-        }
+                updatedFolders = [...updatedFolders, ...newFoldersToAdd];
+            }
+
+            if (oldPersonState.name !== personData.name) {
+                const updateKycSubfolderName = (nodes: Folder[]): Folder[] => {
+                    return nodes.map(folder => {
+                        if (folder.name === 'Seller KYC') {
+                            const updatedChildren = folder.children.map(child => {
+                                if (child.name === oldPersonState.name) {
+                                    return { ...child, name: personData.name };
+                                }
+                                return child;
+                            });
+                            return { ...folder, children: updatedChildren };
+                        }
+                        return folder;
+                    });
+                };
+                updatedFolders = updateKycSubfolderName(updatedFolders);
+            }
+            return updatedFolders;
+        });
     }, [familyHead]);
 
     const handleAddFolder = useCallback((parentId: string, name: string) => {
