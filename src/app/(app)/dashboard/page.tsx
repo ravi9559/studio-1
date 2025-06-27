@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -24,18 +24,31 @@ export default function DashboardPage() {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectSiteId, setNewProjectSiteId] = useState('');
   const [newProjectLocation, setNewProjectLocation] = useState('');
+  const isInitialMount = useRef(true);
 
   // Load projects from localStorage on initial client-side render
   useEffect(() => {
-    const savedProjects = localStorage.getItem('projects');
-    if (savedProjects) {
-      setProjects(JSON.parse(savedProjects));
+    try {
+      const savedProjects = localStorage.getItem('projects');
+      if (savedProjects) {
+        setProjects(JSON.parse(savedProjects));
+      }
+    } catch (e) {
+      console.error("Could not load projects from local storage", e);
     }
   }, []);
 
-  // Save projects to localStorage whenever the projects state changes
+  // Save projects to localStorage whenever the projects state changes, but skip the initial render.
   useEffect(() => {
-    localStorage.setItem('projects', JSON.stringify(projects));
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    try {
+      localStorage.setItem('projects', JSON.stringify(projects));
+    } catch (e) {
+      console.error("Could not save projects to local storage", e);
+    }
   }, [projects]);
 
 
