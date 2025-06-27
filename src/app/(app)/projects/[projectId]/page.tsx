@@ -239,28 +239,6 @@ export default function ProjectDetailsPage() {
             }
         }
     }, [familyHeads, folders, acquisitionStatuses, isLoaded, lineageStorageKey, folderStorageKey, acquisitionStorageKey]);
-
-
-    // --- Helper functions for manipulating state ---
-    const findPerson = (people: Person[], personId: string): {person: Person, path: string[]} | null => {
-        for (let i = 0; i < people.length; i++) {
-            const p = people[i];
-            if (p.id === personId) return { person: p, path: [i.toString()] };
-            
-            const findInHeirs = (person: Person, currentPath: string[]): {person: Person, path: string[]} | null => {
-                 if (person.id === personId) return { person, path: currentPath };
-                 for (let j = 0; j < person.heirs.length; j++) {
-                     const heir = person.heirs[j];
-                     const result = findInHeirs(heir, [...currentPath, 'heirs', j.toString()]);
-                     if (result) return result;
-                 }
-                 return null;
-            }
-            const result = findInHeirs(p, [i.toString()]);
-            if (result) return result;
-        }
-        return null;
-    }
     
     // --- State Update Handlers ---
     const handleUpdateProject = (e: React.FormEvent) => {
