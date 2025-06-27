@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -89,84 +90,64 @@ function createSurveyFolder(surveyNumber: string): Folder {
   };
 }
 
-// Mock data for lineage to be used as a default for new projects
+// Mock data for lineage based on the provided site sketch
 const defaultFamilyHead: Person = {
   id: '1',
-  name: 'Kandasamy Gounder',
+  name: 'Arunachalam',
   relation: 'Family Head',
   gender: 'Male',
-  age: 85,
+  age: 78,
   maritalStatus: 'Married',
-  status: 'Died',
+  status: 'Alive',
   sourceOfLand: 'Purchase',
   landRecords: [
-      { id: 'lr-1-1', surveyNumber: '123/A', acres: '5', cents: '20', landClassification: 'Dry' }
+      { id: 'lr-1-1', surveyNumber: '34/1', acres: '1', cents: '50', landClassification: 'Dry' },
+      { id: 'lr-1-2', surveyNumber: '34/2', acres: '0', cents: '75', landClassification: 'Dry' }
   ],
   heirs: [
     {
       id: '1.1',
-      name: 'Ramasamy Gounder',
+      name: 'Baskar',
       relation: 'Son',
       gender: 'Male',
-      age: 60,
+      age: 55,
       maritalStatus: 'Married',
       status: 'Alive',
       sourceOfLand: 'Legal Heir',
       landRecords: [
-        { id: 'lr-1.1-1', surveyNumber: '123/A', acres: '2', cents: '60', landClassification: 'Dry' }
+        { id: 'lr-1.1-1', surveyNumber: '35/1', acres: '2', cents: '10', landClassification: 'Wet' },
+        { id: 'lr-1.1-2', surveyNumber: '35/3A', acres: '1', cents: '25', landClassification: 'Wet' },
       ],
-      heirs: [
-        {
-          id: '1.1.1',
-          name: 'Palanisamy',
-          relation: 'Son',
-          gender: 'Male',
-          age: 35,
-          maritalStatus: 'Married',
-          status: 'Alive',
-          sourceOfLand: 'Legal Heir',
-          landRecords: [],
-          heirs: [],
-        },
-        {
-          id: '1.1.2',
-          name: 'Saraswathi',
-          relation: 'Daughter',
-          gender: 'Female',
-          age: 32,
-          maritalStatus: 'Married',
-          status: 'Alive',
-          sourceOfLand: 'Legal Heir',
-          landRecords: [],
-          heirs: [],
-        },
-        {
-          id: '1.1.3',
-          name: 'Kavitha',
-          relation: 'Daughter',
-          gender: 'Female',
-          age: 30,
-          maritalStatus: 'Married',
-          status: 'Alive',
-          sourceOfLand: 'Legal Heir',
-          landRecords: [
-            { id: 'lr-1.1.3-1', surveyNumber: '456/C', acres: '3', cents: '0', landClassification: 'Dry' }
-          ],
-          heirs: [],
-        },
-      ],
+      heirs: [],
     },
     {
       id: '1.2',
-      name: 'Kamalam',
+      name: 'Chitra',
       relation: 'Daughter',
       gender: 'Female',
-      age: 58,
+      age: 52,
       maritalStatus: 'Married',
       status: 'Alive',
       sourceOfLand: 'Gift',
       landRecords: [
-         { id: 'lr-1.2-1', surveyNumber: '123/B', acres: '2', cents: '60', landClassification: 'Wet' }
+         { id: 'lr-1.2-1', surveyNumber: '33/1A', acres: '3', cents: '0', landClassification: 'Dry' },
+         { id: 'lr-1.2-2', surveyNumber: '33/1B', acres: '0', cents: '80', landClassification: 'Dry' },
+      ],
+      heirs: [],
+    },
+    {
+      id: '1.3',
+      name: 'David',
+      relation: 'Son',
+      gender: 'Male',
+      age: 48,
+      maritalStatus: 'Married',
+      status: 'Alive',
+      sourceOfLand: 'Legal Heir',
+      landRecords: [
+         { id: 'lr-1.3-1', surveyNumber: '10/1A', acres: '0', cents: '95', landClassification: 'Unclassified' },
+         { id: 'lr-1.3-2', surveyNumber: '10/1B', acres: '1', cents: '0', landClassification: 'Unclassified' },
+         { id: 'lr-1.3-3', surveyNumber: '10/1C', acres: '1', cents: '10', landClassification: 'Unclassified' },
       ],
       heirs: [],
     },
@@ -274,37 +255,31 @@ export default function ProjectDetailsPage() {
             if (savedAcquisition) {
                 setAcquisitionStatuses(JSON.parse(savedAcquisition));
             } else {
-                // Create a richer demo dataset for the acquisition tracker
+                // Create a richer demo dataset for the acquisition tracker based on the site sketch
                 const demoStatuses = allSurveyRecords.map(rec => {
                     const baseStatus = createDefaultAcquisitionStatus(projectId, rec, lineageData.name);
                     
                     // Customize statuses for demo purposes
-                    if (rec.surveyNumber === '123/A') {
-                        baseStatus.financials = {
-                            advancePayment: 'Paid',
-                            agreementStatus: 'Signed',
-                        };
+                    if (rec.surveyNumber === '34/1') {
+                        baseStatus.financials = { advancePayment: 'Paid', agreementStatus: 'Signed' };
                         baseStatus.operations = {
-                            meetingDate: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(),
+                            meetingDate: new Date(new Date().setDate(new Date().getDate() - 15)).toISOString(),
                             documentCollection: 'Fully Collected',
                         };
-                         baseStatus.legal = {
-                            queryStatus: 'Cleared',
-                        };
-                    } else if (rec.surveyNumber === '123/B') {
-                        baseStatus.financials = {
-                            advancePayment: 'Paid',
-                            agreementStatus: 'Pending',
-                        };
+                         baseStatus.legal = { queryStatus: 'Cleared' };
+                    } else if (rec.surveyNumber === '35/3A') {
+                        baseStatus.financials = { advancePayment: 'Paid', agreementStatus: 'Pending' };
                         baseStatus.operations = {
-                            meetingDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(),
+                            meetingDate: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString(),
                             documentCollection: 'Partially Collected',
                         };
-                        baseStatus.legal = {
-                            queryStatus: 'On-Progress',
-                        };
+                        baseStatus.legal = { queryStatus: 'On-Progress' };
+                    } else if (rec.surveyNumber === '33/1B') {
+                        baseStatus.financials = { advancePayment: 'Pending', agreementStatus: 'Pending' };
+                        baseStatus.operations = { meetingDate: null, documentCollection: 'Pending' };
+                        baseStatus.legal = { queryStatus: 'Awaiting' };
                     }
-                    // The third survey number ('456/C') will remain in its default "Pending" state.
+                    // All other survey numbers (e.g., from S.No 10) will remain in their default "Not Started" / "Pending" state.
                     
                     return baseStatus;
                 });
@@ -587,3 +562,5 @@ export default function ProjectDetailsPage() {
         </div>
     );
 }
+
+    
