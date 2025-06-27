@@ -190,9 +190,23 @@ export default function ProjectDetailsPage() {
 
             // Lineage Data
             const savedLineage = localStorage.getItem(lineageStorageKey);
+            let lineageData: Person[] = [];
             if (savedLineage) {
-                setFamilyHeads(JSON.parse(savedLineage));
+                try {
+                    const parsedData = JSON.parse(savedLineage);
+                    if (Array.isArray(parsedData)) {
+                        lineageData = parsedData;
+                    }
+                } catch {
+                    // Data is corrupted, treat as empty
+                    lineageData = [];
+                }
+            }
+
+            if (lineageData.length > 0) {
+                setFamilyHeads(lineageData);
             } else {
+                // If no saved data, it's empty, or corrupted, initialize.
                 const ownersMap = createOwnersMap();
                 const initialHeads = createInitialFamilyHeads(ownersMap);
                 setFamilyHeads(initialHeads);
@@ -213,8 +227,8 @@ export default function ProjectDetailsPage() {
                 setFolders(JSON.parse(savedFolders));
             } else {
                 // We need familyHeads to generate folders, so we do it based on what was just set
-                const lineageData = savedLineage ? JSON.parse(savedLineage) : createInitialFamilyHeads(createOwnersMap());
-                const defaultFolders = createDefaultFolders(lineageData);
+                const lineageForFolders = lineageData.length > 0 ? lineageData : createInitialFamilyHeads(createOwnersMap());
+                const defaultFolders = createDefaultFolders(lineageForFolders);
                 setFolders(defaultFolders);
             }
 
