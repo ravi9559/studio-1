@@ -44,10 +44,10 @@ const StepperNode = ({ stage, status, isLast = false }: { stage: string, status:
   )
 }
 
-const InfoRow = ({ label, value, icon, valueComponent }: { label: string, value: string, icon: React.ElementType, valueComponent?: React.ReactNode }) => (
+const InfoRow = ({ label, value, icon: Icon, valueComponent }: { label: string, value: string, icon: React.ElementType, valueComponent?: React.ReactNode }) => (
     <div className="flex items-start justify-between">
         <div className="flex items-center gap-2 text-sm font-medium">
-            <icon className="h-4 w-4 text-muted-foreground" />
+            <Icon className="h-4 w-4 text-muted-foreground" />
             <span>{label}</span>
         </div>
         {valueComponent || <span className="text-sm text-muted-foreground">{value}</span>}
