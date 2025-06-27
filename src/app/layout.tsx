@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://lakshmibalajio2o.com'),
   title: 'LineageLens',
   description: 'Manage Land, Lineage, and Transaction History',
 };
