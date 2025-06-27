@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import type { SurveyRecordWithOwner } from '@/types';
 import { Users, MapPin, LandPlot, HandCoins } from 'lucide-react';
 import { Badge } from '../ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface SiteSketchViewProps {
   plotData: SurveyRecordWithOwner[];
