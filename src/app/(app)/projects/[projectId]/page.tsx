@@ -25,29 +25,10 @@ import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 // --- Versioning and Storage Keys ---
-const DATA_VERSION = "1.4"; 
+const DATA_VERSION = "1.5"; 
 const DATA_VERSION_KEY = 'data-version';
 const PROJECTS_STORAGE_KEY = 'projects';
 const USERS_STORAGE_KEY = 'users';
-
-// --- Default Data Constants ---
-const initialUsers: User[] = [
-    { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
-    { id: 'user-1682600000002', name: 'SK Associates', email: 'lawyer@sk.com', password: 'password', role: 'Lawyer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
-    { id: 'user-1682600000003', name: 'Greenfield Corp', email: 'client@greenfield.com', password: 'password', role: 'Client', status: 'Active' },
-    { id: 'user-1682600000004', name: 'Land Investors Inc.', email: 'investor@land.com', password: 'password', role: 'Investor', status: 'Inactive'},
-    { id: 'user-1682600000005', name: 'Property Aggregators', email: 'aggregator@prop.com', password: 'password', role: 'Aggregator', status: 'Active' },
-];
-
-const initialProjects: Project[] = [
-    {
-        id: 'proj-1700000000000',
-        name: 'Greenfield Valley',
-        siteId: 'GV-001',
-        location: 'Coimbatore',
-    }
-];
-
 
 // --- Data Initialization Functions ---
 
@@ -202,31 +183,23 @@ export default function ProjectDetailsPage() {
         try {
             // --- Data Versioning and Migration ---
             const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
-            if (savedVersion !== DATA_VERSION) {
-                console.warn(`Data version mismatch. Stored: ${savedVersion}, Code: ${DATA_VERSION}. Regenerating data...`);
-                const theme = localStorage.getItem('theme');
-                localStorage.clear();
-                if (theme) localStorage.setItem('theme', theme);
-                localStorage.setItem(DATA_VERSION_KEY, DATA_VERSION);
-            }
+            const versionMismatched = savedVersion !== DATA_VERSION;
 
-            // --- Initialize Core Data (Users/Projects) if missing ---
+            // --- Load Core Data (Users/Projects) ---
             let allProjects: Project[];
             const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-            if (!savedProjects) {
-                allProjects = initialProjects;
-                localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
+            if (savedProjects) {
+                 allProjects = JSON.parse(savedProjects);
             } else {
-                allProjects = JSON.parse(savedProjects);
+                setProject(null);
+                setLoading(false);
+                return;
             }
             
             const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
             if (savedUsers) {
                 const users: User[] = JSON.parse(savedUsers);
                 if (users.length > 0) setCurrentUser(users[0]);
-            } else {
-                 localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(initialUsers));
-                 setCurrentUser(initialUsers[0]);
             }
 
             // Find the current project
@@ -237,7 +210,6 @@ export default function ProjectDetailsPage() {
                 setEditedProjectSiteId(currentProject.siteId);
                 setEditedProjectLocation(currentProject.location);
             } else {
-                // This case should not be hit if navigation is from a valid source
                 setProject(null);
                 setLoading(false);
                 return;
@@ -250,7 +222,10 @@ export default function ProjectDetailsPage() {
             
             const isInvalidData = !loadedOwners || !loadedStatuses || !loadedFolders || !Array.isArray(loadedOwners) || loadedOwners.length === 0;
 
-            if (isInvalidData) {
+            if (isInvalidData || versionMismatched) {
+                if(versionMismatched) console.warn("Data version mismatch, regenerating project data.");
+                if(isInvalidData) console.warn("Invalid or missing data, regenerating project data.");
+
                 const ownersMap = createOwnersMap();
                 const initialHeads = createInitialOwners(ownersMap);
                 const demoStatuses = siteSketchData.map((plot, index) => createDefaultAcquisitionStatus(projectId, plot, index));
@@ -426,7 +401,7 @@ export default function ProjectDetailsPage() {
                     </Link>
                 </Button>
                 <h1 className="text-2xl font-bold">Project not found</h1>
-                <p className="text-muted-foreground">The project you are looking for does not exist or has been deleted. This can happen on first load; try returning to the main page.</p>
+                <p className="text-muted-foreground">The project you are looking for does not exist or has been deleted. Please start from the dashboard.</p>
             </div>
         )
     }

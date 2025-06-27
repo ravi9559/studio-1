@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,7 +12,7 @@ import Link from 'next/link';
 import type { Project, User } from '@/types';
 import { Loader2 } from 'lucide-react';
 
-const DATA_VERSION = "1.3";
+const DATA_VERSION = "1.5";
 const DATA_VERSION_KEY = 'data-version';
 const USERS_STORAGE_KEY = 'users';
 const PROJECTS_STORAGE_KEY = 'projects';
@@ -48,9 +49,8 @@ export default function ProjectsPage() {
     try {
       const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
       if (savedVersion !== DATA_VERSION) {
-          const theme = localStorage.getItem('theme');
-          localStorage.clear();
-          if (theme) localStorage.setItem('theme', theme);
+          // Non-destructive update. The project details page will handle its own data migration.
+          // We just stamp the new version here.
           localStorage.setItem(DATA_VERSION_KEY, DATA_VERSION);
       }
 
