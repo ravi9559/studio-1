@@ -32,7 +32,7 @@ export const siteSketchData: SiteSketchPlot[] = [
   // Second Row
   { surveyNumber: '7/1A', classification: 'Wet', ownerName: 'Annamalai', status: 'Sale Advance', acres: '0', cents: '26', gridClass: 'col-start-1 col-span-1 row-start-2' },
   { surveyNumber: '7/1B', classification: 'Wet', ownerName: 'Nanjundan Achari', status: 'Pending', acres: '0', cents: '30', gridClass: 'col-start-2 col-span-1 row-start-2' },
-  { surveyNumber: '7/1D', classification: 'Wet', ownerName: 'N/A', status: 'Agreement', acres: '0', cents: '30', gridClass: 'col-start-4 col-span-1 row-start-2' },
+  { surveyNumber: '7/1D', classification: 'Wet', ownerName: 'Arumugha Naicker', status: 'Pending', acres: '0', cents: '30', gridClass: 'col-start-4 col-span-1 row-start-2' },
   { surveyNumber: '7/1E', classification: 'Wet', ownerName: 'Subramaniya Achari', status: 'Pending', acres: '0', cents: '28', gridClass: 'col-start-5 col-span-1 row-start-2' },
   { surveyNumber: '7/2A', classification: 'Wet', ownerName: 'Annamalai', status: 'Sale Advance', acres: '0', cents: '47', gridClass: 'col-start-6 col-span-1 row-start-2' },
   { surveyNumber: '7/2B', classification: 'Wet', ownerName: 'Marimuthu Achari', status: 'Sale Advance', acres: '0', cents: '49', gridClass: 'col-start-7 col-span-1 row-start-2' },
