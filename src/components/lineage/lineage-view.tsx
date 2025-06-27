@@ -1,9 +1,14 @@
-import { PersonCard } from './person-card';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { PersonCard, type Person } from './person-card';
 import { LineageSuggestion } from './lineage-suggestion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Loader2 } from 'lucide-react';
 
-// Mock data
-const familyHead = {
+// Mock data to be used as a default for new projects
+const defaultFamilyHead: Person = {
   id: '1',
   name: 'Kandasamy Gounder',
   relation: 'Family Head',
@@ -23,6 +28,7 @@ const familyHead = {
       maritalStatus: 'Married',
       status: 'Alive',
       sourceOfLand: 'Legal Heir',
+      landDetails: 'Survey 123/A, 2.6 Acres',
       heirs: [
         {
           id: '1.1.1',
@@ -57,12 +63,83 @@ const familyHead = {
       maritalStatus: 'Married',
       status: 'Alive',
       sourceOfLand: 'Gift',
+      landDetails: 'Survey 123/B, 2.6 Acres',
       heirs: [],
     },
   ],
 };
 
+// Recursive function to add an heir
+const addHeirToFamily = (family: Person, parentId: string, newHeir: Person): Person => {
+    if (family.id === parentId) {
+        return {
+            ...family,
+            heirs: [...family.heirs, newHeir],
+        };
+    }
+    return {
+        ...family,
+        heirs: family.heirs.map(h => addHeirToFamily(h, parentId, newHeir)),
+    };
+};
+
 export function LineageView() {
+  const params = useParams();
+  const projectId = params.projectId as string;
+  const [familyHead, setFamilyHead] = useState<Person | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const storageKey = `lineage-data-${projectId}`;
+
+  useEffect(() => {
+    if (!projectId) return;
+    try {
+      const savedData = localStorage.getItem(storageKey);
+      if (savedData) {
+        setFamilyHead(JSON.parse(savedData));
+      } else {
+        // If no data, start with the default mock data
+        setFamilyHead(defaultFamilyHead);
+      }
+    } catch (e) {
+      console.error("Could not load lineage data", e);
+      setFamilyHead(defaultFamilyHead); // Fallback to default
+    }
+    setIsLoaded(true);
+  }, [projectId, storageKey]);
+
+  useEffect(() => {
+    if (isLoaded && familyHead) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(familyHead));
+      } catch (e) {
+        console.error("Could not save lineage data", e);
+      }
+    }
+  }, [familyHead, isLoaded, storageKey]);
+
+  const handleAddHeir = (parentId: string, heirData: Omit<Person, 'id' | 'heirs'>) => {
+    if (!familyHead) return;
+
+    const newHeir: Person = {
+        ...heirData,
+        id: `${parentId}.${Date.now()}`, // Simple unique ID
+        heirs: [],
+    };
+
+    const updatedFamilyHead = addHeirToFamily(familyHead, parentId, newHeir);
+    setFamilyHead(updatedFamilyHead);
+  };
+  
+  if (!familyHead || !isLoaded) {
+    return (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="ml-4">Loading Lineage Data...</p>
+        </div>
+    )
+  }
+
   const familyDataString = JSON.stringify(familyHead, null, 2);
 
   return (
@@ -71,10 +148,10 @@ export function LineageView() {
         <Card>
           <CardHeader>
             <CardTitle>Family Tree</CardTitle>
-            <CardDescription>Visual representation of the family lineage.</CardDescription>
+            <CardDescription>Visual representation of the family lineage. Click "Add Heir" to expand the tree.</CardDescription>
           </CardHeader>
           <CardContent>
-            <PersonCard person={familyHead} />
+            <PersonCard person={familyHead} onAddHeir={handleAddHeir} />
           </CardContent>
         </Card>
       </div>
