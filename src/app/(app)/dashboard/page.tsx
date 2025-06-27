@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -17,26 +17,33 @@ type Project = {
   location: string;
 };
 
-// Start with an empty array of projects
-const initialProjects: Project[] = [];
-
 export default function DashboardPage() {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectSiteId, setNewProjectSiteId] = useState('');
   const [newProjectLocation, setNewProjectLocation] = useState('');
 
-  console.log('DashboardPage rendered. Current projects:', projects);
+  // Load projects from localStorage on initial client-side render
+  useEffect(() => {
+    const savedProjects = localStorage.getItem('projects');
+    if (savedProjects) {
+      setProjects(JSON.parse(savedProjects));
+    }
+  }, []);
+
+  // Save projects to localStorage whenever the projects state changes
+  useEffect(() => {
+    localStorage.setItem('projects', JSON.stringify(projects));
+  }, [projects]);
+
 
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleAddProject triggered!');
-    console.log('Form values:', { newProjectName, newProjectSiteId, newProjectLocation });
 
     if (!newProjectName || !newProjectSiteId || !newProjectLocation) {
-        console.error('Validation failed: One or more fields are empty.');
+        // Simple validation
         return;
     }
 
@@ -46,20 +53,14 @@ export default function DashboardPage() {
       siteId: newProjectSiteId,
       location: newProjectLocation,
     };
-    console.log('Creating new project:', newProject);
 
-    setProjects(prevProjects => {
-        const updatedProjects = [...prevProjects, newProject];
-        console.log('Updating projects state:', updatedProjects);
-        return updatedProjects;
-    });
+    setProjects(prevProjects => [...prevProjects, newProject]);
     
     // Reset form and close dialog
     setNewProjectName('');
     setNewProjectSiteId('');
     setNewProjectLocation('');
     setIsDialogOpen(false);
-    console.log('Form reset and dialog closed.');
   };
 
   return (
