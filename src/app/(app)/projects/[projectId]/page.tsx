@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineageView } from "@/components/lineage/lineage-view";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { FileManager } from "@/components/files/file-manager";
+import { TitleDocumentsView } from '@/components/documents/title-documents-view';
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -72,10 +73,11 @@ export default function ProjectDetailsPage() {
                 <p className="text-muted-foreground">{project.siteId} - {project.location}</p>
             </header>
             <Tabs defaultValue="lineage" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
+                <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-flex">
                     <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
                     <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                     <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
+                    <TabsTrigger value="documents">Title Documents</TabsTrigger>
                 </TabsList>
                 <TabsContent value="lineage" className="mt-6">
                     <LineageView />
@@ -85,6 +87,9 @@ export default function ProjectDetailsPage() {
                 </TabsContent>
                 <TabsContent value="files" className="mt-6">
                     <FileManager projectId={projectId} />
+                </TabsContent>
+                <TabsContent value="documents" className="mt-6">
+                    <TitleDocumentsView projectId={projectId} />
                 </TabsContent>
             </Tabs>
         </div>
