@@ -28,6 +28,7 @@ type User = {
   email: string;
   role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
   status: 'Active' | 'Inactive';
+  avatarUrl?: string;
 };
 
 export function AppSidebar() {
@@ -105,7 +106,7 @@ export function AppSidebar() {
       <SidebarFooter>
          <div className="flex items-center gap-3 p-2 transition-all duration-200 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center">
             <Avatar className="flex-shrink-0">
-                <AvatarImage src="https://placehold.co/40x40" alt="User Avatar" data-ai-hint="profile person" />
+                <AvatarImage src={currentUser?.avatarUrl} alt="User Avatar" data-ai-hint="profile person" />
                 <AvatarFallback>{currentUser?.name.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">

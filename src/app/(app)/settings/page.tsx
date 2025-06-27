@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Moon, Sun, Trash2, User } from 'lucide-react';
+import { Moon, Sun, Trash2, User as UserIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type User = {
   id: string;
@@ -17,6 +18,7 @@ type User = {
   email: string;
   role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
   status: 'Active' | 'Inactive';
+  avatarUrl?: string;
 };
 
 export default function SettingsPage() {
@@ -27,12 +29,14 @@ export default function SettingsPage() {
     
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState('');
 
     // Sync form fields when currentUser changes
     useEffect(() => {
         if (currentUser) {
             setName(currentUser.name);
             setEmail(currentUser.email);
+            setAvatarUrl(currentUser.avatarUrl || '');
         }
     }, [currentUser]);
 
@@ -40,8 +44,10 @@ export default function SettingsPage() {
     useEffect(() => {
         const loadData = () => {
             // Load theme
-            const savedTheme = localStorage.getItem('theme');
-            setIsDarkMode(savedTheme === 'dark');
+            if (typeof window !== 'undefined') {
+                const savedTheme = localStorage.getItem('theme');
+                setIsDarkMode(savedTheme === 'dark');
+            }
 
             // Load current user (assuming the first user is the logged-in user)
             try {
@@ -70,15 +76,19 @@ export default function SettingsPage() {
 
     // Effect to apply theme class
     useEffect(() => {
-        const root = window.document.documentElement;
-        root.classList.toggle('dark', isDarkMode);
-        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+        if (typeof window !== 'undefined') {
+            const root = window.document.documentElement;
+            root.classList.toggle('dark', isDarkMode);
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+        }
     }, [isDarkMode]);
 
     const handleClearData = () => {
         try {
             localStorage.clear();
-            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            }
             toast({
                 title: "Success",
                 description: "All local application data has been cleared.",
@@ -103,7 +113,7 @@ export default function SettingsPage() {
             if (savedUsers) {
                 let users: User[] = JSON.parse(savedUsers);
                 const updatedUsers = users.map(user => 
-                    user.id === currentUser.id ? { ...user, name, email } : user
+                    user.id === currentUser.id ? { ...user, name, email, avatarUrl } : user
                 );
                 localStorage.setItem('users', JSON.stringify(updatedUsers));
                 
@@ -138,21 +148,20 @@ export default function SettingsPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><User /> User Profile</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><UserIcon /> User Profile</CardTitle>
                     <CardDescription>This is your profile information. You can edit it here.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-1">
-                        <Label>Name</Label>
-                        <p className="text-sm text-muted-foreground">{currentUser?.name || 'Loading...'}</p>
-                    </div>
-                     <div className="space-y-1">
-                        <Label>Email</Label>
-                        <p className="text-sm text-muted-foreground">{currentUser?.email || 'Loading...'}</p>
-                    </div>
-                    <div className="space-y-1">
-                        <Label>Role</Label>
-                        <p className="text-sm text-muted-foreground">{currentUser?.role || 'Loading...'}</p>
+                <CardContent>
+                     <div className="flex items-center gap-4">
+                        <Avatar className="h-20 w-20">
+                            <AvatarImage src={currentUser?.avatarUrl} alt={currentUser?.name} data-ai-hint="profile person" />
+                            <AvatarFallback>{currentUser?.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div className="grid gap-1.5">
+                            <h2 className="text-2xl font-semibold">{currentUser?.name || 'Loading...'}</h2>
+                            <p className="text-sm text-muted-foreground">{currentUser?.email || 'Loading...'}</p>
+                            <p className="text-sm text-muted-foreground">Role: {currentUser?.role || 'Loading...'}</p>
+                        </div>
                     </div>
                 </CardContent>
                  <CardFooter>
@@ -176,6 +185,10 @@ export default function SettingsPage() {
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="email" className="text-right">Email</Label>
                                         <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="avatarUrl" className="text-right">Avatar URL</Label>
+                                        <Input id="avatarUrl" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} className="col-span-3" placeholder="https://..." />
                                     </div>
                                 </div>
                                 <DialogFooter>

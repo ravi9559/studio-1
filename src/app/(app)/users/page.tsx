@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 // Define the type for a user
 type User = {
@@ -19,11 +20,12 @@ type User = {
   email: string;
   role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
   status: 'Active' | 'Inactive';
+  avatarUrl?: string;
 };
 
 // Initial mock data
 const initialUsers: User[] = [
-    { id: 'user-1682600000001', name: 'Transaction Manager', email: 'manager@o2o.com', role: 'Super Admin', status: 'Active' },
+    { id: 'user-1682600000001', name: 'Transaction Manager', email: 'manager@o2o.com', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
     { id: 'user-1682600000002', name: 'Data Entry Clerk', email: 'clerk1@o2o.com', role: 'Transaction Manager', status: 'Active' },
     { id: 'user-1682600000003', name: 'Read Only User', email: 'viewer@o2o.com', role: 'Viewer', status: 'Inactive' },
 ];
@@ -119,7 +121,13 @@ export default function UsersPage() {
                         <TableBody>
                             {users.map(user => (
                                 <TableRow key={user.id}>
-                                    <TableCell className="font-medium">{user.name}</TableCell>
+                                    <TableCell className="font-medium flex items-center gap-2">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="profile person" />
+                                            <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                                        </Avatar>
+                                        {user.name}
+                                    </TableCell>
                                     <TableCell>{user.email}</TableCell>
                                     <TableCell>{user.role}</TableCell>
                                     <TableCell>
@@ -181,6 +189,7 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogPr
     const [email, setEmail] = useState('');
     const [role, setRole] = useState<User['role']>('Viewer');
     const [status, setStatus] = useState<User['status']>('Active');
+    const [avatarUrl, setAvatarUrl] = useState('');
 
     useEffect(() => {
         if (user) {
@@ -188,18 +197,20 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogPr
             setEmail(user.email);
             setRole(user.role);
             setStatus(user.status);
+            setAvatarUrl(user.avatarUrl || '');
         } else {
             // Reset form for new user
             setName('');
             setEmail('');
             setRole('Viewer');
             setStatus('Active');
+            setAvatarUrl('');
         }
     }, [user, isOpen]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ name, email, role, status });
+        onSave({ name, email, role, status, avatarUrl });
     };
 
     return (
@@ -220,6 +231,10 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogPr
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="email" className="text-right">Email</Label>
                             <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="col-span-3" required />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="avatarUrl" className="text-right">Avatar URL</Label>
+                            <Input id="avatarUrl" value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} className="col-span-3" placeholder="https://..." />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right">Role</Label>
