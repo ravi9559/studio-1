@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -43,7 +44,7 @@ export function LineageSuggestion({ existingData }: LineageSuggestionProps) {
   return (
     <div className="fixed bottom-6 right-6 z-50">
         {isOpen && (
-            <Card className="w-96 mb-2 shadow-lg animate-in fade-in-50 slide-in-from-bottom-10 duration-300">
+            <Card className="w-96 mb-2 shadow-lg animate-in fade-in-50 slide-in-from-bottom-10 duration-300 flex flex-col max-h-[33vh]">
                 <CardHeader className="flex flex-row items-start justify-between">
                     <div className="space-y-1.5">
                         <CardTitle className="flex items-center gap-2">
@@ -58,7 +59,7 @@ export function LineageSuggestion({ existingData }: LineageSuggestionProps) {
                         <X className="h-4 w-4" />
                     </Button>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 overflow-y-auto">
                     <div>
                         <Textarea
                             placeholder="e.g., 'Are there any missing heirs for Ramasamy Gounder?'"
