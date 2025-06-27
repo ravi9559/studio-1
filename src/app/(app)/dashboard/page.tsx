@@ -28,9 +28,17 @@ export default function DashboardPage() {
   const [newProjectSiteId, setNewProjectSiteId] = useState('');
   const [newProjectLocation, setNewProjectLocation] = useState('');
 
+  console.log('DashboardPage rendered. Current projects:', projects);
+
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProjectName || !newProjectSiteId || !newProjectLocation) return;
+    console.log('handleAddProject triggered!');
+    console.log('Form values:', { newProjectName, newProjectSiteId, newProjectLocation });
+
+    if (!newProjectName || !newProjectSiteId || !newProjectLocation) {
+        console.error('Validation failed: One or more fields are empty.');
+        return;
+    }
 
     const newProject: Project = {
       id: `proj-${Date.now()}`, // Simple unique ID for now
@@ -38,14 +46,20 @@ export default function DashboardPage() {
       siteId: newProjectSiteId,
       location: newProjectLocation,
     };
+    console.log('Creating new project:', newProject);
 
-    setProjects(prevProjects => [...prevProjects, newProject]);
+    setProjects(prevProjects => {
+        const updatedProjects = [...prevProjects, newProject];
+        console.log('Updating projects state:', updatedProjects);
+        return updatedProjects;
+    });
     
     // Reset form and close dialog
     setNewProjectName('');
     setNewProjectSiteId('');
     setNewProjectLocation('');
     setIsDialogOpen(false);
+    console.log('Form reset and dialog closed.');
   };
 
   return (
