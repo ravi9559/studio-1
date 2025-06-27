@@ -10,7 +10,7 @@ import { FileManager } from "@/components/files/file-manager";
 import { ArrowLeft, Loader2, Edit } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +25,7 @@ import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 // --- Versioning and Storage Keys ---
-const DATA_VERSION = "1.3"; 
+const DATA_VERSION = "1.4"; 
 const DATA_VERSION_KEY = 'data-version';
 const PROJECTS_STORAGE_KEY = 'projects';
 const USERS_STORAGE_KEY = 'users';
@@ -247,8 +247,10 @@ export default function ProjectDetailsPage() {
             let loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || 'null');
             let loadedStatuses = JSON.parse(localStorage.getItem(acquisitionStorageKey) || 'null');
             let loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || 'null');
+            
+            const isInvalidData = !loadedOwners || !loadedStatuses || !loadedFolders || !Array.isArray(loadedOwners) || loadedOwners.length === 0;
 
-            if (!loadedOwners || !loadedStatuses || !loadedFolders || loadedOwners.length === 0) {
+            if (isInvalidData) {
                 const ownersMap = createOwnersMap();
                 const initialHeads = createInitialOwners(ownersMap);
                 const demoStatuses = siteSketchData.map((plot, index) => createDefaultAcquisitionStatus(projectId, plot, index));
@@ -438,7 +440,7 @@ export default function ProjectDetailsPage() {
         <div className="p-4 sm:p-6 lg:p-8">
             <header className="mb-6">
                 <Button variant="ghost" asChild className="mb-4 -ml-4">
-                    <Link href="/">
+                    <Link href="/dashboard">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Projects
                     </Link>
@@ -500,7 +502,12 @@ export default function ProjectDetailsPage() {
                     <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 <TabsContent value="lineage" className="mt-6">
-                    <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} />
+                    <LineageView 
+                        familyHeads={owners} 
+                        onAddHeir={handleAddHeir} 
+                        onUpdatePerson={handleUpdatePerson}
+                        onImport={(newOwners) => updateAndPersistOwners(newOwners)}
+                    />
                 </TabsContent>
                 <TabsContent value="site-sketch" className="mt-6">
                     <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
