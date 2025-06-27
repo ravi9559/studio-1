@@ -68,8 +68,8 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarMenu className="flex-1">
         <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard') || pathname.startsWith('/projects')} tooltip="Projects">
-            <Link href="/dashboard">
+          <SidebarMenuButton asChild isActive={pathname === '/' || pathname.startsWith('/projects/')} tooltip="Projects">
+            <Link href="/">
               <FolderKanban />
               <span>Projects</span>
             </Link>

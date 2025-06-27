@@ -383,7 +383,7 @@ export default function ProjectDetailsPage() {
         return (
             <div className="p-4 sm:p-6 lg:p-8 text-center">
                 <Button variant="ghost" asChild className="mb-4">
-                    <Link href="/projects">
+                    <Link href="/">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Projects
                     </Link>
@@ -403,7 +403,7 @@ export default function ProjectDetailsPage() {
         <div className="p-4 sm:p-6 lg:p-8">
             <header className="mb-6">
                 <Button variant="ghost" asChild className="mb-4 -ml-4">
-                    <Link href="/projects">
+                    <Link href="/">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Projects
                     </Link>
