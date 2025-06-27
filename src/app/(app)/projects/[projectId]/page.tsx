@@ -7,9 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineageView } from "@/components/lineage/lineage-view";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { FileManager } from "@/components/files/file-manager";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Edit } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from '@/hooks/use-toast';
 import { TitleDocumentsView } from '@/components/documents/title-documents-view';
 import { Notes } from '@/components/project/notes';
 import { Tasks } from '@/components/project/tasks';
@@ -141,6 +145,7 @@ function createDefaultFolders(familyHeads: Person[]): Folder[] {
 export default function ProjectDetailsPage() {
     const params = useParams();
     const projectId = params.projectId as string;
+    const { toast } = useToast();
 
     const [project, setProject] = useState<Project | null>(null);
     const [familyHeads, setFamilyHeads] = useState<Person[]>([]);
@@ -151,6 +156,11 @@ export default function ProjectDetailsPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [activeTab, setActiveTab] = useState('site-sketch');
     const [activeSurvey, setActiveSurvey] = useState<string | undefined>(siteSketchData[0]?.surveyNumber);
+    
+    const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
+    const [editedProjectName, setEditedProjectName] = useState('');
+    const [editedProjectSiteId, setEditedProjectSiteId] = useState('');
+    const [editedProjectLocation, setEditedProjectLocation] = useState('');
 
     const lineageStorageKey = `lineage-data-${projectId}`;
     const folderStorageKey = `document-folders-${projectId}`;
@@ -164,7 +174,12 @@ export default function ProjectDetailsPage() {
             if (savedProjects) {
                 const projects: Project[] = JSON.parse(savedProjects);
                 const currentProject = projects.find(p => p.id === projectId);
-                if (currentProject) setProject(currentProject);
+                if (currentProject) {
+                    setProject(currentProject);
+                    setEditedProjectName(currentProject.name);
+                    setEditedProjectSiteId(currentProject.siteId);
+                    setEditedProjectLocation(currentProject.location);
+                }
             }
 
             const savedUsers = localStorage.getItem('users');
@@ -248,6 +263,38 @@ export default function ProjectDetailsPage() {
     }
     
     // --- State Update Handlers ---
+    const handleUpdateProject = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!project || !editedProjectName || !editedProjectSiteId || !editedProjectLocation) return;
+
+        const updatedProjectData: Project = {
+            ...project,
+            name: editedProjectName,
+            siteId: editedProjectSiteId,
+            location: editedProjectLocation,
+        };
+
+        try {
+            const savedProjects = localStorage.getItem('projects');
+            const projects: Project[] = savedProjects ? JSON.parse(savedProjects) : [];
+            const updatedProjects = projects.map(p => p.id === projectId ? updatedProjectData : p);
+            localStorage.setItem('projects', JSON.stringify(updatedProjects));
+            setProject(updatedProjectData);
+            setIsEditProjectDialogOpen(false);
+            toast({
+                title: 'Project Updated',
+                description: 'The project details have been successfully saved.',
+            });
+        } catch (error) {
+            console.error("Failed to update project", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to update project details.',
+            });
+        }
+    };
+    
     const handleAddHeir = useCallback((parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
         setFamilyHeads(currentHeads => {
             const newHeads = JSON.parse(JSON.stringify(currentHeads)); // Deep copy
@@ -462,8 +509,65 @@ export default function ProjectDetailsPage() {
                         Back to Projects
                     </Link>
                 </Button>
-                <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-                <p className="text-muted-foreground">{project.siteId} - {project.location}</p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+                        <p className="text-muted-foreground">{project.siteId} - {project.location}</p>
+                    </div>
+                     <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Project
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Edit Project Details</DialogTitle>
+                                <DialogDescription>
+                                    Make changes to your project here. Click save when you're done.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleUpdateProject}>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-name" className="text-right">Name</Label>
+                                        <Input
+                                            id="edit-name"
+                                            value={editedProjectName}
+                                            onChange={(e) => setEditedProjectName(e.target.value)}
+                                            className="col-span-3"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-siteId" className="text-right">Site ID</Label>
+                                        <Input
+                                            id="edit-siteId"
+                                            value={editedProjectSiteId}
+                                            onChange={(e) => setEditedProjectSiteId(e.target.value)}
+                                            className="col-span-3"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-location" className="text-right">Location</Label>
+                                        <Input
+                                            id="edit-location"
+                                            value={editedProjectLocation}
+                                            onChange={(e) => setEditedProjectLocation(e.target.value)}
+                                            className="col-span-3"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit">Save Changes</Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </header>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full sm:inline-flex sm:w-auto">
