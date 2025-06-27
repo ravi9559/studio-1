@@ -12,12 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 // Define the type for a user
 type User = {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
   status: 'Active' | 'Inactive';
   avatarUrl?: string;
@@ -25,14 +27,15 @@ type User = {
 
 // Initial mock data
 const initialUsers: User[] = [
-    { id: 'user-1682600000001', name: 'Transaction Manager', email: 'manager@o2o.com', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
-    { id: 'user-1682600000002', name: 'Data Entry Clerk', email: 'clerk1@o2o.com', role: 'Transaction Manager', status: 'Active' },
-    { id: 'user-1682600000003', name: 'Read Only User', email: 'viewer@o2o.com', role: 'Viewer', status: 'Inactive' },
+    { id: 'user-1682600000001', name: 'Super Admin', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
+    { id: 'user-1682600000002', name: 'Transaction Manager', email: 'manager@o2o.com', password: 'password', role: 'Transaction Manager', status: 'Active' },
+    { id: 'user-1682600000003', name: 'Read Only User', email: 'viewer@o2o.com', password: 'password', role: 'Viewer', status: 'Inactive' },
 ];
 
 const STORAGE_KEY = 'users';
 
 export default function UsersPage() {
+    const { toast } = useToast();
     const [users, setUsers] = useState<User[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -77,12 +80,19 @@ export default function UsersPage() {
 
     const handleDeleteUser = (userId: string) => {
         setUsers(users.filter(user => user.id !== userId));
+        toast({ title: "User Deleted", description: "The user has been successfully removed." });
     };
 
     const handleSaveUser = (userData: Omit<User, 'id'>) => {
         if (userToEdit) {
             // Edit existing user
-            setUsers(users.map(user => user.id === userToEdit.id ? { ...user, ...userData } : user));
+            const updatedData = { ...userData };
+            if (!updatedData.password) {
+                // If password field is empty on edit, keep the old one
+                updatedData.password = userToEdit.password;
+            }
+            setUsers(users.map(user => user.id === userToEdit.id ? { ...userToEdit, ...updatedData } : user));
+            toast({ title: "User Updated", description: "The user details have been saved." });
         } else {
             // Add new user
             const newUser: User = {
@@ -90,6 +100,7 @@ export default function UsersPage() {
                 ...userData,
             };
             setUsers([...users, newUser]);
+            toast({ title: "User Added", description: "The new user has been created." });
         }
         setIsDialogOpen(false);
     };
@@ -187,6 +198,7 @@ interface UserFormDialogProps {
 function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogProps) {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [role, setRole] = useState<User['role']>('Viewer');
     const [status, setStatus] = useState<User['status']>('Active');
     const [avatarUrl, setAvatarUrl] = useState('');
@@ -198,10 +210,12 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogPr
             setRole(user.role);
             setStatus(user.status);
             setAvatarUrl(user.avatarUrl || '');
+            setPassword(''); // Don't pre-fill password for editing
         } else {
             // Reset form for new user
             setName('');
             setEmail('');
+            setPassword('');
             setRole('Viewer');
             setStatus('Active');
             setAvatarUrl('');
@@ -210,7 +224,7 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogPr
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ name, email, role, status, avatarUrl });
+        onSave({ name, email, password, role, status, avatarUrl });
     };
 
     return (
@@ -231,6 +245,10 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogPr
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="email" className="text-right">Email</Label>
                             <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="col-span-3" required />
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="password" className="text-right">Password</Label>
+                            <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="col-span-3" placeholder={user ? "Leave blank to keep unchanged" : ""} required={!user} />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="avatarUrl" className="text-right">Avatar URL</Label>
