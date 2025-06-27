@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { FC } from 'react';
@@ -18,6 +19,7 @@ interface PersonCardProps {
   person: Person;
   onAddHeir: (parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => void;
   onUpdatePerson: (personId: string, personData: Omit<Person, 'id' | 'heirs'>) => void;
+  isFamilyHead?: boolean;
 }
 
 const statusColors: { [key in Person['status']]: string } = {
@@ -309,7 +311,7 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
     );
 }
 
-export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePerson }) => {
+export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePerson, isFamilyHead }) => {
   const [isAddHeirOpen, setIsAddHeirOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   
@@ -397,7 +399,7 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
                     <EditPersonForm person={person} onUpdatePerson={onUpdatePerson} closeDialog={() => setIsEditOpen(false)} />
                 </DialogContent>
             </Dialog>
-            <Button variant="ghost" size="sm"><Trash2 className="mr-1 h-3 w-3" /> Delete</Button>
+            {!isFamilyHead && <Button variant="ghost" size="sm"><Trash2 className="mr-1 h-3 w-3" /> Delete</Button>}
             <Dialog open={isAddHeirOpen} onOpenChange={setIsAddHeirOpen}>
                 <DialogTrigger asChild>
                     <Button size="sm"><UserPlus className="mr-1 h-3 w-3" /> Add Heir</Button>
