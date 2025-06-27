@@ -5,83 +5,47 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { AcquisitionStatus } from '@/types';
-import { Users, HandCoins } from 'lucide-react';
-import { Badge } from '../ui/badge';
-import { Button } from '@/components/ui/button';
-import { siteSketchData } from '@/lib/site-sketch-data';
+import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 
 interface SiteSketchViewProps {
   acquisitionStatuses: AcquisitionStatus[];
   onSelectSurvey: (statusId: string) => void;
 }
 
-const getStatusVariant = (status?: AcquisitionStatus): 'default' | 'secondary' | 'destructive' => {
-    if (!status) return 'destructive';
-    if (status.legal.queryStatus === 'Cleared') return 'default';
-    if (status.financials.advancePayment === 'Paid' || status.financials.agreementStatus === 'Signed' || status.legal.queryStatus === 'On-Progress') return 'secondary';
-    return 'destructive';
+const getStatusVariant = (status?: AcquisitionStatus): 'completed' | 'inProgress' | 'pending' => {
+    if (!status) return 'pending';
+    if (status.legal.queryStatus === 'Cleared') return 'completed';
+    if (status.financials.advancePayment === 'Paid' || status.financials.agreementStatus === 'Signed' || status.legal.queryStatus === 'On-Progress') return 'inProgress';
+    return 'pending';
 }
 
-const getStatusText = (status?: AcquisitionStatus) => {
-    if (!status) return 'Pending';
-    if (status.legal.queryStatus === 'Cleared') return 'Completed';
-    if (status.financials.advancePayment === 'Paid' || status.financials.agreementStatus === 'Signed' || status.legal.queryStatus === 'On-Progress') return 'In Progress';
-    return 'Pending';
-}
-
-
-const PlotCard = ({ plot, status, onSelectSurvey }: { plot: typeof siteSketchData[0], status?: AcquisitionStatus, onSelectSurvey: (statusId: string) => void; }) => {
+const PlotCard = ({ plot, status, onSelectSurvey }: { plot: SiteSketchPlot, status?: AcquisitionStatus, onSelectSurvey: (statusId: string) => void; }) => {
   const statusVariant = getStatusVariant(status);
-  const statusText = getStatusText(status);
-  
-  const ownerName = status ? status.familyHeadName : plot.ownerName;
-  const extentAcres = status ? status.extent.acres : plot.acres;
-  const extentCents = status ? status.extent.cents : plot.cents;
+
+  const colorClasses = {
+    completed: 'bg-green-100 text-green-800 border-green-400 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700 dark:hover:bg-green-800/50',
+    inProgress: 'bg-yellow-100 text-yellow-800 border-yellow-400 hover:bg-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700 dark:hover:bg-yellow-800/50',
+    pending: 'bg-slate-100 text-slate-800 border-slate-400 hover:bg-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800/50',
+  };
+
+  const surveyNumber = status ? status.surveyNumber : plot.surveyNumber;
 
   return (
-    <div
+    <button
+      onClick={() => status && onSelectSurvey(status.id)}
+      disabled={!status}
       className={cn(
-        'flex h-full flex-col justify-between rounded-lg border p-2 text-xs shadow-sm transition-all hover:shadow-md hover:scale-[1.03] hover:z-10 overflow-hidden',
-        // Completed
-        statusVariant === 'default' && 'bg-emerald-50 dark:bg-emerald-950 border-emerald-500 text-emerald-900 dark:text-emerald-200',
-        // In Progress
-        statusVariant === 'secondary' && 'bg-amber-50 dark:bg-amber-950 border-amber-500 text-amber-900 dark:text-amber-200',
-        // Pending
-        statusVariant === 'destructive' && 'bg-rose-50 dark:bg-rose-950 border-rose-500 text-rose-900 dark:text-rose-200'
+        'w-full aspect-square flex items-center justify-center rounded-lg border p-2 text-sm font-bold shadow-sm transition-all hover:shadow-md hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed',
+        statusVariant === 'completed' && colorClasses.completed,
+        statusVariant === 'inProgress' && colorClasses.inProgress,
+        statusVariant === 'pending' && colorClasses.pending,
       )}
     >
-      <div>
-        <div className="flex justify-between items-center">
-            <h3 className="font-bold text-sm truncate">{plot.surveyNumber}</h3>
-            <Badge
-              variant={"outline"}
-              className={cn(
-                "text-xs border-transparent font-bold",
-                statusVariant === 'default' && 'bg-emerald-500 text-white',
-                statusVariant === 'secondary' && 'bg-amber-500 text-amber-950',
-                statusVariant === 'destructive' && 'bg-rose-500 text-white'
-              )}
-            >
-              {statusText}
-            </Badge>
-        </div>
-        <div className="space-y-1 mt-1 text-current/80 font-medium">
-            <div className="flex items-center gap-1">
-                <Users className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{ownerName}</span>
-            </div>
-            <div className="flex items-center gap-1">
-                <HandCoins className="h-3 w-3 flex-shrink-0" />
-                <span>{extentAcres} Ac, {extentCents} C</span>
-            </div>
-        </div>
-      </div>
-       <Button variant="ghost" size="sm" className="w-full h-6 mt-1 text-xs text-current/90 font-semibold hover:bg-black/5 dark:hover:bg-white/5" onClick={() => status && onSelectSurvey(status.id)}>
-            View Details
-        </Button>
-    </div>
+      {surveyNumber}
+    </button>
   );
 };
+
 
 export function SiteSketchView({ acquisitionStatuses, onSelectSurvey }: SiteSketchViewProps) {
   
@@ -90,26 +54,19 @@ export function SiteSketchView({ acquisitionStatuses, onSelectSurvey }: SiteSket
       <CardHeader>
         <CardTitle>Site Sketch Layout</CardTitle>
         <CardDescription>
-          A visual, interactive representation of the project site. Click "View Details" on a plot to see its acquisition status. The sketch will auto-update as you make changes.
+          An interactive grid of all survey plots. Click a plot to view and manage its acquisition details.
         </CardDescription>
       </CardHeader>
-      <CardContent className="overflow-x-auto p-2">
-        <div className="relative w-[1600px] h-[900px] rounded-lg border bg-gray-50 dark:bg-background/30 p-4">
-           {/* Main Road */}
-           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
-                <p className="font-bold text-gray-600 dark:text-gray-300">MAIN ROAD</p>
-           </div>
-           
-           <div className="relative h-full w-full grid grid-cols-20 grid-rows-10 gap-1 mb-20">
+      <CardContent>
+         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3 p-2 border rounded-lg bg-background/50">
             {siteSketchData.map((plot, index) => {
+              // The status ID includes the index to ensure uniqueness for plots that might be part of a larger survey number but are distinct entries.
               const status = acquisitionStatuses.find(s => s.id.endsWith(`-${plot.surveyNumber}-${index}`));
               return (
-              <div key={`${plot.surveyNumber}-${index}`} className={cn(plot.gridClass)}>
-                <PlotCard plot={plot} status={status} onSelectSurvey={onSelectSurvey} />
-              </div>
-            )})}
+                 <PlotCard key={`${plot.surveyNumber}-${index}`} plot={plot} status={status} onSelectSurvey={onSelectSurvey} />
+              )
+            })}
           </div>
-        </div>
       </CardContent>
     </Card>
   );
