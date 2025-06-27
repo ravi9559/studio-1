@@ -3,3 +3,16 @@
 This is a NextJS starter in Firebase Studio.
 
 To get started, take a look at src/app/page.tsx.
+
+## Deploying and Adding a Custom Domain
+
+Your application is hosted using **Firebase App Hosting**. To connect your custom domain (e.g., `https://lakshmibalajio2o.com/`), follow these steps in the Firebase Console:
+
+1.  **Go to the Firebase Console:** [https://console.firebase.google.com/](https://console.firebase.google.com/)
+2.  **Select your project:** `lakshmibalajio2o`
+3.  **Navigate to App Hosting:** In the left-hand menu, under the "Build" section, click on **App Hosting**.
+4.  **Select your Backend:** You will see a list of backends. Click on the one named **"Studio"**. This should take you to that backend's specific dashboard.
+5.  **Add Domain:** On the dashboard, find and click the **Domains** tab.
+6.  **Follow Instructions:** Click **"Add custom domain"** and follow the on-screen instructions to verify your domain ownership and update your DNS records.
+
+If you have trouble with the console UI (e.g., pages not loading or cards not being clickable), please try a hard refresh (`Ctrl/Cmd + Shift + R`) or logging out and back in, as this can often resolve temporary issues.
