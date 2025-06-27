@@ -9,8 +9,13 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, ArrowRight } from "lucide-react";
 import Link from 'next/link';
 import type { Project, User } from '@/types';
+import { Loader2 } from 'lucide-react';
 
-// Default data to initialize the app
+const DATA_VERSION = "1.3";
+const DATA_VERSION_KEY = 'data-version';
+const USERS_STORAGE_KEY = 'users';
+const PROJECTS_STORAGE_KEY = 'projects';
+
 const initialUsers: User[] = [
     { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
     { id: 'user-1682600000002', name: 'SK Associates', email: 'lawyer@sk.com', password: 'password', role: 'Lawyer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
@@ -28,8 +33,6 @@ const initialProjects: Project[] = [
     }
 ];
 
-const USERS_STORAGE_KEY = 'users';
-const PROJECTS_STORAGE_KEY = 'projects';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -41,26 +44,39 @@ export default function ProjectsPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // Load and initialize data from localStorage
   useEffect(() => {
     try {
-      // Initialize users if they don't exist
-      const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      const users: User[] = savedUsers ? JSON.parse(savedUsers) : initialUsers;
-      if (!savedUsers) {
-          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
+      if (savedVersion !== DATA_VERSION) {
+          const theme = localStorage.getItem('theme');
+          localStorage.clear();
+          if (theme) localStorage.setItem('theme', theme);
+          localStorage.setItem(DATA_VERSION_KEY, DATA_VERSION);
       }
+
+      // Initialize users if they don't exist
+      let users: User[];
+      const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      if (!savedUsers) {
+        users = initialUsers;
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      } else {
+        users = JSON.parse(savedUsers);
+      }
+      
       const user = users.length > 0 ? users[0] : null;
       setCurrentUser(user);
 
       // Initialize projects if they don't exist
+      let allProjects: Project[];
       const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-      let allProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : initialProjects;
       if (!savedProjects) {
+          allProjects = initialProjects;
           localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
+      } else {
+        allProjects = JSON.parse(savedProjects);
       }
       
-      // Filter projects based on user role
       if (user && user.role !== 'Super Admin') {
         const assignedProjects = allProjects.filter(p => user.projectIds?.includes(p.id));
         setProjects(assignedProjects);
@@ -75,35 +91,29 @@ export default function ProjectsPage() {
 
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!newProjectName || !newProjectSiteId || !newProjectLocation) {
-        return;
-    }
-
+    if (!newProjectName || !newProjectSiteId || !newProjectLocation) return;
     const newProject: Project = {
       id: `proj-${Date.now()}`,
       name: newProjectName,
       siteId: newProjectSiteId,
       location: newProjectLocation,
     };
-
-    try {
-        const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-        const allProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : [];
-        const updatedProjects = [...allProjects, newProject];
-        localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
-        
-        setProjects(updatedProjects);
-
-    } catch (error) {
-        console.error("Failed to add project", error);
-    }
-    
+    const updatedProjects = [...projects, newProject];
+    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+    setProjects(updatedProjects);
     setNewProjectName('');
     setNewProjectSiteId('');
     setNewProjectLocation('');
     setIsDialogOpen(false);
   };
+  
+  if (!isLoaded) {
+    return (
+        <div className="flex justify-center items-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    )
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -130,43 +140,16 @@ export default function ProjectsPage() {
                 <form onSubmit={handleAddProject}>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                        Name
-                    </Label>
-                    <Input
-                        id="name"
-                        value={newProjectName}
-                        onChange={(e) => setNewProjectName(e.target.value)}
-                        className="col-span-3"
-                        placeholder="e.g., Greenfield Valley"
-                        required
-                    />
+                    <Label htmlFor="name" className="text-right">Name</Label>
+                    <Input id="name" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} className="col-span-3" placeholder="e.g., Greenfield Valley" required />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="siteId" className="text-right">
-                        Site ID
-                    </Label>
-                    <Input
-                        id="siteId"
-                        value={newProjectSiteId}
-                        onChange={(e) => setNewProjectSiteId(e.target.value)}
-                        className="col-span-3"
-                        placeholder="e.g., GV-001"
-                        required
-                    />
+                    <Label htmlFor="siteId" className="text-right">Site ID</Label>
+                    <Input id="siteId" value={newProjectSiteId} onChange={(e) => setNewProjectSiteId(e.target.value)} className="col-span-3" placeholder="e.g., GV-001" required />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="location" className="text-right">
-                        Location
-                    </Label>
-                    <Input
-                        id="location"
-                        value={newProjectLocation}
-                        onChange={(e) => setNewProjectLocation(e.target.value)}
-                        className="col-span-3"
-                        placeholder="e.g., Coimbatore"
-                        required
-                    />
+                    <Label htmlFor="location" className="text-right">Location</Label>
+                    <Input id="location" value={newProjectLocation} onChange={(e) => setNewProjectLocation(e.target.value)} className="col-span-3" placeholder="e.g., Coimbatore" required />
                     </div>
                 </div>
                 <DialogFooter>

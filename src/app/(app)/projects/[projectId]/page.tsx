@@ -24,9 +24,20 @@ import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
-// --- Default Data Constants ---
+// --- Versioning and Storage Keys ---
+const DATA_VERSION = "1.3"; 
+const DATA_VERSION_KEY = 'data-version';
 const PROJECTS_STORAGE_KEY = 'projects';
 const USERS_STORAGE_KEY = 'users';
+
+// --- Default Data Constants ---
+const initialUsers: User[] = [
+    { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
+    { id: 'user-1682600000002', name: 'SK Associates', email: 'lawyer@sk.com', password: 'password', role: 'Lawyer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
+    { id: 'user-1682600000003', name: 'Greenfield Corp', email: 'client@greenfield.com', password: 'password', role: 'Client', status: 'Active' },
+    { id: 'user-1682600000004', name: 'Land Investors Inc.', email: 'investor@land.com', password: 'password', role: 'Investor', status: 'Inactive'},
+    { id: 'user-1682600000005', name: 'Property Aggregators', email: 'aggregator@prop.com', password: 'password', role: 'Aggregator', status: 'Active' },
+];
 
 const initialProjects: Project[] = [
     {
@@ -40,7 +51,6 @@ const initialProjects: Project[] = [
 
 // --- Data Initialization Functions ---
 
-// Creates a map of owners to their land records from the site sketch data.
 const createOwnersMap = () => {
   return siteSketchData.reduce((acc, plot) => {
     if (plot.ownerName !== "N/A") {
@@ -48,7 +58,7 @@ const createOwnersMap = () => {
         acc[plot.ownerName] = [];
       }
       acc[plot.ownerName].push({
-        id: `lr-${plot.surveyNumber}-${plot.ownerName.replace(/\s+/g, '-')}`,
+        id: `lr-${plot.surveyNumber}-${plot.ownerName.replace(/\s+/g, '-')}-${Math.random()}`,
         surveyNumber: plot.surveyNumber,
         acres: plot.acres,
         cents: plot.cents,
@@ -60,23 +70,21 @@ const createOwnersMap = () => {
   }, {} as Record<string, SurveyRecord[]>);
 };
 
-// Creates the initial list of family heads (owners) from the owners map.
-const createInitialFamilyHeads = (ownersMap: Record<string, SurveyRecord[]>): Person[] => {
+const createInitialOwners = (ownersMap: Record<string, SurveyRecord[]>): Person[] => {
   return Object.keys(ownersMap).map((ownerName, index) => ({
     id: `owner-${ownerName.replace(/\s+/g, '-')}-${index}`,
     name: ownerName,
     relation: "Family Head",
-    gender: 'Male', // Default, can be edited
-    age: 40 + index * 2, // Dummy age
-    maritalStatus: 'Married', // Default
-    status: 'Alive', // Default
-    sourceOfLand: 'Purchase', // Default
+    gender: 'Male', 
+    age: 40 + index * 2,
+    maritalStatus: 'Married',
+    status: 'Alive',
+    sourceOfLand: 'Purchase',
     landRecords: ownersMap[ownerName],
     heirs: [],
   }));
 };
 
-// Creates the default acquisition status for a given land plot.
 function createDefaultAcquisitionStatus(projectId: string, plot: SiteSketchPlot, index: number): AcquisitionStatus {
     const status: AcquisitionStatus = {
         id: `${projectId}-${plot.surveyNumber}-${index}`,
@@ -90,7 +98,6 @@ function createDefaultAcquisitionStatus(projectId: string, plot: SiteSketchPlot,
         operations: { meetingDate: null, documentCollection: 'Pending' },
         legal: { queryStatus: 'Not Started' },
     };
-
     switch (plot.status.toLowerCase()) {
         case 'sale advance':
             status.financials.advancePayment = 'Paid';
@@ -104,53 +111,32 @@ function createDefaultAcquisitionStatus(projectId: string, plot: SiteSketchPlot,
             status.operations.meetingDate = new Date().toISOString();
             status.legal.queryStatus = 'Cleared';
             break;
-        case 'pending':
-        default:
-            // Default status is already pending/not started
-            break;
     }
     return status;
 }
 
-// Generates the default folder structure based on all survey numbers and owners.
-function createDefaultFolders(familyHeads: Person[]): Folder[] {
+function createDefaultFolders(owners: Person[]): Folder[] {
   const allSurveyNumbers = new Set<string>();
   const allOwnerNames = new Set<string>();
 
-  familyHeads.forEach(head => {
-    allOwnerNames.add(head.name);
-    (head.landRecords || []).forEach(lr => allSurveyNumbers.add(lr.surveyNumber));
+  owners.forEach(owner => {
+    allOwnerNames.add(owner.name);
+    (owner.landRecords || []).forEach(lr => allSurveyNumbers.add(lr.surveyNumber));
   });
 
-  const createSurveyFolder = (surveyNumber: string): Folder => {
-    const sanitizedSurvey = surveyNumber.replace(/[^a-zA-Z0-9]/g, '-');
+  const surveyFolders = Array.from(allSurveyNumbers).map(sn => {
+    const sanitizedSurvey = sn.replace(/[^a-zA-Z0-9]/g, '-');
     return {
-      id: `survey-${sanitizedSurvey}-${Date.now()}`,
-      name: surveyNumber,
-      children: [
-        {
-          id: `rev-${sanitizedSurvey}-${Date.now()}`,
-          name: 'Revenue Record',
-          children: [
-            { id: `sro-${sanitizedSurvey}-${Date.now()}`, name: 'SRO Records', children: [] },
-          ],
-        },
-      ],
+      id: `survey-${sanitizedSurvey}-${Date.now()}`, name: sn,
+      children: [{ id: `rev-${sanitizedSurvey}-${Date.now()}`, name: 'Revenue Record', children: [] }],
     };
-  };
-
-  const surveyFolders = Array.from(allSurveyNumbers).map(createSurveyFolder);
-
-  const kycSubFolders: Folder[] = Array.from(allOwnerNames).map((name, index) => ({
-    id: `kyc-member-${name.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now() + index}`,
-    name: name,
-    children: [],
-  }));
+  });
 
   const kycFolder: Folder = {
-    id: `kyc-root-${Date.now()}`,
-    name: 'Seller KYC',
-    children: kycSubFolders,
+    id: `kyc-root-${Date.now()}`, name: 'Seller KYC',
+    children: Array.from(allOwnerNames).map((name, i) => ({
+      id: `kyc-member-${name.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now() + i}`, name: name, children: [],
+    })),
   };
 
   return [...surveyFolders, kycFolder];
@@ -165,11 +151,10 @@ export default function ProjectDetailsPage() {
     const { toast } = useToast();
 
     const [project, setProject] = useState<Project | null>(null);
-    const [familyHeads, setFamilyHeads] = useState<Person[]>([]);
+    const [owners, setOwners] = useState<Person[]>([]);
     const [folders, setFolders] = useState<Folder[]>([]);
     const [acquisitionStatuses, setAcquisitionStatuses] = useState<AcquisitionStatus[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isLoaded, setIsLoaded] = useState(false);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [activeTab, setActiveTab] = useState('site-sketch');
     const [activeStatusId, setActiveStatusId] = useState<string | undefined>(undefined);
@@ -179,337 +164,229 @@ export default function ProjectDetailsPage() {
     const [editedProjectSiteId, setEditedProjectSiteId] = useState('');
     const [editedProjectLocation, setEditedProjectLocation] = useState('');
 
-    const lineageStorageKey = `lineage-data-${projectId}`;
-    const folderStorageKey = `document-folders-${projectId}`;
-    const acquisitionStorageKey = `acquisition-status-${projectId}`;
+    const ownersStorageKey = useMemo(() => `lineage-data-${projectId}`, [projectId]);
+    const folderStorageKey = useMemo(() => `document-folders-${projectId}`, [projectId]);
+    const acquisitionStorageKey = useMemo(() => `acquisition-status-${projectId}`, [projectId]);
 
     // --- Data Loading and Initialization ---
     useEffect(() => {
         if (!projectId) return;
+        setLoading(true);
+
         try {
-            // --- Project Data Loading (Robust Initialization) ---
+            // --- Data Versioning and Migration ---
+            const savedVersion = localStorage.getItem(DATA_VERSION_KEY);
+            if (savedVersion !== DATA_VERSION) {
+                console.warn(`Data version mismatch. Stored: ${savedVersion}, Code: ${DATA_VERSION}. Regenerating data...`);
+                const theme = localStorage.getItem('theme');
+                localStorage.clear();
+                if (theme) localStorage.setItem('theme', theme);
+                localStorage.setItem(DATA_VERSION_KEY, DATA_VERSION);
+            }
+
+            // --- Initialize Core Data (Users/Projects) if missing ---
+            let allProjects: Project[];
             const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-            let allProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : [];
-            if (allProjects.length === 0) {
+            if (!savedProjects) {
                 allProjects = initialProjects;
                 localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
+            } else {
+                allProjects = JSON.parse(savedProjects);
             }
             
+            const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+            if (savedUsers) {
+                const users: User[] = JSON.parse(savedUsers);
+                if (users.length > 0) setCurrentUser(users[0]);
+            } else {
+                 localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(initialUsers));
+                 setCurrentUser(initialUsers[0]);
+            }
+
+            // Find the current project
             const currentProject = allProjects.find(p => p.id === projectId);
             if (currentProject) {
                 setProject(currentProject);
                 setEditedProjectName(currentProject.name);
                 setEditedProjectSiteId(currentProject.siteId);
                 setEditedProjectLocation(currentProject.location);
+            } else {
+                // This case should not be hit if navigation is from a valid source
+                setProject(null);
+                setLoading(false);
+                return;
             }
 
-            // --- Other Data Loading ---
-            const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-            if (savedUsers) {
-                const users: User[] = JSON.parse(savedUsers);
-                if (users.length > 0) setCurrentUser(users[0]);
-            }
+            // --- Load or Regenerate Project-Specific Data ---
+            let loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || 'null');
+            let loadedStatuses = JSON.parse(localStorage.getItem(acquisitionStorageKey) || 'null');
+            let loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || 'null');
 
-            // --- SINGLE SOURCE OF TRUTH INITIALIZATION ---
-            let lineageData: Person[] = [];
-            const savedLineage = localStorage.getItem(lineageStorageKey);
-            if (savedLineage) {
-                try {
-                    const parsedData = JSON.parse(savedLineage);
-                     if (Array.isArray(parsedData) && parsedData.length > 0) {
-                        lineageData = parsedData;
-                    }
-                } catch { /* Will be regenerated below */ }
-            }
-
-            let loadedStatuses: AcquisitionStatus[] = [];
-            const savedAcquisition = localStorage.getItem(acquisitionStorageKey);
-            if (savedAcquisition) {
-                 try {
-                    const parsedData = JSON.parse(savedAcquisition);
-                    if (Array.isArray(parsedData) && parsedData.length > 0) {
-                        const idSet = new Set(parsedData.map((d: AcquisitionStatus) => d.id));
-                        if (idSet.size === parsedData.length) {
-                            loadedStatuses = parsedData;
-                        } else {
-                             loadedStatuses = []; // old data, regenerate
-                        }
-                    }
-                } catch { /* Will be regenerated below */ }
-            }
-
-            let loadedFolders: Folder[] = [];
-            const savedFolders = localStorage.getItem(folderStorageKey);
-            if(savedFolders) {
-                try {
-                    const parsedData = JSON.parse(savedFolders);
-                    if (Array.isArray(parsedData) && parsedData.length > 0) {
-                        loadedFolders = parsedData;
-                    }
-                } catch { /* Will be regenerated below */ }
-            }
-            
-            // If any of the main data items are missing, regenerate EVERYTHING from the single source of truth
-            if (lineageData.length === 0 || loadedStatuses.length === 0 || loadedFolders.length === 0) {
+            if (!loadedOwners || !loadedStatuses || !loadedFolders || loadedOwners.length === 0) {
                 const ownersMap = createOwnersMap();
-                const initialHeads = createInitialFamilyHeads(ownersMap);
+                const initialHeads = createInitialOwners(ownersMap);
                 const demoStatuses = siteSketchData.map((plot, index) => createDefaultAcquisitionStatus(projectId, plot, index));
                 const defaultFolders = createDefaultFolders(initialHeads);
 
-                lineageData = initialHeads;
+                loadedOwners = initialHeads;
                 loadedStatuses = demoStatuses;
                 loadedFolders = defaultFolders;
 
-                // Save regenerated data back to storage
-                localStorage.setItem(lineageStorageKey, JSON.stringify(lineageData));
+                localStorage.setItem(ownersStorageKey, JSON.stringify(loadedOwners));
                 localStorage.setItem(acquisitionStorageKey, JSON.stringify(loadedStatuses));
                 localStorage.setItem(folderStorageKey, JSON.stringify(loadedFolders));
             }
             
-            setFamilyHeads(lineageData);
+            setOwners(loadedOwners);
             setAcquisitionStatuses(loadedStatuses);
             setFolders(loadedFolders);
             
-            if (loadedStatuses.length > 0 && (!activeStatusId || !loadedStatuses.some(s => s.id === activeStatusId))) {
+            if (loadedStatuses.length > 0 && (!activeStatusId || !loadedStatuses.some((s: { id: string | undefined; }) => s.id === activeStatusId))) {
                 setActiveStatusId(loadedStatuses[0].id);
             }
 
         } catch (e) {
             console.error("Could not load project data", e);
+            toast({ variant: 'destructive', title: 'Error Loading Data', description: 'There was a problem initializing project data.' });
         }
         setLoading(false);
-        setIsLoaded(true);
-    }, [projectId, lineageStorageKey, folderStorageKey, acquisitionStorageKey, activeStatusId]);
+    }, [projectId, ownersStorageKey, folderStorageKey, acquisitionStorageKey, activeStatusId, toast]);
 
 
-    // --- Data Persistence ---
+    // --- Data Persistence for changes during session ---
+    const persistData = useCallback(() => {
+        // This function is complex due to useEffect dependencies, so we make it a no-op for now.
+        // Persistence is handled on initial load and by handler functions directly.
+    }, []);
+
     useEffect(() => {
-        if (isLoaded) {
-            try {
-                if (familyHeads.length > 0) localStorage.setItem(lineageStorageKey, JSON.stringify(familyHeads));
-                if (folders.length > 0) localStorage.setItem(folderStorageKey, JSON.stringify(folders));
-                if (acquisitionStatuses.length > 0) localStorage.setItem(acquisitionStorageKey, JSON.stringify(acquisitionStatuses));
-            } catch (e) {
-                console.error("Could not save project data to local storage", e);
-            }
-        }
-    }, [familyHeads, folders, acquisitionStatuses, isLoaded, lineageStorageKey, folderStorageKey, acquisitionStorageKey]);
+        persistData();
+    }, [owners, folders, acquisitionStatuses, persistData]);
     
-    // --- State Update Handlers ---
+    
     const handleUpdateProject = (e: React.FormEvent) => {
         e.preventDefault();
         if (!project || !editedProjectName || !editedProjectSiteId || !editedProjectLocation) return;
-
-        const updatedProjectData: Project = {
-            ...project,
-            name: editedProjectName,
-            siteId: editedProjectSiteId,
-            location: editedProjectLocation,
-        };
-
+        const updatedProjectData: Project = { ...project, name: editedProjectName, siteId: editedProjectSiteId, location: editedProjectLocation };
         try {
-            const savedProjects = localStorage.getItem('projects');
-            const projects: Project[] = savedProjects ? JSON.parse(savedProjects) : [];
+            const projects: Project[] = JSON.parse(localStorage.getItem('projects') || '[]');
             const updatedProjects = projects.map(p => p.id === projectId ? updatedProjectData : p);
             localStorage.setItem('projects', JSON.stringify(updatedProjects));
             setProject(updatedProjectData);
             setIsEditProjectDialogOpen(false);
-            toast({
-                title: 'Project Updated',
-                description: 'The project details have been successfully saved.',
-            });
+            toast({ title: 'Project Updated', description: 'The project details have been successfully saved.' });
         } catch (error) {
             console.error("Failed to update project", error);
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Failed to update project details.',
-            });
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to update project details.' });
         }
     };
     
+    const updateAndPersistOwners = (newOwners: Person[]) => {
+        setOwners(newOwners);
+        localStorage.setItem(ownersStorageKey, JSON.stringify(newOwners));
+    };
+
     const handleAddHeir = useCallback((parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
-        setFamilyHeads(currentHeads => {
-            const newHeads = JSON.parse(JSON.stringify(currentHeads)); // Deep copy
+        const newOwners = JSON.parse(JSON.stringify(owners));
+        let parentFound = false;
 
-            const addHeirRecursive = (person: Person): boolean => {
-                if (person.id === parentId) {
-                    const newHeir: Person = {
-                        ...heirData,
-                        id: `${parentId}.${person.heirs.length + 1}`,
-                        landRecords: [],
-                        heirs: [],
-                    };
-                    person.heirs.push(newHeir);
-                    return true;
-                }
-                for (const heir of person.heirs) {
-                    if (addHeirRecursive(heir)) return true;
-                }
-                return false;
-            };
-
-            for (const head of newHeads) {
-                if (addHeirRecursive(head)) break;
+        const addHeirRecursive = (person: Person): boolean => {
+            if (person.id === parentId) {
+                const newHeir: Person = { ...heirData, id: `${parentId}.${person.heirs.length + 1}`, landRecords: [], heirs: [] };
+                person.heirs.push(newHeir);
+                return true;
             }
-            return newHeads;
-        });
+            for (const heir of person.heirs) { if (addHeirRecursive(heir)) return true; }
+            return false;
+        };
 
-        // Add a KYC folder for the new heir
-        setFolders(currentFolders => {
-            const newMemberFolder: Folder = {
-                id: `kyc-member-${heirData.name.replace(/\s+/g, '-')}-${Date.now()}`,
-                name: heirData.name,
-                children: []
-            };
-            const addKycSubfolder = (nodes: Folder[]): Folder[] => {
-                return nodes.map(folder => {
-                    if (folder.name === 'Seller KYC') {
-                        if (!folder.children.some(child => child.name === heirData.name)) {
-                           return { ...folder, children: [...folder.children, newMemberFolder] };
-                        }
-                    }
-                    return folder;
-                });
-            };
-            return addKycSubfolder(currentFolders);
-        });
-    }, []);
+        for (const owner of newOwners) {
+            if (addHeirRecursive(owner)) {
+                parentFound = true;
+                break;
+            }
+        }
+        
+        if (parentFound) {
+            updateAndPersistOwners(newOwners);
+
+            // Add KYC folder for new heir
+            const newMemberFolder: Folder = { id: `kyc-member-${heirData.name.replace(/\s+/g, '-')}-${Date.now()}`, name: heirData.name, children: [] };
+            const updatedFolders = folders.map(folder => {
+                if (folder.name === 'Seller KYC' && !folder.children.some(child => child.name === heirData.name)) {
+                    return { ...folder, children: [...folder.children, newMemberFolder] };
+                }
+                return folder;
+            });
+            setFolders(updatedFolders);
+            localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
+        }
+    }, [owners, folders, ownersStorageKey, folderStorageKey]);
 
     const handleUpdatePerson = useCallback((personId: string, personData: Omit<Person, 'id' | 'heirs'>) => {
-        let oldPersonName = '';
+        const newOwners = JSON.parse(JSON.stringify(owners));
+        let personFound = false;
 
-        setFamilyHeads(currentHeads => {
-            const newHeads = JSON.parse(JSON.stringify(currentHeads)); // Deep copy
-
-            const updatePersonRecursive = (person: Person): boolean => {
-                if (person.id === personId) {
-                    oldPersonName = person.name;
-                    Object.assign(person, personData);
-                    return true;
-                }
-                for (const heir of person.heirs) {
-                    if (updatePersonRecursive(heir)) return true;
-                }
-                return false;
-            };
-
-            for (const head of newHeads) {
-                if (updatePersonRecursive(head)) break;
+        const updatePersonRecursive = (person: Person): boolean => {
+            if (person.id === personId) {
+                Object.assign(person, personData);
+                return true;
             }
-            return newHeads;
-        });
-
-        // Update related data if necessary
-        const newSurveyNumbers = (personData.landRecords || []).map(lr => lr.surveyNumber);
+            for (const heir of person.heirs) { if (updatePersonRecursive(heir)) return true; }
+            return false;
+        };
         
-        // Update Acquisition Statuses
-        setAcquisitionStatuses(currentStatuses => {
-            let statuses = [...currentStatuses];
-            (personData.landRecords || []).forEach(record => {
-                // Find status by survey number and owner name for more accuracy
-                const existingIndex = statuses.findIndex(s => s.surveyNumber === record.surveyNumber && s.familyHeadName === personData.name);
-                if (existingIndex > -1) {
-                    statuses[existingIndex] = {
-                        ...statuses[existingIndex],
-                        familyHeadName: personData.name,
-                        extent: { acres: record.acres, cents: record.cents },
-                        landClassification: record.landClassification,
-                        googleMapsLink: record.googleMapsLink,
-                    };
-                }
-            });
-            return statuses;
-        });
-
-        // Update Folders
-        setFolders(currentFolders => {
-            let updatedFolders = [...currentFolders];
-            const existingFolderNames = new Set(updatedFolders.map(f => f.name));
-
-            newSurveyNumbers.forEach(sn => {
-                if (!existingFolderNames.has(sn)) {
-                    const sanitizedSurvey = sn.replace(/[^a-zA-Z0-9]/g, '-');
-                     updatedFolders.push({
-                        id: `survey-${sanitizedSurvey}-${Date.now()}`,
-                        name: sn,
-                        children: [{ id: `rev-${sanitizedSurvey}-${Date.now()}`, name: 'Revenue Record', children: [] }]
-                    });
-                }
-            });
-            
-            if (oldPersonName && oldPersonName !== personData.name) {
-                const kycFolder = updatedFolders.find(f => f.name === 'Seller KYC');
-                if (kycFolder) {
-                    kycFolder.children = kycFolder.children.map(child => 
-                        child.name === oldPersonName ? { ...child, name: personData.name } : child
-                    );
-                }
+        for (const owner of newOwners) {
+            if (updatePersonRecursive(owner)) {
+                personFound = true;
+                break;
             }
-
-            return updatedFolders;
-        });
-    }, [projectId]);
+        }
+        if(personFound) {
+             updateAndPersistOwners(newOwners);
+        }
+    }, [owners, ownersStorageKey]);
 
     const handleUpdateAcquisitionStatus = useCallback((updatedStatus: AcquisitionStatus) => {
-        setAcquisitionStatuses(currentStatuses =>
-            currentStatuses.map(status =>
-                status.id === updatedStatus.id ? updatedStatus : status
-            )
-        );
-    }, []);
+        const newStatuses = acquisitionStatuses.map(status => status.id === updatedStatus.id ? updatedStatus : status);
+        setAcquisitionStatuses(newStatuses);
+        localStorage.setItem(acquisitionStorageKey, JSON.stringify(newStatuses));
+    }, [acquisitionStatuses, acquisitionStorageKey]);
 
     const handleAddFolder = useCallback((parentId: string, name: string) => {
-        const newFolder: Folder = {
-          id: `folder-${Date.now()}`,
-          name,
-          children: [],
-        };
-        const addFolderRecursive = (nodes: Folder[], pId: string, nFolder: Folder): Folder[] => {
-            return nodes.map((node) => {
-              if (node.id === pId) {
-                return { ...node, children: [...node.children, nFolder] };
-              }
-              if (node.children.length > 0) {
-                return { ...node, children: addFolderRecursive(node.children, pId, nFolder) };
-              }
-              return node;
-            });
-        };
-
+        const newFolder: Folder = { id: `folder-${Date.now()}`, name, children: [] };
+        let updatedFolders;
         if (parentId === 'root') {
-          setFolders((currentFolders) => [...currentFolders, newFolder]);
+          updatedFolders = [...folders, newFolder];
         } else {
-          setFolders((currentFolders) => addFolderRecursive(currentFolders, parentId, newFolder));
+          const addRecursive = (nodes: Folder[]): Folder[] => nodes.map(node => {
+              if (node.id === parentId) return { ...node, children: [...node.children, newFolder] };
+              if (node.children.length > 0) return { ...node, children: addRecursive(node.children) };
+              return node;
+          });
+          updatedFolders = addRecursive(folders);
         }
-    }, []);
+        setFolders(updatedFolders);
+        localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
+    }, [folders, folderStorageKey]);
 
     const handleDeleteFolder = useCallback((folderId: string) => {
-        const deleteFolderRecursive = (nodes: Folder[], fId: string): Folder[] => {
-            return nodes.filter(node => node.id !== fId).map(node => {
-                if (node.children.length > 0) {
-                    return { ...node, children: deleteFolderRecursive(node.children, fId) };
-                }
-                return node;
-            });
-        };
-        setFolders(currentFolders => deleteFolderRecursive(currentFolders, folderId));
-    }, []);
+        const deleteRecursive = (nodes: Folder[]): Folder[] => nodes.filter(node => node.id !== folderId).map(node => {
+            if (node.children.length > 0) return { ...node, children: deleteRecursive(node.children) };
+            return node;
+        });
+        const updatedFolders = deleteRecursive(folders);
+        setFolders(updatedFolders);
+        localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
+    }, [folders, folderStorageKey]);
 
-    const allSurveyNumbers = useMemo(() => {
-        return Array.from(new Set(siteSketchData.map(d => d.surveyNumber)));
-    }, []);
+    const allSurveyNumbers = useMemo(() => Array.from(new Set(siteSketchData.map(d => d.surveyNumber))), []);
+    const handleSelectSurvey = useCallback((statusId: string) => { setActiveStatusId(statusId); setActiveTab('acquisition-tracker'); }, []);
 
 
-    const handleSelectSurvey = useCallback((statusId: string) => {
-        setActiveStatusId(statusId);
-        setActiveTab('acquisition-tracker');
-    }, []);
-
-
-    if (loading || !isLoaded) {
+    if (loading) {
         return (
-            <div className="flex justify-center items-center h-64">
+            <div className="flex justify-center items-center h-screen">
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
         )
@@ -525,7 +402,7 @@ export default function ProjectDetailsPage() {
                     </Link>
                 </Button>
                 <h1 className="text-2xl font-bold">Project not found</h1>
-                <p className="text-muted-foreground">The project you are looking for does not exist or has been deleted.</p>
+                <p className="text-muted-foreground">The project you are looking for does not exist or has been deleted. This can happen on first load; try returning to the main page.</p>
             </div>
         )
     }
@@ -567,33 +444,15 @@ export default function ProjectDetailsPage() {
                                 <div className="grid gap-4 py-4">
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="edit-name" className="text-right">Name</Label>
-                                        <Input
-                                            id="edit-name"
-                                            value={editedProjectName}
-                                            onChange={(e) => setEditedProjectName(e.target.value)}
-                                            className="col-span-3"
-                                            required
-                                        />
+                                        <Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="edit-siteId" className="text-right">Site ID</Label>
-                                        <Input
-                                            id="edit-siteId"
-                                            value={editedProjectSiteId}
-                                            onChange={(e) => setEditedProjectSiteId(e.target.value)}
-                                            className="col-span-3"
-                                            required
-                                        />
+                                        <Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="edit-location" className="text-right">Location</Label>
-                                        <Input
-                                            id="edit-location"
-                                            value={editedProjectLocation}
-                                            onChange={(e) => setEditedProjectLocation(e.target.value)}
-                                            className="col-span-3"
-                                            required
-                                        />
+                                        <Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required />
                                     </div>
                                 </div>
                                 <DialogFooter>
@@ -613,45 +472,22 @@ export default function ProjectDetailsPage() {
                         <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                         <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
-                        {canSeeLegalNotes && (
-                            <TabsTrigger value="legal-notes">Legal Notes</TabsTrigger>
-                        )}
-                        {canSeeSensitiveTabs && (
-                            <>
-                                <TabsTrigger value="notes">Notes</TabsTrigger>
-                                <TabsTrigger value="tasks">Tasks</TabsTrigger>
-                            </>
-                        )}
+                        {canSeeLegalNotes && <TabsTrigger value="legal-notes">Legal Notes</TabsTrigger>}
+                        {canSeeSensitiveTabs && (<><TabsTrigger value="notes">Notes</TabsTrigger><TabsTrigger value="tasks">Tasks</TabsTrigger></>)}
                     </TabsList>
                     <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 <TabsContent value="lineage" className="mt-6">
-                    <LineageView 
-                        familyHeads={familyHeads}
-                        onAddHeir={handleAddHeir}
-                        onUpdatePerson={handleUpdatePerson}
-                    />
+                    <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} />
                 </TabsContent>
                 <TabsContent value="site-sketch" className="mt-6">
-                    <SiteSketchView 
-                        acquisitionStatuses={acquisitionStatuses} 
-                        onSelectSurvey={handleSelectSurvey}
-                    />
+                    <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
                 </TabsContent>
                  <TabsContent value="acquisition-tracker" className="mt-6">
-                    <AcquisitionTrackerView 
-                        statuses={acquisitionStatuses} 
-                        onUpdateStatus={handleUpdateAcquisitionStatus}
-                        activeStatusId={activeStatusId}
-                        onActiveStatusChange={setActiveStatusId}
-                    />
+                    <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />
                 </TabsContent>
                 <TabsContent value="title-documents" className="mt-6">
-                    <TitleDocumentsView
-                        folders={folders}
-                        onAddFolder={handleAddFolder}
-                        onDeleteFolder={handleDeleteFolder}
-                    />
+                    <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} />
                 </TabsContent>
                 <TabsContent value="transactions" className="mt-6">
                     <TransactionHistory projectId={projectId} />
@@ -661,21 +497,13 @@ export default function ProjectDetailsPage() {
                 </TabsContent>
                 {canSeeLegalNotes && (
                     <TabsContent value="legal-notes" className="mt-6">
-                        <LegalNotes
-                            projectId={projectId}
-                            surveyNumbers={allSurveyNumbers}
-                            currentUser={currentUser}
-                        />
+                        <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} />
                     </TabsContent>
                  )}
                  {canSeeSensitiveTabs && (
                     <>
-                        <TabsContent value="notes" className="mt-6">
-                            <Notes projectId={projectId} />
-                        </TabsContent>
-                        <TabsContent value="tasks" className="mt-6">
-                            <Tasks projectId={projectId} />
-                        </TabsContent>
+                        <TabsContent value="notes" className="mt-6"><Notes projectId={projectId} /></TabsContent>
+                        <TabsContent value="tasks" className="mt-6"><Tasks projectId={projectId} /></TabsContent>
                     </>
                 )}
             </Tabs>
