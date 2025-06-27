@@ -10,7 +10,26 @@ import { PlusCircle, ArrowRight } from "lucide-react";
 import Link from 'next/link';
 import type { Project, User } from '@/types';
 
+// Default data to initialize the app
+const initialUsers: User[] = [
+    { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
+    { id: 'user-1682600000002', name: 'SK Associates', email: 'lawyer@sk.com', password: 'password', role: 'Lawyer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
+    { id: 'user-1682600000003', name: 'Greenfield Corp', email: 'client@greenfield.com', password: 'password', role: 'Client', status: 'Active' },
+    { id: 'user-1682600000004', name: 'Land Investors Inc.', email: 'investor@land.com', password: 'password', role: 'Investor', status: 'Inactive'},
+    { id: 'user-1682600000005', name: 'Property Aggregators', email: 'aggregator@prop.com', password: 'password', role: 'Aggregator', status: 'Active' },
+];
+
+const initialProjects: Project[] = [
+    {
+        id: 'proj-1700000000000',
+        name: 'Greenfield Valley',
+        siteId: 'GV-001',
+        location: 'Coimbatore',
+    }
+];
+
 const USERS_STORAGE_KEY = 'users';
+const PROJECTS_STORAGE_KEY = 'projects';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -22,76 +41,64 @@ export default function ProjectsPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // Load projects and current user from localStorage on initial client-side render
+  // Load and initialize data from localStorage
   useEffect(() => {
     try {
-      // Load current user (assuming first user is the logged-in user)
+      // Initialize users if they don't exist
       const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      const users: User[] = savedUsers ? JSON.parse(savedUsers) : [];
+      const users: User[] = savedUsers ? JSON.parse(savedUsers) : initialUsers;
+      if (!savedUsers) {
+          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      }
       const user = users.length > 0 ? users[0] : null;
       setCurrentUser(user);
 
-      // Load all projects
-      const savedProjects = localStorage.getItem('projects');
-      const allProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : [];
-
-      // Filter projects based on user role and assignments
+      // Initialize projects if they don't exist
+      const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
+      let allProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : initialProjects;
+      if (!savedProjects) {
+          localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
+      }
+      
+      // Filter projects based on user role
       if (user && user.role !== 'Super Admin') {
         const assignedProjects = allProjects.filter(p => user.projectIds?.includes(p.id));
         setProjects(assignedProjects);
       } else {
-        // Super Admin sees all projects
         setProjects(allProjects);
       }
     } catch (e) {
-      console.error("Could not load projects from local storage", e);
+      console.error("Could not load data from local storage", e);
     }
-    setIsLoaded(true); // Mark as loaded after attempting to load
+    setIsLoaded(true);
   }, []);
-
-  // Save projects to localStorage whenever the projects state changes, but only after initial load.
-  useEffect(() => {
-    if (isLoaded) {
-        try {
-            // We read all projects and only write back the full list if a new one is added
-            // to avoid overwriting the master list with a filtered list.
-        } catch (e) {
-            console.error("Could not save projects to local storage", e);
-        }
-    }
-  }, [projects, isLoaded]);
-
 
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!newProjectName || !newProjectSiteId || !newProjectLocation) {
-        // Simple validation
         return;
     }
 
     const newProject: Project = {
-      id: `proj-${Date.now()}`, // Simple unique ID for now
+      id: `proj-${Date.now()}`,
       name: newProjectName,
       siteId: newProjectSiteId,
       location: newProjectLocation,
     };
 
-    // When adding a new project, we need to update the master list in localStorage
     try {
-        const savedProjects = localStorage.getItem('projects');
+        const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
         const allProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : [];
         const updatedProjects = [...allProjects, newProject];
-        localStorage.setItem('projects', JSON.stringify(updatedProjects));
+        localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
         
-        // Update the component's state as well
-        setProjects(prevProjects => [...prevProjects, newProject]);
+        setProjects(updatedProjects);
 
     } catch (error) {
         console.error("Failed to add project", error);
     }
     
-    // Reset form and close dialog
     setNewProjectName('');
     setNewProjectSiteId('');
     setNewProjectLocation('');

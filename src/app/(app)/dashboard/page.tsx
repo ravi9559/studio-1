@@ -10,7 +10,7 @@ import { PlusCircle, ArrowRight } from "lucide-react";
 import Link from 'next/link';
 import type { Project, User } from '@/types';
 
-// Copied from users/page.tsx to ensure data can be initialized without login
+// Default data to initialize the app
 const initialUsers: User[] = [
     { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
     { id: 'user-1682600000002', name: 'SK Associates', email: 'lawyer@sk.com', password: 'password', role: 'Lawyer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
@@ -18,9 +18,20 @@ const initialUsers: User[] = [
     { id: 'user-1682600000004', name: 'Land Investors Inc.', email: 'investor@land.com', password: 'password', role: 'Investor', status: 'Inactive'},
     { id: 'user-1682600000005', name: 'Property Aggregators', email: 'aggregator@prop.com', password: 'password', role: 'Aggregator', status: 'Active' },
 ];
-const USERS_STORAGE_KEY = 'users';
 
-export default function DashboardPage() {
+const initialProjects: Project[] = [
+    {
+        id: 'proj-1700000000000',
+        name: 'Greenfield Valley',
+        siteId: 'GV-001',
+        location: 'Coimbatore',
+    }
+];
+
+const USERS_STORAGE_KEY = 'users';
+const PROJECTS_STORAGE_KEY = 'projects';
+
+export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -28,60 +39,66 @@ export default function DashboardPage() {
   const [newProjectSiteId, setNewProjectSiteId] = useState('');
   const [newProjectLocation, setNewProjectLocation] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // Load projects from localStorage on initial client-side render
+  // Load and initialize data from localStorage
   useEffect(() => {
-    // Initialize users if they don't exist, so app can function without login
     try {
-        const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-        if (!savedUsers) {
-            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(initialUsers));
-        }
-    } catch (e) {
-        console.error("Could not initialize users", e);
-    }
-    
-    try {
-      const savedProjects = localStorage.getItem('projects');
-      if (savedProjects) {
-        setProjects(JSON.parse(savedProjects));
+      // Initialize users if they don't exist
+      const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      const users: User[] = savedUsers ? JSON.parse(savedUsers) : initialUsers;
+      if (!savedUsers) {
+          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      }
+      const user = users.length > 0 ? users[0] : null;
+      setCurrentUser(user);
+
+      // Initialize projects if they don't exist
+      const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
+      let allProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : initialProjects;
+      if (!savedProjects) {
+          localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
+      }
+      
+      // Filter projects based on user role
+      if (user && user.role !== 'Super Admin') {
+        const assignedProjects = allProjects.filter(p => user.projectIds?.includes(p.id));
+        setProjects(assignedProjects);
+      } else {
+        setProjects(allProjects);
       }
     } catch (e) {
-      console.error("Could not load projects from local storage", e);
+      console.error("Could not load data from local storage", e);
     }
-    setIsLoaded(true); // Mark as loaded after attempting to load
+    setIsLoaded(true);
   }, []);
-
-  // Save projects to localStorage whenever the projects state changes, but only after initial load.
-  useEffect(() => {
-    if (isLoaded) {
-        try {
-            localStorage.setItem('projects', JSON.stringify(projects));
-        } catch (e) {
-            console.error("Could not save projects to local storage", e);
-        }
-    }
-  }, [projects, isLoaded]);
-
 
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!newProjectName || !newProjectSiteId || !newProjectLocation) {
-        // Simple validation
         return;
     }
 
     const newProject: Project = {
-      id: `proj-${Date.now()}`, // Simple unique ID for now
+      id: `proj-${Date.now()}`,
       name: newProjectName,
       siteId: newProjectSiteId,
       location: newProjectLocation,
     };
 
-    setProjects(prevProjects => [...prevProjects, newProject]);
+    try {
+        const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
+        const allProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : [];
+        const updatedProjects = [...allProjects, newProject];
+        localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+        
+        setProjects(updatedProjects);
+
+    } catch (error) {
+        console.error("Failed to add project", error);
+    }
     
-    // Reset form and close dialog
     setNewProjectName('');
     setNewProjectSiteId('');
     setNewProjectLocation('');
@@ -95,68 +112,70 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
           <p className="text-muted-foreground">Manage your projects and sites.</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add New Project
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add New Project</DialogTitle>
-              <DialogDescription>
-                Enter the details for your new project. Click save when you're done.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddProject}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Name
-                  </Label>
-                  <Input
-                    id="name"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g., Greenfield Valley"
-                    required
-                  />
+        {currentUser?.role === 'Super Admin' && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Project
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                <DialogTitle>Add New Project</DialogTitle>
+                <DialogDescription>
+                    Enter the details for your new project. Click save when you're done.
+                </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleAddProject}>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">
+                        Name
+                    </Label>
+                    <Input
+                        id="name"
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        className="col-span-3"
+                        placeholder="e.g., Greenfield Valley"
+                        required
+                    />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="siteId" className="text-right">
+                        Site ID
+                    </Label>
+                    <Input
+                        id="siteId"
+                        value={newProjectSiteId}
+                        onChange={(e) => setNewProjectSiteId(e.target.value)}
+                        className="col-span-3"
+                        placeholder="e.g., GV-001"
+                        required
+                    />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="location" className="text-right">
+                        Location
+                    </Label>
+                    <Input
+                        id="location"
+                        value={newProjectLocation}
+                        onChange={(e) => setNewProjectLocation(e.target.value)}
+                        className="col-span-3"
+                        placeholder="e.g., Coimbatore"
+                        required
+                    />
+                    </div>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="siteId" className="text-right">
-                    Site ID
-                  </Label>
-                  <Input
-                    id="siteId"
-                    value={newProjectSiteId}
-                    onChange={(e) => setNewProjectSiteId(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g., GV-001"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="location" className="text-right">
-                    Location
-                  </Label>
-                  <Input
-                    id="location"
-                    value={newProjectLocation}
-                    onChange={(e) => setNewProjectLocation(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g., Coimbatore"
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit">Save Project</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter>
+                    <Button type="submit">Save Project</Button>
+                </DialogFooter>
+                </form>
+            </DialogContent>
+            </Dialog>
+        )}
       </header>
       
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -183,7 +202,9 @@ export default function DashboardPage() {
           <Card className="md:col-span-2 lg:col-span-3">
             <CardContent className="flex h-40 flex-col items-center justify-center p-6 text-center">
               <h3 className="text-lg font-semibold">No Projects Yet</h3>
-              <p className="text-muted-foreground mt-1">Click "Add New Project" to get started.</p>
+              <p className="text-muted-foreground mt-1">
+                {currentUser?.role === 'Super Admin' ? 'Click "Add New Project" to get started.' : 'You have not been assigned to any projects.'}
+              </p>
             </CardContent>
           </Card>
         )}
