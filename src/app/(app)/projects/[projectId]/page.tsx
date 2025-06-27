@@ -4,7 +4,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineageView } from "@/components/lineage/lineage-view";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { FileManager } from "@/components/files/file-manager";
@@ -23,12 +22,12 @@ import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tra
 import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { ProjectMap } from '@/components/project/project-map';
 import { roadData } from '@/lib/road-data';
 import { MindMapView } from '@/components/mindmap/mind-map-view';
+import { Progress } from "@/components/ui/progress";
 
 
 // --- Storage Keys ---
@@ -167,7 +166,7 @@ export default function ProjectDetailsPage() {
     const [acquisitionStatuses, setAcquisitionStatuses] = useState<AcquisitionStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [activeTab, setActiveTab] = useState('lineage');
+    const [activeTab, setActiveTab] = useState('mind-map');
     const [activeStatusId, setActiveStatusId] = useState<string | undefined>(undefined);
     const [siteSketchPdf, setSiteSketchPdf] = useState<string | null>(null);
     
@@ -418,6 +417,28 @@ export default function ProjectDetailsPage() {
             dryPlots,
         };
     }, [owners]);
+    
+    const progressStats = useMemo(() => {
+        if (!acquisitionStatuses || acquisitionStatuses.length === 0) {
+            return {
+                advancePaidPercent: 0,
+                meetingsDonePercent: 0,
+                docsCollectedPercent: 0,
+            };
+        }
+
+        const total = acquisitionStatuses.length;
+        
+        const advancePaidCount = acquisitionStatuses.filter(s => s.financials.advancePayment === 'Paid').length;
+        const meetingsDoneCount = acquisitionStatuses.filter(s => !!s.operations.meetingDate).length;
+        const docsCollectedCount = acquisitionStatuses.filter(s => s.operations.documentCollection === 'Fully Collected').length;
+
+        return {
+            advancePaidPercent: Math.round((advancePaidCount / total) * 100),
+            meetingsDonePercent: Math.round((meetingsDoneCount / total) * 100),
+            docsCollectedPercent: Math.round((docsCollectedCount / total) * 100),
+        };
+    }, [acquisitionStatuses]);
 
 
     const allSurveyNumbers = useMemo(() => Array.from(new Set(siteSketchData.map(d => d.surveyNumber))), []);
@@ -511,30 +532,68 @@ export default function ProjectDetailsPage() {
             </div>
 
             <div className="pt-8">
-                 <h2 className="text-2xl font-bold tracking-tight mb-4">Project Workspace</h2>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <ScrollArea className="w-full pb-2.5">
-                        <TabsList>
-                            <TabsTrigger value="mind-map">Mind Map</TabsTrigger>
-                            <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
-                            <TabsTrigger value="acquisition-tracker">Acquisition Tracker</TabsTrigger>
-                            <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
-                            <TabsTrigger value="transactions">Transaction History</TabsTrigger>
-                            <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
-                            {canSeeLegalNotes && <TabsTrigger value="legal-notes">Legal Notes</TabsTrigger>}
-                            {canSeeSensitiveTabs && (<><TabsTrigger value="notes">Notes</TabsTrigger><TabsTrigger value="tasks">Tasks</TabsTrigger></>)}
-                        </TabsList>
-                        <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
-                    <TabsContent value="mind-map" className="mt-6"><MindMapView projectName={project.name} familyHeads={owners} /></TabsContent>
-                    <TabsContent value="lineage" className="mt-6"><LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/></TabsContent>
-                    <TabsContent value="acquisition-tracker" className="mt-6"><AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} /></TabsContent>
-                    <TabsContent value="title-documents" className="mt-6"><TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} /></TabsContent>
-                    <TabsContent value="transactions" className="mt-6"><TransactionHistory projectId={projectId} /></TabsContent>
-                    <TabsContent value="files" className="mt-6"><FileManager projectId={projectId} /></TabsContent>
-                    {canSeeLegalNotes && (<TabsContent value="legal-notes" className="mt-6"><LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} /></TabsContent>)}
-                    {canSeeSensitiveTabs && (<><TabsContent value="notes" className="mt-6"><Notes projectId={projectId} /></TabsContent><TabsContent value="tasks" className="mt-6"><Tasks projectId={projectId} /></TabsContent></>)}
-                </Tabs>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Project Progress Dashboard</CardTitle>
+                        <CardDescription>A high-level overview of key acquisition milestones.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-2">
+                            <Label>Advance Payments ({progressStats.advancePaidPercent}%)</Label>
+                            <Progress value={progressStats.advancePaidPercent} />
+                            <p className="text-sm text-muted-foreground">Percentage of land parcels where an advance has been paid.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>In-Person Meetings ({progressStats.meetingsDonePercent}%)</Label>
+                            <Progress value={progressStats.meetingsDonePercent} />
+                            <p className="text-sm text-muted-foreground">Percentage of owners who have had an in-person meeting.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Document Collection ({progressStats.docsCollectedPercent}%)</Label>
+                            <Progress value={progressStats.docsCollectedPercent} />
+                            <p className="text-sm text-muted-foreground">Percentage of land parcels with fully collected documents.</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="pt-8">
+                <h2 className="text-2xl font-bold tracking-tight mb-4">Project Workspace</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <aside className="md:col-span-1">
+                        <div className="flex flex-col space-y-2 sticky top-8">
+                            <Button variant={activeTab === 'mind-map' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('mind-map')} className="justify-start">Mind Map</Button>
+                            <Button variant={activeTab === 'lineage' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('lineage')} className="justify-start">Family Lineage</Button>
+                            <Button variant={activeTab === 'acquisition-tracker' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('acquisition-tracker')} className="justify-start">Acquisition Tracker</Button>
+                            <Button variant={activeTab === 'title-documents' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('title-documents')} className="justify-start">Title Documents</Button>
+                            <Button variant={activeTab === 'transactions' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('transactions')} className="justify-start">Transaction History</Button>
+                            <Button variant={activeTab === 'files' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('files')} className="justify-start">Files &amp; Documents</Button>
+                            {canSeeLegalNotes && <Button variant={activeTab === 'legal-notes' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('legal-notes')} className="justify-start">Legal Notes</Button>}
+                            {canSeeSensitiveTabs && (
+                                <>
+                                    <Button variant={activeTab === 'notes' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('notes')} className="justify-start">Notes</Button>
+                                    <Button variant={activeTab === 'tasks' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('tasks')} className="justify-start">Tasks</Button>
+                                </>
+                            )}
+                        </div>
+                    </aside>
+
+                    <main className="md:col-span-3">
+                        {activeTab === 'mind-map' && <MindMapView projectName={project.name} familyHeads={owners} />}
+                        {activeTab === 'lineage' && <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>}
+                        {activeTab === 'acquisition-tracker' && <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />}
+                        {activeTab === 'title-documents' && <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} />}
+                        {activeTab === 'transactions' && <TransactionHistory projectId={projectId} />}
+                        {activeTab === 'files' && <FileManager projectId={projectId} />}
+                        {canSeeLegalNotes && activeTab === 'legal-notes' && <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} />}
+                        {canSeeSensitiveTabs && (
+                            <>
+                                {activeTab === 'notes' && <Notes projectId={projectId} />}
+                                {activeTab === 'tasks' && <Tasks projectId={projectId} />}
+                            </>
+                        )}
+                    </main>
+                </div>
             </div>
         </div>
     );
