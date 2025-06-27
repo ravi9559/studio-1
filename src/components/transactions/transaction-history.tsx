@@ -29,12 +29,8 @@ type Transaction = {
   doc: string;
 };
 
-// Initial mock data for new projects
-const initialTransactions: Transaction[] = [
-    { id: 'tx-1', owner: 'Kandasamy Gounder (Self)', sourceName: 'Seller Govindasamy', mode: 'Purchase', year: 1980, doc: 'DOC-1980-A1' },
-    { id: 'tx-2', owner: 'Seller Govindasamy', sourceName: 'Seller Krishnan', mode: 'Purchase', year: 1965, doc: 'DOC-1965-B2' },
-    { id: 'tx-3', owner: 'Seller Krishnan', sourceName: 'Krishnan\'s Father', mode: 'Legal Heir', year: 1940, doc: 'N/A' },
-];
+// Initial mock data for new projects is now handled by the project template
+const initialTransactions: Transaction[] = [];
 
 interface TransactionHistoryProps {
     projectId: string;

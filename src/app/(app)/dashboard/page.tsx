@@ -10,6 +10,7 @@ import { PlusCircle, ArrowRight } from "lucide-react";
 import Link from 'next/link';
 import type { Project, User } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { initializeNewProjectData } from '@/lib/project-template';
 
 const USERS_STORAGE_KEY = 'users';
 const PROJECTS_STORAGE_KEY = 'projects';
@@ -52,6 +53,8 @@ export default function ProjectsPage() {
       if (!savedProjects) {
           allProjects = initialProjects;
           localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
+          // Initialize data for the default project
+          initializeNewProjectData(initialProjects[0].id);
       } else {
         allProjects = JSON.parse(savedProjects);
       }
@@ -85,6 +88,9 @@ export default function ProjectsPage() {
     const updatedProjects = [...allProjectsFromStorage, newProject];
     
     localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+
+    // Initialize all default data for the new project
+    initializeNewProjectData(newProject.id);
 
     // Update the viewable projects state
     setProjects(prevProjects => [...prevProjects, newProject]);

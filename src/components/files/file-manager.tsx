@@ -19,12 +19,8 @@ type File = {
   uploaded: string;
 };
 
-// Initial mock data for new projects
-const initialFiles: File[] = [
-    { id: 'file-1', name: 'Sale_Deed_1980.pdf', type: 'PDF', size: '2.3 MB', uploaded: '2023-05-10' },
-    { id: 'file-2', name: 'Patta_Copy.jpeg', type: 'Image', size: '800 KB', uploaded: '2023-05-11' },
-    { id: 'file-3', name: 'EC_1980-2023.pdf', type: 'PDF', size: '5.1 MB', uploaded: '2023-06-01' },
-];
+// Initial mock data for new projects is now handled by the project template
+const initialFiles: File[] = [];
 
 interface FileManagerProps {
     projectId: string;

@@ -21,11 +21,8 @@ export type Task = {
   reminder: boolean;
 };
 
-const initialTasks: Task[] = [
-    { id: 'task-1', text: 'Review initial land documents', dueDate: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0], completed: true, reminder: false },
-    { id: 'task-2', text: 'Contact legal counsel for opinion', dueDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0], completed: false, reminder: true },
-    { id: 'task-3', text: 'Schedule site visit', dueDate: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0], completed: false, reminder: false },
-];
+// Initial mock data for new projects is now handled by the project template
+const initialTasks: Task[] = [];
 
 interface TasksProps {
     projectId: string;
