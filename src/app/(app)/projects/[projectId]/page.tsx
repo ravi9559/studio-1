@@ -15,7 +15,7 @@ import { Notes } from '@/components/project/notes';
 import { Tasks } from '@/components/project/tasks';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
-import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord, SurveyRecordWithOwner } from '@/types';
+import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord, SurveyRecordWithOwner, LandClassification } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 
 // Recursive function to find a person in the family tree
@@ -91,90 +91,170 @@ function createSurveyFolder(surveyNumber: string): Folder {
   };
 }
 
-// Mock data for lineage based on the provided site sketch
-const defaultFamilyHead: Person = {
-  id: '1',
-  name: 'Arunachalam',
-  relation: 'Family Head',
+type SketchPlot = {
+  surveyNumber: string;
+  classification: LandClassification;
+  ownerName: string;
+  status: string; // "Sale Advance", "Pending", "N/A", "Agreement"
+  acres: string;
+  cents: string;
+};
+
+const sketchData: SketchPlot[] = [
+    { surveyNumber: "10/1", classification: "Wet", ownerName: "Marimuthu Pillai", status: "Sale Advance", acres: "0", cents: "30" },
+    { surveyNumber: "10/2", classification: "Wet", ownerName: "Alaghakesan", status: "Sale Advance", acres: "0", cents: "44" },
+    { surveyNumber: "10/3A1", classification: "Wet", ownerName: "Alaghakesan", status: "Sale Advance", acres: "0", cents: "9" },
+    { surveyNumber: "10/3A2", classification: "Wet", ownerName: "Marimuthu Pillai", status: "Sale Advance", acres: "0", cents: "N/A" },
+    { surveyNumber: "10/3B", classification: "Wet", ownerName: "Marimuthu Pillai", status: "Advance", acres: "0", cents: "36" },
+    { surveyNumber: "9/1", classification: "Wet", ownerName: "Kaniappa Achari", status: "Sale Advance", acres: "0", cents: "54" },
+    { surveyNumber: "9/2", classification: "Wet", ownerName: "Nanjundan Achari", status: "Pending", acres: "0", cents: "41" },
+    { surveyNumber: "9/3", classification: "Wet", ownerName: "Subramaniya Achari", status: "Sale Advance", acres: "0", cents: "54" },
+    { surveyNumber: "9/4", classification: "Wet", ownerName: "Annamalai", status: "Sale Advance", acres: "0", cents: "31" },
+    { surveyNumber: "7/3A", classification: "Wet", ownerName: "Mani & One", status: "Pending", acres: "1", cents: "14" },
+    { surveyNumber: "8", classification: "Wet", ownerName: "Kothandam", status: "Pending", acres: "0", cents: "75" },
+    { surveyNumber: "34/1", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "1", cents: "1" },
+    { surveyNumber: "34/2", classification: "Wet", ownerName: "Vinayagam", status: "Sale Advance", acres: "0", cents: "30" },
+    { surveyNumber: "7/1A", classification: "Wet", ownerName: "Annamalai", status: "Sale Advance", acres: "0", cents: "26" },
+    { surveyNumber: "7/1B", classification: "Wet", ownerName: "Nanjundan Achari", status: "Pending", acres: "0", cents: "30" },
+    { surveyNumber: "7/1C", classification: "Wet", ownerName: "Arumugha Naicker", status: "Sale Advance", acres: "0", cents: "26" },
+    { surveyNumber: "7/1D", classification: "Wet", ownerName: "N/A", status: "Agreement", acres: "0", cents: "30" },
+    { surveyNumber: "7/1E", classification: "Wet", ownerName: "Subramaniya Achari", status: "Pending", acres: "0", cents: "28" },
+    { surveyNumber: "7/2A", classification: "Wet", ownerName: "Annamalai", status: "Sale Advance", acres: "0", cents: "47" },
+    { surveyNumber: "7/2B", classification: "Wet", ownerName: "Marimuthu Achari", status: "Sale Advance", acres: "0", cents: "49" },
+    { surveyNumber: "7/2C", classification: "Wet", ownerName: "Sampath", status: "Sale Advance", acres: "0", cents: "38" },
+    { surveyNumber: "7/3B1", classification: "Wet", ownerName: "Perumal", status: "Pending", acres: "0", cents: "11" },
+    { surveyNumber: "7/3B2", classification: "Wet", ownerName: "Perumal", status: "Pending", acres: "0", cents: "54" },
+    { surveyNumber: "7/3C1", classification: "Wet", ownerName: "Krishnaveni & 4", status: "Pending", acres: "0", cents: "20" },
+    { surveyNumber: "7/3D", classification: "Wet", ownerName: "Perumal", status: "Pending", acres: "0", cents: "9" },
+    { surveyNumber: "6", classification: "Wet", ownerName: "Raman", status: "Pending", acres: "0", cents: "90" },
+    { surveyNumber: "3/1A", classification: "Wet", ownerName: "Kothandam", status: "Pending", acres: "0", cents: "43" },
+    { surveyNumber: "3/1B", classification: "Wet", ownerName: "Raman", status: "Pending", acres: "0", cents: "43" },
+    { surveyNumber: "3/1C", classification: "Wet", ownerName: "Perumal", status: "Pending", acres: "0", cents: "45" },
+    { surveyNumber: "4/3A", classification: "Wet", ownerName: "Chitra Joseph", status: "Pending", acres: "0", cents: "76" },
+    { surveyNumber: "4/3B", classification: "Wet", ownerName: "Raghava Naicker", status: "Pending", acres: "0", cents: "27" },
+    { surveyNumber: "4/1A", classification: "Wet", ownerName: "Raghava Naicker", status: "Pending", acres: "0", cents: "49" },
+    { surveyNumber: "4/1B", classification: "Wet", ownerName: "Nanjundan Achari", status: "Pending", acres: "0", cents: "55" },
+    { surveyNumber: "4/2", classification: "Wet", ownerName: "Chitra Joseph", status: "Pending", acres: "0", cents: "76" },
+    { surveyNumber: "5/3A", classification: "Wet", ownerName: "Chitra Joseph", status: "Pending", acres: "0", cents: "27" },
+    { surveyNumber: "5/3B", classification: "Wet", ownerName: "Jani Investment", status: "Pending", acres: "0", cents: "80" },
+    { surveyNumber: "5/1A", classification: "Wet", ownerName: "Raghava Naicker", status: "0", cents: "45" },
+    { surveyNumber: "5/1B1", classification: "Wet", ownerName: "Kanniappa Naicker", status: "Pending", acres: "0", cents: "42" },
+    { surveyNumber: "5/1B2", classification: "Wet", ownerName: "Raman", status: "Pending", acres: "0", cents: "42" },
+    { surveyNumber: "5/1B3", classification: "Wet", ownerName: "Karachi & 1", status: "Pending", acres: "0", cents: "44" },
+    { surveyNumber: "38/3", classification: "Wet", ownerName: "Surendran", status: "Pending", acres: "0", cents: "88" },
+    { surveyNumber: "39", classification: "Wet", ownerName: "Surendran", status: "Pending", acres: "0", cents: "53" },
+    { surveyNumber: "38/1", classification: "Wet", ownerName: "Surendran", status: "Pending", acres: "0", cents: "36" },
+    { surveyNumber: "38/4", classification: "Wet", ownerName: "Surendran", status: "Pending", acres: "0", cents: "78" },
+    { surveyNumber: "41/1", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "0", cents: "25" },
+    { surveyNumber: "41/2", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "0", cents: "21" },
+    { surveyNumber: "41/3", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "0", cents: "27" },
+    { surveyNumber: "41/4", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "0", cents: "25" },
+    { surveyNumber: "33/1A1", classification: "Wet", ownerName: "Srinivasan", status: "Pending", acres: "0", cents: "57" },
+    { surveyNumber: "33/1B", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "0", cents: "54" },
+    { surveyNumber: "33/3", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "N/A", cents: "N/A" },
+    { surveyNumber: "6/3C2", classification: "Wet", ownerName: "N/A", status: "Pending", acres: "0", cents: "N/A" },
+    { surveyNumber: "33/1A2", classification: "Wet", ownerName: "Vedhachalam", status: "Pending", acres: "0", cents: "11" },
+    { surveyNumber: "35/1", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "1", cents: "62" },
+    { surveyNumber: "35/3A", classification: "Wet", ownerName: "Vedhachalam", status: "Pending", acres: "0", cents: "81" },
+    { surveyNumber: "35/1", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "1", cents: "62" },
+    { surveyNumber: "35/2", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "0", cents: "81" },
+    { surveyNumber: "36/1", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "0", cents: "40" },
+    { surveyNumber: "36/2", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "0", cents: "23" },
+    { surveyNumber: "36/3", classification: "Wet", ownerName: "VRV Imports & Exports", status: "Pending", acres: "0", cents: "13" },
+    { surveyNumber: "37/3A", classification: "Wet", ownerName: "Vedhachalam", status: "Pending", acres: "0", cents: "26" },
+    { surveyNumber: "30/1A", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "34" },
+    { surveyNumber: "30/2", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "20" },
+    { surveyNumber: "30/3A", classification: "Wet", ownerName: "Puspavali & 1", status: "Pending", acres: "0", cents: "35" },
+    { surveyNumber: "30/4A", classification: "Wet", ownerName: "Puspavali & 1", status: "Pending", acres: "0", cents: "33" },
+    { surveyNumber: "30/4B", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "N/A" },
+    { surveyNumber: "30/1B", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "37" },
+    { surveyNumber: "30/3B", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "25" },
+    { surveyNumber: "31/1", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "20" },
+    { surveyNumber: "31/1", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "20" },
+    { surveyNumber: "31/2", classification: "Wet", ownerName: "Munusamy", status: "Pending", acres: "0", cents: "15" },
+    { surveyNumber: "32", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "28" },
+    { surveyNumber: "33/2", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "41" },
+    { surveyNumber: "35/3B", classification: "Wet", ownerName: "N/A", status: "Pending", acres: "0", cents: "N/A" },
+    { surveyNumber: "37/1", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "19" },
+    { surveyNumber: "37/2A", classification: "Wet", ownerName: "Anitha Kamalabal", status: "Pending", acres: "0", cents: "21" },
+    { surveyNumber: "37/2B", classification: "Wet", ownerName: "Sudha Anand", status: "Pending", acres: "0", cents: "20" },
+    { surveyNumber: "37/3B1", classification: "Wet", ownerName: "Sudha Anand", status: "Pending", acres: "0", cents: "26" },
+    { surveyNumber: "37/3B2", classification: "Wet", ownerName: "Sudha Anand", status: "Pending", acres: "0", cents: "55" },
+];
+
+const ownersMap = sketchData.reduce((acc, plot) => {
+  if (plot.ownerName !== "N/A") {
+    if (!acc[plot.ownerName]) {
+      acc[plot.ownerName] = [];
+    }
+    acc[plot.ownerName].push({
+      id: `lr-${plot.surveyNumber}-${plot.ownerName}`,
+      surveyNumber: plot.surveyNumber,
+      acres: plot.acres,
+      cents: plot.cents,
+      landClassification: plot.classification,
+    });
+  }
+  return acc;
+}, {} as Record<string, SurveyRecord[]>);
+
+const familyHeadsFromSketch: Person[] = Object.keys(ownersMap).map((ownerName, index) => ({
+  id: `owner-${index + 1}`,
+  name: ownerName,
+  relation: "Family Head",
   gender: 'Male',
-  age: 78,
+  age: 40 + index * 2, // Dummy age
   maritalStatus: 'Married',
   status: 'Alive',
   sourceOfLand: 'Purchase',
-  landRecords: [
-      { id: 'lr-1-1', surveyNumber: '34/1', acres: '1', cents: '50', landClassification: 'Dry' },
-      { id: 'lr-1-2', surveyNumber: '34/2', acres: '0', cents: '75', landClassification: 'Dry' }
-  ],
-  heirs: [
-    {
-      id: '1.1',
-      name: 'Baskar',
-      relation: 'Son',
-      gender: 'Male',
-      age: 55,
-      maritalStatus: 'Married',
-      status: 'Alive',
-      sourceOfLand: 'Legal Heir',
-      landRecords: [
-        { id: 'lr-1.1-1', surveyNumber: '35/1', acres: '2', cents: '10', landClassification: 'Wet' },
-        { id: 'lr-1.1-2', surveyNumber: '35/3A', acres: '1', cents: '25', landClassification: 'Wet' },
-      ],
-      heirs: [],
-    },
-    {
-      id: '1.2',
-      name: 'Chitra',
-      relation: 'Daughter',
-      gender: 'Female',
-      age: 52,
-      maritalStatus: 'Married',
-      status: 'Alive',
-      sourceOfLand: 'Gift',
-      landRecords: [
-         { id: 'lr-1.2-1', surveyNumber: '33/1A', acres: '3', cents: '0', landClassification: 'Dry' },
-         { id: 'lr-1.2-2', surveyNumber: '33/1B', acres: '0', cents: '80', landClassification: 'Dry' },
-      ],
-      heirs: [],
-    },
-    {
-      id: '1.3',
-      name: 'David',
-      relation: 'Son',
-      gender: 'Male',
-      age: 48,
-      maritalStatus: 'Married',
-      status: 'Alive',
-      sourceOfLand: 'Legal Heir',
-      landRecords: [
-         { id: 'lr-1.3-1', surveyNumber: '10/1A', acres: '0', cents: '95', landClassification: 'Unclassified' },
-         { id: 'lr-1.3-2', surveyNumber: '10/1B', acres: '1', cents: '0', landClassification: 'Unclassified' },
-         { id: 'lr-1.3-3', surveyNumber: '10/1C', acres: '1', cents: '10', landClassification: 'Unclassified' },
-      ],
-      heirs: [],
-    },
-  ],
+  landRecords: ownersMap[ownerName],
+  heirs: [],
+}));
+
+const defaultFamilyHead: Person = {
+  id: 'root',
+  name: 'Project Site',
+  relation: 'Root',
+  gender: 'Other',
+  age: 0,
+  maritalStatus: 'Single',
+  status: 'Unknown',
+  landRecords: [],
+  heirs: familyHeadsFromSketch, // Use the generated family heads as heirs of a virtual root
 };
 
-function createDefaultAcquisitionStatus(projectId: string, surveyRecord: SurveyRecord, familyHeadName: string): AcquisitionStatus {
-    return {
+
+function createDefaultAcquisitionStatus(projectId: string, surveyRecord: SurveyRecord, familyHeadName: string, rawStatus: string): AcquisitionStatus {
+    const status: AcquisitionStatus = {
         id: `${projectId}-${surveyRecord.surveyNumber}`,
         projectId: projectId,
         surveyNumber: surveyRecord.surveyNumber,
         familyHeadName,
         extent: { acres: surveyRecord.acres, cents: surveyRecord.cents },
         landClassification: surveyRecord.landClassification,
-        financials: {
-            advancePayment: 'Pending',
-            agreementStatus: 'Pending',
-        },
-        operations: {
-            meetingDate: null,
-            documentCollection: 'Pending',
-        },
-        legal: {
-            queryStatus: 'Not Started',
-        },
+        financials: { advancePayment: 'Pending', agreementStatus: 'Pending' },
+        operations: { meetingDate: null, documentCollection: 'Pending' },
+        legal: { queryStatus: 'Not Started' },
     };
+
+    switch (rawStatus.toLowerCase()) {
+        case 'sale advance':
+            status.financials.advancePayment = 'Paid';
+            status.operations.documentCollection = 'Partially Collected';
+            status.legal.queryStatus = 'On-Progress';
+            break;
+        case 'agreement':
+            status.financials.advancePayment = 'Paid';
+            status.financials.agreementStatus = 'Signed';
+            status.operations.documentCollection = 'Fully Collected';
+            status.operations.meetingDate = new Date().toISOString();
+            status.legal.queryStatus = 'Cleared';
+            break;
+        case 'pending':
+            // Default status is already pending
+            break;
+    }
+    return status;
 }
 
 export default function ProjectDetailsPage() {
@@ -188,6 +268,9 @@ export default function ProjectDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [isLoaded, setIsLoaded] = useState(false);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [activeTab, setActiveTab] = useState('site-sketch');
+    const [activeSurvey, setActiveSurvey] = useState<string | undefined>(sketchData[0]?.surveyNumber);
+
 
     const lineageStorageKey = `lineage-data-${projectId}`;
     const folderStorageKey = `document-folders-${projectId}`;
@@ -213,24 +296,11 @@ export default function ProjectDetailsPage() {
             const lineageData = savedLineage ? JSON.parse(savedLineage) : defaultFamilyHead;
             setFamilyHead(lineageData);
 
-            // Collect all unique survey numbers from lineage
-            const surveyRecordsMap = new Map<string, SurveyRecord>();
-            const collectSurveyRecords = (person: Person) => {
-                (person.landRecords || []).forEach(rec => {
-                    if (!surveyRecordsMap.has(rec.surveyNumber)) {
-                        surveyRecordsMap.set(rec.surveyNumber, rec);
-                    }
-                });
-                (person.heirs || []).forEach(collectSurveyRecords);
-            };
-            collectSurveyRecords(lineageData);
-            const allSurveyRecords = Array.from(surveyRecordsMap.values());
-
             const savedFolders = localStorage.getItem(folderStorageKey);
             if (savedFolders) {
                 setFolders(JSON.parse(savedFolders));
             } else {
-                 const surveyFolders = allSurveyRecords.map(r => createSurveyFolder(r.surveyNumber));
+                 const surveyFolders = sketchData.map(r => createSurveyFolder(r.surveyNumber));
                 const familyMembers: string[] = [];
                 const collectFamilyMembers = (person: Person) => {
                     familyMembers.push(person.name);
@@ -256,33 +326,15 @@ export default function ProjectDetailsPage() {
             if (savedAcquisition) {
                 setAcquisitionStatuses(JSON.parse(savedAcquisition));
             } else {
-                // Create a richer demo dataset for the acquisition tracker based on the site sketch
-                const demoStatuses = allSurveyRecords.map(rec => {
-                    const baseStatus = createDefaultAcquisitionStatus(projectId, rec, lineageData.name);
-                    
-                    // Customize statuses for demo purposes
-                    if (rec.surveyNumber === '34/1') {
-                        baseStatus.financials = { advancePayment: 'Paid', agreementStatus: 'Signed' };
-                        baseStatus.operations = {
-                            meetingDate: new Date(new Date().setDate(new Date().getDate() - 15)).toISOString(),
-                            documentCollection: 'Fully Collected',
-                        };
-                         baseStatus.legal = { queryStatus: 'Cleared' };
-                    } else if (rec.surveyNumber === '35/3A') {
-                        baseStatus.financials = { advancePayment: 'Paid', agreementStatus: 'Pending' };
-                        baseStatus.operations = {
-                            meetingDate: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString(),
-                            documentCollection: 'Partially Collected',
-                        };
-                        baseStatus.legal = { queryStatus: 'On-Progress' };
-                    } else if (rec.surveyNumber === '33/1B') {
-                        baseStatus.financials = { advancePayment: 'Pending', agreementStatus: 'Pending' };
-                        baseStatus.operations = { meetingDate: null, documentCollection: 'Pending' };
-                        baseStatus.legal = { queryStatus: 'Awaiting' };
-                    }
-                    // All other survey numbers (e.g., from S.No 10) will remain in their default "Not Started" / "Pending" state.
-                    
-                    return baseStatus;
+                const demoStatuses = sketchData.map(plot => {
+                    const surveyRecord: SurveyRecord = {
+                        id: `lr-${plot.surveyNumber}-${plot.ownerName}`,
+                        surveyNumber: plot.surveyNumber,
+                        acres: plot.acres,
+                        cents: plot.cents,
+                        landClassification: plot.classification
+                    };
+                    return createDefaultAcquisitionStatus(projectId, surveyRecord, plot.ownerName, plot.status);
                 });
                 setAcquisitionStatuses(demoStatuses);
             }
@@ -359,7 +411,7 @@ export default function ProjectDetailsPage() {
                     };
                 } else {
                     // Add new status if a new survey number was added
-                    newStatuses.push(createDefaultAcquisitionStatus(projectId, record, familyHead.name));
+                    newStatuses.push(createDefaultAcquisitionStatus(projectId, record, familyHead.name, 'Pending'));
                 }
             });
             return newStatuses;
@@ -473,6 +525,11 @@ export default function ProjectDetailsPage() {
         return records;
     }, [familyHead]);
 
+    const handleSelectSurvey = useCallback((surveyNumber: string) => {
+        setActiveSurvey(surveyNumber);
+        setActiveTab('acquisition-tracker');
+    }, []);
+
 
     if (loading) {
         return (
@@ -514,10 +571,10 @@ export default function ProjectDetailsPage() {
                 <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
                 <p className="text-muted-foreground">{project.siteId} - {project.location}</p>
             </header>
-            <Tabs defaultValue="lineage" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full sm:inline-flex sm:w-auto">
-                    <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
                     <TabsTrigger value="site-sketch">Site Sketch</TabsTrigger>
+                    <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
                     <TabsTrigger value="acquisition-tracker">Acquisition Tracker</TabsTrigger>
                     <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
                     <TabsTrigger value="transactions">Transaction History</TabsTrigger>
@@ -540,12 +597,17 @@ export default function ProjectDetailsPage() {
                     />
                 </TabsContent>
                 <TabsContent value="site-sketch" className="mt-6">
-                    <SiteSketchView plotData={allSurveyRecordsWithOwner} />
+                    <SiteSketchView 
+                        acquisitionStatuses={acquisitionStatuses} 
+                        onSelectSurvey={handleSelectSurvey}
+                    />
                 </TabsContent>
                  <TabsContent value="acquisition-tracker" className="mt-6">
                     <AcquisitionTrackerView 
                         statuses={acquisitionStatuses} 
                         onUpdateStatus={handleUpdateAcquisitionStatus}
+                        activeSurvey={activeSurvey}
+                        onActiveSurveyChange={setActiveSurvey}
                     />
                 </TabsContent>
                 <TabsContent value="title-documents" className="mt-6">

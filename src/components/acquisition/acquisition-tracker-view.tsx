@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AcquisitionCard } from './acquisition-card';
@@ -11,15 +12,24 @@ import { useToast } from '@/hooks/use-toast';
 interface AcquisitionTrackerViewProps {
   statuses: AcquisitionStatus[];
   onUpdateStatus: (updatedStatus: AcquisitionStatus) => void;
+  activeSurvey?: string;
+  onActiveSurveyChange: (surveyNumber: string) => void;
 }
 
-export function AcquisitionTrackerView({ statuses, onUpdateStatus }: AcquisitionTrackerViewProps) {
-  const [selectedSurvey, setSelectedSurvey] = useState<string | undefined>(statuses[0]?.surveyNumber);
+export function AcquisitionTrackerView({ statuses, onUpdateStatus, activeSurvey, onActiveSurveyChange }: AcquisitionTrackerViewProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [statusToEdit, setStatusToEdit] = useState<AcquisitionStatus | null>(null);
   const { toast } = useToast();
 
-  const selectedStatus = statuses.find(s => s.surveyNumber === selectedSurvey);
+  const selectedStatus = statuses.find(s => s.surveyNumber === activeSurvey);
+  
+  // Effect to handle initial selection if none is provided
+  useEffect(() => {
+    if (!activeSurvey && statuses.length > 0) {
+      onActiveSurveyChange(statuses[0].surveyNumber);
+    }
+  }, [activeSurvey, statuses, onActiveSurveyChange]);
+
 
   const handleEditClick = (status: AcquisitionStatus) => {
     setStatusToEdit(status);
@@ -59,7 +69,7 @@ export function AcquisitionTrackerView({ statuses, onUpdateStatus }: Acquisition
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Select onValueChange={setSelectedSurvey} defaultValue={selectedSurvey}>
+            <Select onValueChange={onActiveSurveyChange} value={activeSurvey}>
               <SelectTrigger className="w-full md:w-1/3">
                 <SelectValue placeholder="Select a Survey Number..." />
               </SelectTrigger>
