@@ -5,7 +5,6 @@ import {
   Users,
   Settings,
   FolderKanban,
-  Home,
   LogOut,
 } from 'lucide-react';
 import {
@@ -37,16 +36,8 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarMenu className="flex-1">
         <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={pathname === '/dashboard'} tooltip="Dashboard">
+          <SidebarMenuButton asChild isActive={pathname === '/dashboard' || pathname.startsWith('/projects')} tooltip="Projects">
             <Link href="/dashboard">
-              <Home />
-              <span>Dashboard</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={pathname.startsWith('/projects')} tooltip="Projects">
-            <Link href="/projects">
               <FolderKanban />
               <span>Projects</span>
             </Link>

@@ -79,8 +79,8 @@ export default function DashboardPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your projects and sites.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+          <p className="text-muted-foreground">Manage your projects and sites.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>

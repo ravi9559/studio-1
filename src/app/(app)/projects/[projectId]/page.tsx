@@ -368,7 +368,7 @@ export default function ProjectDetailsPage() {
                 <Button variant="ghost" asChild className="mb-4">
                     <Link href="/dashboard">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Dashboard
+                        Back to Projects
                     </Link>
                 </Button>
                 <h1 className="text-2xl font-bold">Project not found</h1>
@@ -383,7 +383,7 @@ export default function ProjectDetailsPage() {
                 <Button variant="ghost" asChild className="mb-4 -ml-4">
                     <Link href="/dashboard">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Dashboard
+                        Back to Projects
                     </Link>
                 </Button>
                 <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
