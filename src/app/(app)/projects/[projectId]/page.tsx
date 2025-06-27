@@ -15,7 +15,8 @@ import { Notes } from '@/components/project/notes';
 import { Tasks } from '@/components/project/tasks';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
-import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord } from '@/types';
+import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord, SurveyRecordWithOwner } from '@/types';
+import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 
 // Recursive function to find a person in the family tree
 const findPerson = (family: Person, personId: string): Person | null => {
@@ -455,6 +456,23 @@ export default function ProjectDetailsPage() {
         return Array.from(surveyNumbers);
     }, [familyHead]);
 
+    const allSurveyRecordsWithOwner = useMemo(() => {
+        if (!familyHead) return [];
+        const records: SurveyRecordWithOwner[] = [];
+        const collect = (person: Person) => {
+            (person.landRecords || []).forEach(lr => {
+                records.push({
+                    ...lr,
+                    ownerName: person.name,
+                    ownerId: person.id,
+                });
+            });
+            (person.heirs || []).forEach(collect);
+        };
+        collect(familyHead);
+        return records;
+    }, [familyHead]);
+
 
     if (loading) {
         return (
@@ -499,6 +517,7 @@ export default function ProjectDetailsPage() {
             <Tabs defaultValue="lineage" className="w-full">
                 <TabsList className="grid w-full sm:inline-flex sm:w-auto">
                     <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
+                    <TabsTrigger value="site-sketch">Site Sketch</TabsTrigger>
                     <TabsTrigger value="acquisition-tracker">Acquisition Tracker</TabsTrigger>
                     <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
                     <TabsTrigger value="transactions">Transaction History</TabsTrigger>
@@ -519,6 +538,9 @@ export default function ProjectDetailsPage() {
                         onAddHeir={handleAddHeir}
                         onUpdatePerson={handleUpdatePerson}
                     />
+                </TabsContent>
+                <TabsContent value="site-sketch" className="mt-6">
+                    <SiteSketchView plotData={allSurveyRecordsWithOwner} />
                 </TabsContent>
                  <TabsContent value="acquisition-tracker" className="mt-6">
                     <AcquisitionTrackerView 

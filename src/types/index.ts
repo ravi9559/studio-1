@@ -10,6 +10,11 @@ export type SurveyRecord = {
   landClassification: LandClassification;
 };
 
+export type SurveyRecordWithOwner = SurveyRecord & {
+  ownerName: string;
+  ownerId: string;
+};
+
 export type Person = {
   id: string;
   name: string;
