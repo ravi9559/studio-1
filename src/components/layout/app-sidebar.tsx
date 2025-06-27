@@ -20,9 +20,51 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
+import { useState, useEffect } from 'react';
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
+  status: 'Active' | 'Inactive';
+};
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const loadUser = () => {
+        try {
+            const savedUsers = localStorage.getItem('users');
+            if (savedUsers) {
+                const users: User[] = JSON.parse(savedUsers);
+                if (users.length > 0) {
+                    setCurrentUser(users[0]); // Assume first user is the logged-in user
+                }
+            }
+        } catch (e) {
+            console.error("Could not load user for sidebar", e);
+        }
+    };
+    
+    loadUser();
+
+    // Listen for changes from other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'users') {
+            loadUser();
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
 
   return (
     <Sidebar>
@@ -64,11 +106,11 @@ export function AppSidebar() {
          <div className="flex items-center gap-3 p-2 transition-all duration-200 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center">
             <Avatar className="flex-shrink-0">
                 <AvatarImage src="https://placehold.co/40x40" alt="User Avatar" data-ai-hint="profile person" />
-                <AvatarFallback>TM</AvatarFallback>
+                <AvatarFallback>{currentUser?.name.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                <span className="text-sm font-semibold">Transaction Manager</span>
-                <span className="text-xs text-muted-foreground">Super Admin</span>
+                <span className="text-sm font-semibold">{currentUser?.name || 'User'}</span>
+                <span className="text-xs text-muted-foreground">{currentUser?.role || 'Role'}</span>
             </div>
         </div>
         <Separator className="my-1"/>

@@ -4,44 +4,85 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Moon, Sun, Trash2, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
+  status: 'Active' | 'Inactive';
+};
 
 export default function SettingsPage() {
     const { toast } = useToast();
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+    
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
 
-    // Effect to set the theme class on the document element
+    // Sync form fields when currentUser changes
+    useEffect(() => {
+        if (currentUser) {
+            setName(currentUser.name);
+            setEmail(currentUser.email);
+        }
+    }, [currentUser]);
+
+    // Effect to load data from localStorage and listen for changes
+    useEffect(() => {
+        const loadData = () => {
+            // Load theme
+            const savedTheme = localStorage.getItem('theme');
+            setIsDarkMode(savedTheme === 'dark');
+
+            // Load current user (assuming the first user is the logged-in user)
+            try {
+                const savedUsers = localStorage.getItem('users');
+                if (savedUsers) {
+                    const users: User[] = JSON.parse(savedUsers);
+                    if (users.length > 0) {
+                        setCurrentUser(users[0]);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load user data", e);
+            }
+        };
+
+        loadData();
+
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'users' || e.key === 'theme') {
+                loadData();
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
+    // Effect to apply theme class
     useEffect(() => {
         const root = window.document.documentElement;
-        if (isDarkMode) {
-            root.classList.add('dark');
-        } else {
-            root.classList.remove('dark');
-        }
+        root.classList.toggle('dark', isDarkMode);
         localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
     }, [isDarkMode]);
-
-    // Effect to load the theme from localStorage on initial render
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            setIsDarkMode(true);
-        }
-    }, []);
 
     const handleClearData = () => {
         try {
             localStorage.clear();
-            // After clearing, we need to restore the theme setting
             localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
             toast({
                 title: "Success",
                 description: "All local application data has been cleared.",
             });
-            // Optional: reload the page to see the effect immediately
             window.location.reload();
         } catch (e) {
             toast({
@@ -53,6 +94,41 @@ export default function SettingsPage() {
         }
     };
 
+    const handleProfileUpdate = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentUser) return;
+
+        try {
+            const savedUsers = localStorage.getItem('users');
+            if (savedUsers) {
+                let users: User[] = JSON.parse(savedUsers);
+                const updatedUsers = users.map(user => 
+                    user.id === currentUser.id ? { ...user, name, email } : user
+                );
+                localStorage.setItem('users', JSON.stringify(updatedUsers));
+                
+                const updatedCurrentUser = updatedUsers.find(u => u.id === currentUser.id);
+                if (updatedCurrentUser) {
+                    setCurrentUser(updatedCurrentUser);
+                }
+                
+                toast({
+                    title: "Success",
+                    description: "Your profile has been updated.",
+                });
+                setIsProfileDialogOpen(false);
+            }
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not update your profile.",
+            });
+            console.error("Failed to update profile", error);
+        }
+    };
+
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             <div>
@@ -60,28 +136,57 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">Manage your account and application settings.</p>
             </div>
 
-            {/* Profile Section */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><User /> User Profile</CardTitle>
-                    <CardDescription>This is your profile information.</CardDescription>
+                    <CardDescription>This is your profile information. You can edit it here.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-1">
                         <Label>Name</Label>
-                        <p className="text-sm text-muted-foreground">Transaction Manager</p>
+                        <p className="text-sm text-muted-foreground">{currentUser?.name || 'Loading...'}</p>
+                    </div>
+                     <div className="space-y-1">
+                        <Label>Email</Label>
+                        <p className="text-sm text-muted-foreground">{currentUser?.email || 'Loading...'}</p>
                     </div>
                     <div className="space-y-1">
                         <Label>Role</Label>
-                        <p className="text-sm text-muted-foreground">Super Admin</p>
+                        <p className="text-sm text-muted-foreground">{currentUser?.role || 'Loading...'}</p>
                     </div>
                 </CardContent>
                  <CardFooter>
-                    <Button variant="outline" disabled>Edit Profile (Not available)</Button>
+                    <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+                        <DialogTrigger asChild>
+                           <Button variant="outline">Edit Profile</Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <form onSubmit={handleProfileUpdate}>
+                                <DialogHeader>
+                                    <DialogTitle>Edit Profile</DialogTitle>
+                                    <DialogDescription>
+                                        Make changes to your profile here. Click save when you're done.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="name" className="text-right">Name</Label>
+                                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="email" className="text-right">Email</Label>
+                                        <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" required />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit">Save Changes</Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
                  </CardFooter>
             </Card>
 
-            {/* Appearance Section */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">{isDarkMode ? <Moon /> : <Sun />} Appearance</CardTitle>
@@ -93,16 +198,11 @@ export default function SettingsPage() {
                             <Label htmlFor="dark-mode" className="font-medium">Dark Mode</Label>
                             <p className="text-xs text-muted-foreground">Toggle between light and dark themes.</p>
                         </div>
-                        <Switch
-                            id="dark-mode"
-                            checked={isDarkMode}
-                            onCheckedChange={setIsDarkMode}
-                        />
+                        <Switch id="dark-mode" checked={isDarkMode} onCheckedChange={setIsDarkMode} />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Data Management Section */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Trash2 /> Data Management</CardTitle>
