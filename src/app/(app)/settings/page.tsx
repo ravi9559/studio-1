@@ -8,18 +8,33 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Moon, Sun, Trash2, User as UserIcon } from 'lucide-react';
+import { Moon, Sun, Trash2, User as UserIcon, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type User = {
   id: string;
   name: string;
   email: string;
-  role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
+  role: string;
   status: 'Active' | 'Inactive';
   avatarUrl?: string;
 };
+
+type Role = {
+    id: string;
+    name: string;
+}
+
+const initialRoles: Role[] = [
+    { id: 'role-super-admin', name: 'Super Admin' },
+    { id: 'role-manager', name: 'Transaction Manager' },
+    { id: 'role-viewer', name: 'Viewer' },
+];
+
+const ROLES_STORAGE_KEY = 'user-roles';
+const USERS_STORAGE_KEY = 'users';
 
 export default function SettingsPage() {
     const { toast } = useToast();
@@ -30,6 +45,11 @@ export default function SettingsPage() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
+
+    const [roles, setRoles] = useState<Role[]>([]);
+    const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+    const [roleToEdit, setRoleToEdit] = useState<Role | null>(null);
+    const [isRolesLoaded, setIsRolesLoaded] = useState(false);
 
     // Sync form fields when currentUser changes
     useEffect(() => {
@@ -51,7 +71,7 @@ export default function SettingsPage() {
 
             // Load current user (assuming the first user is the logged-in user)
             try {
-                const savedUsers = localStorage.getItem('users');
+                const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
                 if (savedUsers) {
                     const users: User[] = JSON.parse(savedUsers);
                     if (users.length > 0) {
@@ -66,7 +86,7 @@ export default function SettingsPage() {
         loadData();
 
         const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === 'users' || e.key === 'theme') {
+            if (e.key === USERS_STORAGE_KEY || e.key === 'theme') {
                 loadData();
             }
         };
@@ -82,6 +102,34 @@ export default function SettingsPage() {
             localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
         }
     }, [isDarkMode]);
+
+    // Effect to load roles
+    useEffect(() => {
+        try {
+            const savedRoles = localStorage.getItem(ROLES_STORAGE_KEY);
+            if (savedRoles) {
+                setRoles(JSON.parse(savedRoles));
+            } else {
+                setRoles(initialRoles);
+                localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(initialRoles));
+            }
+        } catch (e) {
+            console.error("Failed to load roles data", e);
+            setRoles(initialRoles);
+        }
+        setIsRolesLoaded(true);
+    }, []);
+
+    // Effect to save roles
+    useEffect(() => {
+        if (isRolesLoaded) {
+            try {
+                localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(roles));
+            } catch (e) {
+                console.error("Could not save roles to local storage", e);
+            }
+        }
+    }, [roles, isRolesLoaded]);
 
     const handleClearData = () => {
         try {
@@ -109,13 +157,13 @@ export default function SettingsPage() {
         if (!currentUser) return;
 
         try {
-            const savedUsers = localStorage.getItem('users');
+            const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
             if (savedUsers) {
                 let users: User[] = JSON.parse(savedUsers);
                 const updatedUsers = users.map(user => 
                     user.id === currentUser.id ? { ...user, name, email, avatarUrl } : user
                 );
-                localStorage.setItem('users', JSON.stringify(updatedUsers));
+                localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
                 
                 const updatedCurrentUser = updatedUsers.find(u => u.id === currentUser.id);
                 if (updatedCurrentUser) {
@@ -138,6 +186,83 @@ export default function SettingsPage() {
         }
     };
 
+    const handleAddRole = () => {
+        setRoleToEdit(null);
+        setIsRoleDialogOpen(true);
+    };
+
+    const handleEditRole = (role: Role) => {
+        setRoleToEdit(role);
+        setIsRoleDialogOpen(true);
+    };
+
+    const handleSaveRole = (roleData: { name: string }) => {
+        if (roleToEdit) {
+            const oldRoleName = roleToEdit.name;
+            const newRoleName = roleData.name;
+            
+            if (roles.some(r => r.name === newRoleName && r.id !== roleToEdit.id)) {
+                toast({ variant: "destructive", title: "Error", description: "A role with this name already exists." });
+                return;
+            }
+            
+            const updatedRoles = roles.map(r => r.id === roleToEdit.id ? { ...r, name: newRoleName } : r);
+            setRoles(updatedRoles);
+
+            try {
+                const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+                if (savedUsers) {
+                    let users: User[] = JSON.parse(savedUsers);
+                    const updatedUsers = users.map(user => 
+                        user.role === oldRoleName ? { ...user, role: newRoleName } : user
+                    );
+                    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+                }
+            } catch (e) {
+                console.error("Failed to cascade role update to users", e);
+            }
+
+            toast({ title: "Role Updated", description: "The role and associated users have been updated." });
+        } else {
+             if (roles.some(r => r.name === roleData.name)) {
+                toast({ variant: "destructive", title: "Error", description: "A role with this name already exists." });
+                return;
+            }
+            const newRole: Role = {
+                id: `role-${Date.now()}`,
+                name: roleData.name,
+            };
+            setRoles([...roles, newRole]);
+            toast({ title: "Role Added", description: "The new role has been created." });
+        }
+        setIsRoleDialogOpen(false);
+    };
+
+    const handleDeleteRole = (roleId: string) => {
+        const roleToDelete = roles.find(r => r.id === roleId);
+        if (!roleToDelete) return;
+
+        try {
+            const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+            let users: User[] = savedUsers ? JSON.parse(savedUsers) : [];
+            const isRoleInUse = users.some(u => u.role === roleToDelete.name);
+
+            if (isRoleInUse) {
+                toast({
+                    variant: "destructive",
+                    title: "Cannot Delete Role",
+                    description: "This role is currently assigned to one or more users.",
+                });
+                return;
+            }
+
+            setRoles(roles.filter(r => r.id !== roleId));
+            toast({ title: "Role Deleted", description: "The role has been successfully removed." });
+        } catch (e) {
+            console.error("Failed to delete role", e);
+            toast({ variant: "destructive", title: "Error", description: "Could not delete the role." });
+        }
+    };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -202,6 +327,57 @@ export default function SettingsPage() {
 
             <Card>
                 <CardHeader>
+                    <CardTitle className="flex items-center gap-2">Role Management</CardTitle>
+                    <CardDescription>Add, edit, or remove user roles from the system.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Role Name</TableHead>
+                                <TableHead className="text-right w-[100px]">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {roles.map(role => (
+                                <TableRow key={role.id}>
+                                    <TableCell className="font-medium">{role.name}</TableCell>
+                                    <TableCell className="text-right space-x-2">
+                                        <Button variant="ghost" size="icon" onClick={() => handleEditRole(role)}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action cannot be undone. You can only delete roles that are not assigned to any users.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteRole(role.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+                <CardFooter>
+                     <Button onClick={handleAddRole}>Add New Role</Button>
+                </CardFooter>
+            </Card>
+
+            <Card>
+                <CardHeader>
                     <CardTitle className="flex items-center gap-2">{isDarkMode ? <Moon /> : <Sun />} Appearance</CardTitle>
                     <CardDescription>Customize the look and feel of the application.</CardDescription>
                 </CardHeader>
@@ -251,6 +427,58 @@ export default function SettingsPage() {
                     </AlertDialog>
                 </CardFooter>
             </Card>
+
+            <RoleFormDialog
+                isOpen={isRoleDialogOpen}
+                onOpenChange={setIsRoleDialogOpen}
+                onSave={handleSaveRole}
+                role={roleToEdit}
+            />
         </div>
+    );
+}
+
+interface RoleFormDialogProps {
+    isOpen: boolean;
+    onOpenChange: (isOpen: boolean) => void;
+    onSave: (roleData: { name: string }) => void;
+    role: Role | null;
+}
+
+function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormDialogProps) {
+    const [name, setName] = useState('');
+
+    useEffect(() => {
+        if (role) {
+            setName(role.name);
+        } else {
+            setName('');
+        }
+    }, [role, isOpen]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({ name });
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>{role ? 'Edit Role' : 'Add New Role'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="role-name" className="text-right">Name</Label>
+                            <Input id="role-name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" required />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit">Save</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }

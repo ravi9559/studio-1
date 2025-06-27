@@ -20,10 +20,16 @@ type User = {
   name: string;
   email: string;
   password?: string;
-  role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
+  role: string;
   status: 'Active' | 'Inactive';
   avatarUrl?: string;
 };
+
+// Define Role type
+type Role = {
+    id: string;
+    name: string;
+}
 
 // Initial mock data
 const initialUsers: User[] = [
@@ -32,36 +38,52 @@ const initialUsers: User[] = [
     { id: 'user-1682600000003', name: 'Read Only User', email: 'viewer@o2o.com', password: 'password', role: 'Viewer', status: 'Inactive' },
 ];
 
-const STORAGE_KEY = 'users';
+const initialRoles: Role[] = [
+    { id: 'role-super-admin', name: 'Super Admin' },
+    { id: 'role-manager', name: 'Transaction Manager' },
+    { id: 'role-viewer', name: 'Viewer' },
+];
+
+const USERS_STORAGE_KEY = 'users';
+const ROLES_STORAGE_KEY = 'user-roles';
 
 export default function UsersPage() {
     const { toast } = useToast();
     const [users, setUsers] = useState<User[]>([]);
+    const [roles, setRoles] = useState<Role[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
-    // Load users from localStorage on initial client-side render
+    // Load users and roles from localStorage
     useEffect(() => {
         try {
-            const savedUsers = localStorage.getItem(STORAGE_KEY);
+            const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
             if (savedUsers) {
                 setUsers(JSON.parse(savedUsers));
             } else {
-                setUsers(initialUsers); // Use initial data if nothing is saved
+                setUsers(initialUsers);
+            }
+
+            const savedRoles = localStorage.getItem(ROLES_STORAGE_KEY);
+            if(savedRoles) {
+                setRoles(JSON.parse(savedRoles));
+            } else {
+                setRoles(initialRoles);
             }
         } catch (e) {
-            console.error("Could not load users from local storage", e);
+            console.error("Could not load data from local storage", e);
             setUsers(initialUsers);
+            setRoles(initialRoles);
         }
         setIsLoaded(true);
     }, []);
 
-    // Save users to localStorage whenever the users state changes
+    // Save users to localStorage
     useEffect(() => {
         if (isLoaded) {
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+                localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
             } catch (e) {
                 console.error("Could not save users to local storage", e);
             }
@@ -182,6 +204,7 @@ export default function UsersPage() {
                 onOpenChange={setIsDialogOpen}
                 onSave={handleSaveUser}
                 user={userToEdit}
+                roles={roles}
             />
         </div>
     );
@@ -193,17 +216,20 @@ interface UserFormDialogProps {
     onOpenChange: (isOpen: boolean) => void;
     onSave: (userData: Omit<User, 'id'>) => void;
     user: User | null;
+    roles: Role[];
 }
 
-function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogProps) {
+function UserFormDialog({ isOpen, onOpenChange, onSave, user, roles }: UserFormDialogProps) {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState<User['role']>('Viewer');
+    const [role, setRole] = useState<string>('');
     const [status, setStatus] = useState<User['status']>('Active');
     const [avatarUrl, setAvatarUrl] = useState('');
 
     useEffect(() => {
+        const defaultRole = roles.length > 0 ? roles[roles.length - 1].name : 'Viewer';
+
         if (user) {
             setName(user.name);
             setEmail(user.email);
@@ -216,11 +242,11 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogPr
             setName('');
             setEmail('');
             setPassword('');
-            setRole('Viewer');
+            setRole(defaultRole);
             setStatus('Active');
             setAvatarUrl('');
         }
-    }, [user, isOpen]);
+    }, [user, isOpen, roles]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -256,12 +282,12 @@ function UserFormDialog({ isOpen, onOpenChange, onSave, user }: UserFormDialogPr
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right">Role</Label>
-                            <Select onValueChange={(v: User['role']) => setRole(v)} value={role}>
+                            <Select onValueChange={(v: string) => setRole(v)} value={role}>
                                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="Super Admin">Super Admin</SelectItem>
-                                    <SelectItem value="Transaction Manager">Transaction Manager</SelectItem>
-                                    <SelectItem value="Viewer">Viewer</SelectItem>
+                                    {roles.map(r => (
+                                        <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>

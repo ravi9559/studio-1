@@ -26,7 +26,7 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
+  role: string;
   status: 'Active' | 'Inactive';
   avatarUrl?: string;
 };
@@ -107,7 +107,7 @@ export function AppSidebar() {
          <div className="flex items-center gap-3 p-2 transition-all duration-200 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center">
             <Avatar className="flex-shrink-0">
                 <AvatarImage src={currentUser?.avatarUrl} alt="User Avatar" data-ai-hint="profile person" />
-                <AvatarFallback>{currentUser?.name.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                <AvatarFallback>{currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-semibold">{currentUser?.name || 'User'}</span>

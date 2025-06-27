@@ -19,7 +19,7 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
+  role: string;
   status: 'Active' | 'Inactive';
 };
 

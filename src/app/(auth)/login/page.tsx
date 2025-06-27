@@ -14,7 +14,7 @@ type User = {
   name: string;
   email: string;
   password?: string;
-  role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
+  role: string;
   status: 'Active' | 'Inactive';
   avatarUrl?: string;
 };
