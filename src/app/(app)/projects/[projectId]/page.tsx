@@ -85,13 +85,7 @@ function createSurveyFolder(surveyNumber: string): Folder {
           {
             id: `sro-${sanitizedSurvey}-${now}`,
             name: 'SRO Records',
-            children: [
-              {
-                id: `kyc-${sanitizedSurvey}-${now}`,
-                name: 'Seller KYC',
-                children: [],
-              },
-            ],
+            children: [],
           },
         ],
       },
@@ -210,7 +204,13 @@ export default function ProjectDetailsPage() {
                     (person.heirs || []).forEach(collectSurveyNumbers);
                 };
                 collectSurveyNumbers(lineageData);
-                setFolders(Array.from(initialSurveyNumbers).map(createSurveyFolder));
+                const surveyFolders = Array.from(initialSurveyNumbers).map(createSurveyFolder);
+                const kycFolder: Folder = {
+                    id: `kyc-root-${Date.now()}`,
+                    name: 'Seller KYC',
+                    children: [],
+                };
+                setFolders([...surveyFolders, kycFolder]);
             }
         } catch (e) {
             console.error("Could not load project data", e);
