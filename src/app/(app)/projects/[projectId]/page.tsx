@@ -11,6 +11,17 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TitleDocumentsView, type Folder } from '@/components/documents/title-documents-view';
 import type { Person } from '@/components/lineage/person-card';
+import { Notes } from '@/components/project/notes';
+import { Tasks } from '@/components/project/tasks';
+
+// Define the type for a user
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Super Admin' | 'Transaction Manager' | 'Viewer';
+  status: 'Active' | 'Inactive';
+};
 
 // Define the type for a project
 type Project = {
@@ -172,6 +183,8 @@ export default function ProjectDetailsPage() {
     const [folders, setFolders] = useState<Folder[]>([]);
     const [loading, setLoading] = useState(true);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [currentUserRole, setCurrentUserRole] = useState<User['role'] | null>(null);
+
 
     const lineageStorageKey = `lineage-data-${projectId}`;
     const folderStorageKey = `document-folders-${projectId}`;
@@ -185,6 +198,15 @@ export default function ProjectDetailsPage() {
                 const projects: Project[] = JSON.parse(savedProjects);
                 const currentProject = projects.find(p => p.id === projectId);
                 if (currentProject) setProject(currentProject);
+            }
+
+            // Load user role (assuming first user is logged in)
+            const savedUsers = localStorage.getItem('users');
+            if (savedUsers) {
+                const users: User[] = JSON.parse(savedUsers);
+                if (users.length > 0) {
+                    setCurrentUserRole(users[0].role);
+                }
             }
 
             // Load lineage data
@@ -390,11 +412,17 @@ export default function ProjectDetailsPage() {
                 <p className="text-muted-foreground">{project.siteId} - {project.location}</p>
             </header>
             <Tabs defaultValue="lineage" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 md:w-auto md:inline-flex">
+                <TabsList className="grid w-full sm:inline-flex sm:w-auto">
                     <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
                     <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
                     <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                     <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
+                    {currentUserRole === 'Super Admin' && (
+                        <>
+                            <TabsTrigger value="notes">Notes</TabsTrigger>
+                            <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                        </>
+                    )}
                 </TabsList>
                 <TabsContent value="lineage" className="mt-6">
                     <LineageView 
@@ -416,6 +444,16 @@ export default function ProjectDetailsPage() {
                 <TabsContent value="files" className="mt-6">
                     <FileManager projectId={projectId} />
                 </TabsContent>
+                 {currentUserRole === 'Super Admin' && (
+                    <>
+                        <TabsContent value="notes" className="mt-6">
+                            <Notes projectId={projectId} />
+                        </TabsContent>
+                        <TabsContent value="tasks" className="mt-6">
+                            <Tasks projectId={projectId} />
+                        </TabsContent>
+                    </>
+                )}
             </Tabs>
         </div>
     );
