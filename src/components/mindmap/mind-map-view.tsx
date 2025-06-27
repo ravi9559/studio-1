@@ -18,7 +18,8 @@ import 'reactflow/dist/style.css';
 import Dagre from '@dagrejs/dagre';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import type { Person } from '@/types';
-import { Building, Users, LandPlot, User } from 'lucide-react';
+import { Building, LandPlot, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const dagreGraph = new Dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -53,8 +54,11 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   return { nodes, edges };
 };
 
-const CustomNode = ({ data }: { data: { label: string, type: string, icon: React.ReactNode } }) => (
-  <Card className="w-[250px] h-[70px] shadow-md flex items-center p-3 border-primary/40 bg-card/80 backdrop-blur-sm">
+const CustomNode = ({ data }: { data: { label: string, type: string, icon: React.ReactNode, level?: number } }) => (
+  <Card className={cn(
+    "w-[250px] h-[70px] shadow-md flex items-center p-3 border-primary/40 bg-card/80 backdrop-blur-sm transition-opacity duration-300",
+    (data.level && data.level >= 3) ? "opacity-60" : "opacity-100"
+  )}>
     <div className="flex items-center gap-3">
         <div className="p-2 bg-primary/10 rounded-lg text-primary">
             {data.icon}
@@ -88,30 +92,40 @@ function MindMapFlow({ projectName, familyHeads }: { projectName: string; family
         newNodes.push({
             id: 'project-root',
             type: 'custom',
-            data: { label: projectName, type: 'Project', icon: <Building size={24} /> },
+            data: { label: projectName, type: 'Project', icon: <Building size={24} />, level: 0 },
             position: { x: 0, y: 0 },
         });
 
         if (expandedNodes.has('project-root')) {
             // Recursively build the graph
-            const buildGraph = (people: Person[], parentId: string) => {
+            const buildGraph = (people: Person[], parentId: string, level: number) => {
                 people.forEach(person => {
                     newNodes.push({
                         id: person.id,
                         type: 'custom',
-                        data: { label: person.name, type: person.relation, icon: <User size={24} /> },
+                        data: { 
+                            label: person.name, 
+                            type: person.relation, 
+                            icon: <User size={24} />,
+                            level,
+                        },
                         position: { x: 0, y: 0 },
                     });
                     newEdges.push({ id: `e-${parentId}-${person.id}`, source: parentId, target: person.id });
 
                     if (expandedNodes.has(person.id)) {
                         // Add children if expanded
-                        buildGraph(person.heirs, person.id);
+                        buildGraph(person.heirs, person.id, level + 1);
                         person.landRecords.forEach(lr => {
                             newNodes.push({
                                 id: lr.id,
                                 type: 'custom',
-                                data: { label: `S.No: ${lr.surveyNumber}`, type: `${lr.acres || '0'}ac, ${lr.cents || '0'}c`, icon: <LandPlot size={24} /> },
+                                data: { 
+                                    label: `S.No: ${lr.surveyNumber}`, 
+                                    type: `${lr.acres || '0'}ac, ${lr.cents || '0'}c`, 
+                                    icon: <LandPlot size={24} />,
+                                    level: level + 1
+                                },
                                 position: { x: 0, y: 0 },
                             });
                             newEdges.push({ id: `e-${person.id}-${lr.id}`, source: person.id, target: lr.id });
@@ -120,7 +134,7 @@ function MindMapFlow({ projectName, familyHeads }: { projectName: string; family
                 });
             };
             
-            buildGraph(familyHeads, 'project-root');
+            buildGraph(familyHeads, 'project-root', 1);
         }
         
         const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(newNodes, newEdges);
