@@ -28,6 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { ProjectMap } from '@/components/project/project-map';
 import { roadData } from '@/lib/road-data';
+import { MindMapView } from '@/components/mindmap/mind-map-view';
 
 
 // --- Storage Keys ---
@@ -505,11 +506,16 @@ export default function ProjectDetailsPage() {
             </div>
 
             <div className="pt-8">
+                <h2 className="text-2xl font-bold tracking-tight mb-4">Site Overview</h2>
+                <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
+            </div>
+
+            <div className="pt-8">
                  <h2 className="text-2xl font-bold tracking-tight mb-4">Project Workspace</h2>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <ScrollArea className="w-full pb-2.5">
                         <TabsList>
-                            <TabsTrigger value="site-sketch">Site Sketch</TabsTrigger>
+                            <TabsTrigger value="mind-map">Mind Map</TabsTrigger>
                             <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
                             <TabsTrigger value="acquisition-tracker">Acquisition Tracker</TabsTrigger>
                             <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
@@ -520,8 +526,8 @@ export default function ProjectDetailsPage() {
                         </TabsList>
                         <ScrollBar orientation="horizontal" />
                     </ScrollArea>
+                    <TabsContent value="mind-map" className="mt-6"><MindMapView projectName={project.name} familyHeads={owners} /></TabsContent>
                     <TabsContent value="lineage" className="mt-6"><LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/></TabsContent>
-                    <TabsContent value="site-sketch" className="mt-6"><SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} /></TabsContent>
                     <TabsContent value="acquisition-tracker" className="mt-6"><AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} /></TabsContent>
                     <TabsContent value="title-documents" className="mt-6"><TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} /></TabsContent>
                     <TabsContent value="transactions" className="mt-6"><TransactionHistory projectId={projectId} /></TabsContent>
