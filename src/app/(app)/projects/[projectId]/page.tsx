@@ -81,7 +81,7 @@ export default function ProjectDetailsPage() {
                     <LineageView />
                 </TabsContent>
                 <TabsContent value="transactions" className="mt-6">
-                    <TransactionHistory />
+                    <TransactionHistory projectId={projectId} />
                 </TabsContent>
                 <TabsContent value="files" className="mt-6">
                     <FileManager />
