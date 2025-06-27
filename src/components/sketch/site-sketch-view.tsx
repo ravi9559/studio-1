@@ -15,23 +15,29 @@ interface SiteSketchViewProps {
   onSelectSurvey: (surveyNumber: string) => void;
 }
 
-const getStatusVariant = (status: AcquisitionStatus): 'default' | 'secondary' | 'destructive' => {
+const getStatusVariant = (status?: AcquisitionStatus): 'default' | 'secondary' | 'destructive' => {
+    if (!status) return 'destructive';
     if (status.legal.queryStatus === 'Cleared') return 'default'; // Green for completed
     if (status.financials.advancePayment === 'Paid' || status.financials.agreementStatus === 'Signed' || status.legal.queryStatus === 'On-Progress') return 'secondary'; // Blue for in-progress
     return 'destructive'; // Pink for pending/not started
 }
 
-const getStatusText = (status: AcquisitionStatus) => {
+const getStatusText = (status?: AcquisitionStatus) => {
+    if (!status) return 'Pending';
     if (status.legal.queryStatus === 'Cleared') return 'Completed';
     if (status.financials.advancePayment === 'Paid' || status.financials.agreementStatus === 'Signed' || status.legal.queryStatus === 'On-Progress') return 'In Progress';
     return 'Pending';
 }
 
 
-const PlotCard = ({ data, onSelectSurvey }: { data: AcquisitionStatus, onSelectSurvey: (surveyNumber: string) => void; }) => {
-  const statusVariant = getStatusVariant(data);
-  const statusText = getStatusText(data);
+const PlotCard = ({ plot, status, onSelectSurvey }: { plot: typeof siteSketchData[0], status?: AcquisitionStatus, onSelectSurvey: (surveyNumber: string) => void; }) => {
+  const statusVariant = getStatusVariant(status);
+  const statusText = getStatusText(status);
   
+  const ownerName = status ? status.familyHeadName : plot.ownerName;
+  const extentAcres = status ? status.extent.acres : plot.acres;
+  const extentCents = status ? status.extent.cents : plot.cents;
+
   return (
     <div
       className={cn(
@@ -43,21 +49,21 @@ const PlotCard = ({ data, onSelectSurvey }: { data: AcquisitionStatus, onSelectS
     >
       <div>
         <div className="flex justify-between items-center">
-            <h3 className="font-bold text-sm truncate">{data.surveyNumber}</h3>
+            <h3 className="font-bold text-sm truncate">{plot.surveyNumber}</h3>
             <Badge variant={statusVariant} className="text-xs">{statusText}</Badge>
         </div>
         <div className="space-y-1 mt-1 text-muted-foreground">
             <div className="flex items-center gap-1">
                 <Users className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{data.familyHeadName}</span>
+                <span className="truncate">{ownerName}</span>
             </div>
             <div className="flex items-center gap-1">
                 <HandCoins className="h-3 w-3 flex-shrink-0" />
-                <span>{data.extent.acres} Ac, {data.extent.cents} C</span>
+                <span>{extentAcres} Ac, {extentCents} C</span>
             </div>
         </div>
       </div>
-       <Button variant="ghost" size="sm" className="w-full h-6 mt-1 text-xs" onClick={() => onSelectSurvey(data.surveyNumber)}>
+       <Button variant="ghost" size="sm" className="w-full h-6 mt-1 text-xs" onClick={() => onSelectSurvey(plot.surveyNumber)}>
             View Details
         </Button>
     </div>
@@ -76,24 +82,18 @@ export function SiteSketchView({ acquisitionStatuses, onSelectSurvey }: SiteSket
         </CardDescription>
       </CardHeader>
       <CardContent className="overflow-x-auto p-2">
-        <div className="relative w-[1600px] h-[800px] rounded-lg border bg-gray-50 dark:bg-background/30 p-4">
+        <div className="relative w-[1600px] h-[900px] rounded-lg border bg-gray-50 dark:bg-background/30 p-4">
            {/* Main Road */}
            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
                 <p className="font-bold text-gray-600 dark:text-gray-300">MAIN ROAD</p>
            </div>
            
-           <div className="relative h-full w-full grid grid-cols-20 grid-rows-10 gap-1 mb-16">
-            {siteSketchData.map(({ surveyNumber, gridClass }) => {
-              const data = statusMap.get(surveyNumber);
+           <div className="relative h-full w-full grid grid-cols-20 grid-rows-10 gap-1 mb-20">
+            {siteSketchData.map((plot) => {
+              const status = statusMap.get(plot.surveyNumber);
               return (
-              <div key={surveyNumber} className={cn(gridClass)}>
-                {data ? (
-                    <PlotCard data={data} onSelectSurvey={onSelectSurvey} />
-                ) : (
-                    <div className="flex h-full items-center justify-center rounded-lg border border-dashed bg-muted/50 p-2 text-center text-xs text-muted-foreground">
-                        <p>{surveyNumber}</p>
-                    </div>
-                )}
+              <div key={plot.surveyNumber} className={cn(plot.gridClass)}>
+                <PlotCard plot={plot} status={status} onSelectSurvey={onSelectSurvey} />
               </div>
             )})}
           </div>
