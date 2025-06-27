@@ -17,9 +17,9 @@ interface SiteSketchViewProps {
 
 const getStatusVariant = (status?: AcquisitionStatus): 'default' | 'secondary' | 'destructive' => {
     if (!status) return 'destructive';
-    if (status.legal.queryStatus === 'Cleared') return 'default'; // Green for completed
-    if (status.financials.advancePayment === 'Paid' || status.financials.agreementStatus === 'Signed' || status.legal.queryStatus === 'On-Progress') return 'secondary'; // Blue for in-progress
-    return 'destructive'; // Pink for pending/not started
+    if (status.legal.queryStatus === 'Cleared') return 'default';
+    if (status.financials.advancePayment === 'Paid' || status.financials.agreementStatus === 'Signed' || status.legal.queryStatus === 'On-Progress') return 'secondary';
+    return 'destructive';
 }
 
 const getStatusText = (status?: AcquisitionStatus) => {
@@ -42,17 +42,30 @@ const PlotCard = ({ plot, status, onSelectSurvey }: { plot: typeof siteSketchDat
     <div
       className={cn(
         'flex h-full flex-col justify-between rounded-lg border p-2 text-xs shadow-sm transition-all hover:shadow-md hover:scale-[1.03] hover:z-10 overflow-hidden',
-        statusVariant === 'default' && 'bg-green-100 dark:bg-green-900/50 border-green-400',
-        statusVariant === 'secondary' && 'bg-blue-100 dark:bg-blue-900/50 border-blue-400',
-        statusVariant === 'destructive' && 'bg-pink-100 dark:bg-pink-900/50 border-pink-400',
+        // Completed
+        statusVariant === 'default' && 'bg-emerald-50 dark:bg-emerald-950 border-emerald-500 text-emerald-900 dark:text-emerald-200',
+        // In Progress
+        statusVariant === 'secondary' && 'bg-amber-50 dark:bg-amber-950 border-amber-500 text-amber-900 dark:text-amber-200',
+        // Pending
+        statusVariant === 'destructive' && 'bg-rose-50 dark:bg-rose-950 border-rose-500 text-rose-900 dark:text-rose-200'
       )}
     >
       <div>
         <div className="flex justify-between items-center">
             <h3 className="font-bold text-sm truncate">{plot.surveyNumber}</h3>
-            <Badge variant={statusVariant} className="text-xs">{statusText}</Badge>
+            <Badge
+              variant={"outline"}
+              className={cn(
+                "text-xs border-transparent font-bold",
+                statusVariant === 'default' && 'bg-emerald-500 text-white',
+                statusVariant === 'secondary' && 'bg-amber-500 text-amber-950',
+                statusVariant === 'destructive' && 'bg-rose-500 text-white'
+              )}
+            >
+              {statusText}
+            </Badge>
         </div>
-        <div className="space-y-1 mt-1 text-muted-foreground">
+        <div className="space-y-1 mt-1 text-current/80 font-medium">
             <div className="flex items-center gap-1">
                 <Users className="h-3 w-3 flex-shrink-0" />
                 <span className="truncate">{ownerName}</span>
@@ -63,7 +76,7 @@ const PlotCard = ({ plot, status, onSelectSurvey }: { plot: typeof siteSketchDat
             </div>
         </div>
       </div>
-       <Button variant="ghost" size="sm" className="w-full h-6 mt-1 text-xs" onClick={() => status && onSelectSurvey(status.id)}>
+       <Button variant="ghost" size="sm" className="w-full h-6 mt-1 text-xs text-current/90 font-semibold hover:bg-black/5 dark:hover:bg-white/5" onClick={() => status && onSelectSurvey(status.id)}>
             View Details
         </Button>
     </div>
@@ -89,7 +102,7 @@ export function SiteSketchView({ acquisitionStatuses, onSelectSurvey }: SiteSket
            
            <div className="relative h-full w-full grid grid-cols-20 grid-rows-10 gap-1 mb-20">
             {siteSketchData.map((plot, index) => {
-              const status = acquisitionStatuses[index];
+              const status = acquisitionStatuses.find(s => s.id.endsWith(`-${plot.surveyNumber}-${index}`));
               return (
               <div key={`${plot.surveyNumber}-${index}`} className={cn(plot.gridClass)}>
                 <PlotCard plot={plot} status={status} onSelectSurvey={onSelectSurvey} />
