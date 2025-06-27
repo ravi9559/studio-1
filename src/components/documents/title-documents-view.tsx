@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FC } from 'react';
+import { useState, FC } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,33 +14,6 @@ export type Folder = {
   name: string;
   children: Folder[];
 };
-
-// Initial folder structure
-const initialFolders: Folder[] = [
-  {
-    id: 'folder-1',
-    name: 'Survey/Sub-Div',
-    children: [
-      {
-        id: 'folder-1-1',
-        name: 'Revenue Record',
-        children: [
-          {
-            id: 'folder-1-1-1',
-            name: 'SRO Records',
-            children: [
-              {
-                id: 'folder-1-1-1-1',
-                name: 'Seller KYC',
-                children: [],
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-];
 
 // Recursive component to render folders
 const FolderView: FC<{
@@ -113,105 +86,33 @@ const FolderView: FC<{
 
 // Main component
 interface TitleDocumentsViewProps {
-  projectId: string;
+  folders: Folder[];
+  onAddFolder: (parentId: string, name: string) => void;
+  onDeleteFolder: (folderId: string) => void;
 }
 
-export function TitleDocumentsView({ projectId }: TitleDocumentsViewProps) {
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  const storageKey = `document-folders-${projectId}`;
-
-  // Load from localStorage
-  useEffect(() => {
-    if (!projectId) return;
-    try {
-      const savedFolders = localStorage.getItem(storageKey);
-      if (savedFolders) {
-        setFolders(JSON.parse(savedFolders));
-      } else {
-        setFolders(initialFolders);
-      }
-    } catch (e) {
-      console.error('Could not load folders', e);
-      setFolders(initialFolders);
-    }
-    setIsLoaded(true);
-  }, [projectId, storageKey]);
-
-  // Save to localStorage
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(folders));
-      } catch (e) {
-        console.error('Could not save folders', e);
-      }
-    }
-  }, [folders, isLoaded, storageKey]);
-
-  // Recursive function to add a folder
-  const addFolderRecursive = (nodes: Folder[], parentId: string, newFolder: Folder): Folder[] => {
-    return nodes.map((node) => {
-      if (node.id === parentId) {
-        return { ...node, children: [...node.children, newFolder] };
-      }
-      if (node.children.length > 0) {
-        return { ...node, children: addFolderRecursive(node.children, parentId, newFolder) };
-      }
-      return node;
-    });
-  };
-
-  const handleAddFolder = (parentId: string, name: string) => {
-    const newFolder: Folder = {
-      id: `folder-${Date.now()}`,
-      name,
-      children: [],
-    };
-    if (parentId === 'root') {
-      setFolders((currentFolders) => [...currentFolders, newFolder]);
-    } else {
-      setFolders((currentFolders) => addFolderRecursive(currentFolders, parentId, newFolder));
-    }
-  };
-  
-  // Recursive function to delete a folder
-  const deleteFolderRecursive = (nodes: Folder[], folderId: string): Folder[] => {
-      return nodes.filter(node => node.id !== folderId).map(node => {
-          if (node.children.length > 0) {
-              return { ...node, children: deleteFolderRecursive(node.children, folderId) };
-          }
-          return node;
-      });
-  };
-
-  const handleDeleteFolder = (folderId: string) => {
-      setFolders(currentFolders => deleteFolderRecursive(currentFolders, folderId));
-  };
-
-
+export function TitleDocumentsView({ folders, onAddFolder, onDeleteFolder }: TitleDocumentsViewProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between">
         <div>
             <CardTitle>Title Documents</CardTitle>
             <CardDescription>
-            Manage folders for title documents. Add or remove folders as needed.
+            Folders are auto-generated when you add land records in the Family Lineage tab. You can add or remove sub-folders here.
             </CardDescription>
         </div>
-        <Button onClick={() => handleAddFolder('root', 'New Root Folder')}>
+        <Button onClick={() => onAddFolder('root', 'New Root Folder')}>
             <FolderPlus className="mr-2 h-4 w-4" /> Add Root Folder
         </Button>
       </CardHeader>
       <CardContent>
         {folders.length > 0 ? (
           folders.map((folder) => (
-            <FolderView key={folder.id} folder={folder} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} level={0} />
+            <FolderView key={folder.id} folder={folder} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} level={0} />
           ))
         ) : (
           <div className="text-center text-muted-foreground p-8">
-            No folders found. Click "Add Root Folder" to start.
+            No survey records found for this project. Add land records in the "Family Lineage" tab to automatically create document folders.
           </div>
         )}
       </CardContent>
