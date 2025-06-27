@@ -15,7 +15,7 @@ interface LineageViewProps {
 
 export function LineageView({ familyHeads, onAddHeir, onUpdatePerson }: LineageViewProps) {
 
-  if (!familyHeads || familyHeads.length === 0) {
+  if (!Array.isArray(familyHeads) || familyHeads.length === 0) {
     return (
         <div className="flex justify-center items-center h-64">
             <Loader2 className="h-8 w-8 animate-spin" />
