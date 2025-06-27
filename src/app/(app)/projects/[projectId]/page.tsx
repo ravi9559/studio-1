@@ -3,11 +3,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineageView } from "@/components/lineage/lineage-view";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { FileManager } from "@/components/files/file-manager";
-import { ArrowLeft, Loader2, Edit, MapPin } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,7 +24,9 @@ import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord } f
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+
 
 // --- Storage Keys ---
 const PROJECTS_STORAGE_KEY = 'projects';
@@ -161,8 +164,9 @@ export default function ProjectDetailsPage() {
     const [acquisitionStatuses, setAcquisitionStatuses] = useState<AcquisitionStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [activeTab, setActiveTab] = useState('site-sketch');
+    const [activeTab, setActiveTab] = useState('lineage');
     const [activeStatusId, setActiveStatusId] = useState<string | undefined>(undefined);
+    const [siteSketchPdf, setSiteSketchPdf] = useState<string | null>(null);
     
     const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
     const [editedProjectName, setEditedProjectName] = useState('');
@@ -173,6 +177,7 @@ export default function ProjectDetailsPage() {
     const ownersStorageKey = useMemo(() => `lineage-data-${projectId}`, [projectId]);
     const folderStorageKey = useMemo(() => `document-folders-${projectId}`, [projectId]);
     const acquisitionStorageKey = useMemo(() => `acquisition-status-${projectId}`, [projectId]);
+    const siteSketchStorageKey = useMemo(() => `site-sketch-pdf-${projectId}`, [projectId]);
 
     // --- Data Loading and Initialization ---
     useEffect(() => {
@@ -213,12 +218,12 @@ export default function ProjectDetailsPage() {
             let loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || 'null');
             let loadedStatuses = JSON.parse(localStorage.getItem(acquisitionStorageKey) || 'null');
             let loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || 'null');
+            const savedPdf = localStorage.getItem(siteSketchStorageKey);
+            if (savedPdf) setSiteSketchPdf(savedPdf);
             
             const isInvalidData = !loadedOwners || !loadedStatuses || !loadedFolders;
 
             if (isInvalidData) {
-                console.warn("Invalid or missing data, regenerating project data.");
-
                 const ownersMap = createOwnersMap();
                 const initialHeads = createInitialOwners(ownersMap);
                 const demoStatuses = siteSketchData.map((plot, index) => createDefaultAcquisitionStatus(projectId, plot, index));
@@ -246,22 +251,17 @@ export default function ProjectDetailsPage() {
             toast({ variant: 'destructive', title: 'Error Loading Data', description: 'There was a problem initializing project data.' });
         }
         setLoading(false);
-    }, [projectId, ownersStorageKey, folderStorageKey, acquisitionStorageKey, activeStatusId, toast]);
+    }, [projectId, ownersStorageKey, folderStorageKey, acquisitionStorageKey, siteSketchStorageKey, activeStatusId, toast]);
 
     const updateAndPersistOwners = useCallback((newOwners: Person[]) => {
         setOwners(newOwners);
         localStorage.setItem(ownersStorageKey, JSON.stringify(newOwners));
     }, [ownersStorageKey]);
 
-    // This effect will run whenever `owners` data changes, ensuring folders stay in sync while preserving user additions.
     useEffect(() => {
         if (owners && owners.length > 0) {
-            // Use the functional form of setState to get the previous state
-            // to avoid listing `folders` in the dependency array and causing loops.
             setFolders(currentFolders => {
                 const newFolders = createDefaultFolders(owners, currentFolders);
-
-                // Avoid unnecessary writes if the structure hasn't changed.
                 if (JSON.stringify(newFolders) !== JSON.stringify(currentFolders)) {
                     localStorage.setItem(folderStorageKey, JSON.stringify(newFolders));
                     return newFolders;
@@ -270,7 +270,6 @@ export default function ProjectDetailsPage() {
             });
         }
     }, [owners, folderStorageKey]);
-
     
     const handleUpdateProject = (e: React.FormEvent) => {
         e.preventDefault();
@@ -372,6 +371,52 @@ export default function ProjectDetailsPage() {
         localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
     }, [folders, folderStorageKey]);
 
+    const handlePdfUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file && file.type === 'application/pdf') {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const dataUrl = e.target?.result as string;
+                setSiteSketchPdf(dataUrl);
+                localStorage.setItem(siteSketchStorageKey, dataUrl);
+                toast({ title: "Site sketch uploaded successfully." });
+            };
+            reader.readAsDataURL(file);
+        } else {
+            toast({ variant: 'destructive', title: "Invalid file", description: "Please upload a valid PDF file." });
+        }
+    };
+    
+    const projectStats = useMemo(() => {
+        let totalAcres = 0;
+        let totalCents = 0;
+        const ownerCount = owners.length;
+
+        owners.forEach(owner => {
+            (owner.landRecords || []).forEach(rec => {
+                totalAcres += parseFloat(rec.acres || '0');
+                totalCents += parseFloat(rec.cents || '0');
+            });
+        });
+
+        if (totalCents >= 100) {
+            totalAcres += Math.floor(totalCents / 100);
+            totalCents %= 100;
+        }
+
+        const wetPlots = siteSketchData.filter(p => p.classification === 'Wet').length;
+        const dryPlots = siteSketchData.filter(p => p.classification === 'Dry').length;
+
+        return {
+            totalAcres: totalAcres.toFixed(2),
+            totalCents: totalCents.toFixed(2),
+            ownerCount,
+            wetPlots,
+            dryPlots,
+        };
+    }, [owners]);
+
+
     const allSurveyNumbers = useMemo(() => Array.from(new Set(siteSketchData.map(d => d.surveyNumber))), []);
     const handleSelectSurvey = useCallback((statusId: string) => { setActiveStatusId(statusId); setActiveTab('acquisition-tracker'); }, []);
 
@@ -384,29 +429,22 @@ export default function ProjectDetailsPage() {
             }
             return project.googleMapsLink;
         } catch (e) {
-            return null; // Invalid URL
+            return null;
         }
     }, [project?.googleMapsLink]);
 
     if (loading) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-        )
+        return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>
     }
 
     if (!project) {
         return (
             <div className="p-4 sm:p-6 lg:p-8 text-center">
                 <Button variant="ghost" asChild className="mb-4">
-                    <Link href="/dashboard">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Projects
-                    </Link>
+                    <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link>
                 </Button>
                 <h1 className="text-2xl font-bold">Project not found</h1>
-                <p className="text-muted-foreground">The project you are looking for does not exist or has been deleted. Please start from the dashboard.</p>
+                <p className="text-muted-foreground">The project you are looking for does not exist.</p>
             </div>
         )
     }
@@ -415,130 +453,74 @@ export default function ProjectDetailsPage() {
     const canSeeSensitiveTabs = currentUserRole === 'Super Admin';
     const canSeeLegalNotes = currentUserRole === 'Super Admin' || currentUserRole === 'Lawyer';
 
-
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
-            <header className="mb-6">
-                <Button variant="ghost" asChild className="mb-4 -ml-4">
-                    <Link href="/dashboard">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Projects
-                    </Link>
-                </Button>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-                        <p className="text-muted-foreground">{project.siteId} - {project.location}</p>
-                    </div>
-                     <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Project
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-xl">
-                            <DialogHeader>
-                                <DialogTitle>Edit Project Details</DialogTitle>
-                                <DialogDescription>
-                                    Make changes to your project here. Click save when you're done.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleUpdateProject}>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="edit-name" className="text-right">Name</Label>
-                                        <Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="edit-siteId" className="text-right">Site ID</Label>
-                                        <Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="edit-location" className="text-right">Location</Label>
-                                        <Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label>
-                                        <Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" placeholder="Google Maps URL..."/>
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit">Save Changes</Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+            <header className="flex items-center justify-between">
+                <div>
+                    <Button variant="ghost" asChild className="mb-2 -ml-4"><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link></Button>
+                    <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+                    <p className="text-muted-foreground">Project ID: {project.siteId} &middot; {project.location}</p>
                 </div>
+                 <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
+                    <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
+                    <DialogContent className="sm:max-w-xl">
+                        <DialogHeader><DialogTitle>Edit Project Details</DialogTitle><DialogDescription>Make changes to your project here. Click save when you're done.</DialogDescription></DialogHeader>
+                        <form onSubmit={handleUpdateProject}>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right">Name</Label><Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required /></div>
+                                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-siteId" className="text-right">Site ID</Label><Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required /></div>
+                                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-location" className="text-right">Location</Label><Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required /></div>
+                                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label><Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" placeholder="Google Maps URL..."/></div>
+                            </div>
+                            <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </header>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <ScrollArea className="w-full pb-2.5">
-                    <TabsList>
-                        <TabsTrigger value="site-sketch">Site Sketch</TabsTrigger>
-                        <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
-                        <TabsTrigger value="acquisition-tracker">Acquisition Tracker</TabsTrigger>
-                        <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
-                        <TabsTrigger value="transactions">Transaction History</TabsTrigger>
-                        <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
-                        {canSeeLegalNotes && <TabsTrigger value="legal-notes">Legal Notes</TabsTrigger>}
-                        {canSeeSensitiveTabs && (<><TabsTrigger value="notes">Notes</TabsTrigger><TabsTrigger value="tasks">Tasks</TabsTrigger></>)}
-                    </TabsList>
-                    <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-                <TabsContent value="lineage" className="mt-6">
-                    <LineageView 
-                        familyHeads={owners} 
-                        onAddHeir={handleAddHeir} 
-                        onUpdatePerson={handleUpdatePerson}
-                        onImport={(newOwners) => updateAndPersistOwners(newOwners)}
-                    />
-                </TabsContent>
-                <TabsContent value="site-sketch" className="mt-6">
-                    <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
-                </TabsContent>
-                 <TabsContent value="acquisition-tracker" className="mt-6">
-                    <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />
-                </TabsContent>
-                <TabsContent value="title-documents" className="mt-6">
-                    <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} />
-                </TabsContent>
-                <TabsContent value="transactions" className="mt-6">
-                    <TransactionHistory projectId={projectId} />
-                </TabsContent>
-                <TabsContent value="files" className="mt-6">
-                    <FileManager projectId={projectId} />
-                </TabsContent>
-                {canSeeLegalNotes && (
-                    <TabsContent value="legal-notes" className="mt-6">
-                        <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} />
-                    </TabsContent>
-                 )}
-                 {canSeeSensitiveTabs && (
-                    <>
-                        <TabsContent value="notes" className="mt-6"><Notes projectId={projectId} /></TabsContent>
-                        <TabsContent value="tasks" className="mt-6"><Tasks projectId={projectId} /></TabsContent>
-                    </>
-                )}
-            </Tabs>
-            {mapEmbedUrl && (
-                <Card className="mt-6">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><MapPin /> Project Location</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="aspect-video w-full rounded-md overflow-hidden border">
-                            <iframe
-                                width="100%"
-                                height="100%"
-                                loading="lazy"
-                                allowFullScreen
-                                referrerPolicy="no-referrer-when-downgrade"
-                                src={mapEmbedUrl}>
-                            </iframe>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Extent</CardTitle><AreaChart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.totalAcres} Acres</div><p className="text-xs text-muted-foreground">{projectStats.totalCents} Cents</p></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Number of Owners</CardTitle><Users2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.ownerCount}</div><p className="text-xs text-muted-foreground">Unique family heads</p></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Wet Land Plots</CardTitle><Droplets className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.wetPlots}</div><p className="text-xs text-muted-foreground">Count of wet land parcels</p></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Dry Land Plots</CardTitle><Sun className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.dryPlots}</div><p className="text-xs text-muted-foreground">Count of dry land parcels</p></CardContent></Card>
+            </div>
+            
+             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div className="lg:col-span-3 space-y-8">
+                    {mapEmbedUrl && <Card className="overflow-hidden"><CardHeader><CardTitle className="flex items-center gap-2"><MapPin /> Site Location</CardTitle></CardHeader><CardContent><div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500"><iframe width="100%" height="100%" loading="lazy" allowFullScreen referrerPolicy="no-referrer-when-downgrade" src={mapEmbedUrl}></iframe></div></CardContent></Card>}
+                    <Card><CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader><CardContent><Carousel className="w-full"><CarouselContent>{Array.from({ length: 3 }).map((_, index) => (<CarouselItem key={index}><div className="p-1"><Card><CardContent className="flex aspect-video items-center justify-center p-0"><Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" /></CardContent></Card></div></CarouselItem>))}</CarouselContent><CarouselPrevious /><CarouselNext /></Carousel></CardContent></Card>
+                </div>
+                <div className="lg:col-span-2 space-y-8">
+                    <Card><CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader><CardContent>{siteSketchPdf ? (<div className="aspect-[4/5]"><iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/></div>) : (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center"><FileUp className="h-10 w-10 text-muted-foreground mb-4" /><p className="mb-4 font-semibold">No Site Sketch Uploaded</p><Button asChild size="sm"><label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label></Button><Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} /></div>)}</CardContent></Card>
+                </div>
+            </div>
+
+            <div className="pt-8">
+                 <h2 className="text-2xl font-bold tracking-tight mb-4">Project Workspace</h2>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <ScrollArea className="w-full pb-2.5">
+                        <TabsList>
+                            <TabsTrigger value="site-sketch">Site Sketch</TabsTrigger>
+                            <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
+                            <TabsTrigger value="acquisition-tracker">Acquisition Tracker</TabsTrigger>
+                            <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
+                            <TabsTrigger value="transactions">Transaction History</TabsTrigger>
+                            <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
+                            {canSeeLegalNotes && <TabsTrigger value="legal-notes">Legal Notes</TabsTrigger>}
+                            {canSeeSensitiveTabs && (<><TabsTrigger value="notes">Notes</TabsTrigger><TabsTrigger value="tasks">Tasks</TabsTrigger></>)}
+                        </TabsList>
+                        <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                    <TabsContent value="lineage" className="mt-6"><LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/></TabsContent>
+                    <TabsContent value="site-sketch" className="mt-6"><SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} /></TabsContent>
+                    <TabsContent value="acquisition-tracker" className="mt-6"><AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} /></TabsContent>
+                    <TabsContent value="title-documents" className="mt-6"><TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} /></TabsContent>
+                    <TabsContent value="transactions" className="mt-6"><TransactionHistory projectId={projectId} /></TabsContent>
+                    <TabsContent value="files" className="mt-6"><FileManager projectId={projectId} /></TabsContent>
+                    {canSeeLegalNotes && (<TabsContent value="legal-notes" className="mt-6"><LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} /></TabsContent>)}
+                    {canSeeSensitiveTabs && (<><TabsContent value="notes" className="mt-6"><Notes projectId={projectId} /></TabsContent><TabsContent value="tasks" className="mt-6"><Tasks projectId={projectId} /></TabsContent></>)}
+                </Tabs>
+            </div>
         </div>
     );
 }
