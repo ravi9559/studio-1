@@ -8,14 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, ArrowRight } from "lucide-react";
 import Link from 'next/link';
+import type { Project, User } from '@/types';
 
-// Define the type for a project
-type Project = {
-  id: string;
-  name: string;
-  siteId: string;
-  location: string;
-};
+// Copied from users/page.tsx to ensure data can be initialized without login
+const initialUsers: User[] = [
+    { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
+    { id: 'user-1682600000002', name: 'SK Associates', email: 'lawyer@sk.com', password: 'password', role: 'Lawyer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
+    { id: 'user-1682600000003', name: 'Greenfield Corp', email: 'client@greenfield.com', password: 'password', role: 'Client', status: 'Active' },
+    { id: 'user-1682600000004', name: 'Land Investors Inc.', email: 'investor@land.com', password: 'password', role: 'Investor', status: 'Inactive'},
+    { id: 'user-1682600000005', name: 'Property Aggregators', email: 'aggregator@prop.com', password: 'password', role: 'Aggregator', status: 'Active' },
+];
+const USERS_STORAGE_KEY = 'users';
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -28,6 +31,16 @@ export default function DashboardPage() {
 
   // Load projects from localStorage on initial client-side render
   useEffect(() => {
+    // Initialize users if they don't exist, so app can function without login
+    try {
+        const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+        if (!savedUsers) {
+            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(initialUsers));
+        }
+    } catch (e) {
+        console.error("Could not initialize users", e);
+    }
+    
     try {
       const savedProjects = localStorage.getItem('projects');
       if (savedProjects) {

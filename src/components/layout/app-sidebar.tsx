@@ -5,7 +5,6 @@ import {
   Users,
   Settings,
   FolderKanban,
-  LogOut,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -18,8 +17,6 @@ import {
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '../ui/button';
-import { Separator } from '../ui/separator';
 import { useState, useEffect } from 'react';
 import type { User } from '@/types';
 
@@ -71,8 +68,8 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarMenu className="flex-1">
         <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={pathname.startsWith('/projects')} tooltip="Projects">
-            <Link href="/projects">
+          <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard') || pathname.startsWith('/projects')} tooltip="Projects">
+            <Link href="/dashboard">
               <FolderKanban />
               <span>Projects</span>
             </Link>
@@ -106,13 +103,6 @@ export function AppSidebar() {
                 <span className="text-xs text-muted-foreground">{currentUser?.role || 'Role'}</span>
             </div>
         </div>
-        <Separator className="my-1"/>
-        <Button variant="ghost" asChild className="w-full justify-start p-2">
-            <Link href="/login">
-              <LogOut className="h-4 w-4 shrink-0" />
-              <span className="group-data-[collapsible=icon]:hidden ml-2">Logout</span>
-            </Link>
-        </Button>
       </SidebarFooter>
     </Sidebar>
   );
