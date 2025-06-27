@@ -277,12 +277,12 @@ export default function ProjectDetailsPage() {
         const oldPersonState = findPerson(familyHead, personId);
         if (!oldPersonState) return;
         
-        const oldSurveyNumbers = new Set(oldPersonState?.landRecords.map(lr => lr.surveyNumber) || []);
+        const oldSurveyNumbers = new Set((oldPersonState.landRecords || []).map(lr => lr.surveyNumber));
         
         const updatedFamilyHead = updatePersonInFamily(familyHead, personId, personData);
         setFamilyHead(updatedFamilyHead);
 
-        const newSurveyNumbers = new Set(personData.landRecords.map(lr => lr.surveyNumber));
+        const newSurveyNumbers = new Set((personData.landRecords || []).map(lr => lr.surveyNumber));
         const addedSurveyNumbers = [...newSurveyNumbers].filter(sn => !oldSurveyNumbers.has(sn));
 
         setFolders(currentFolders => {
