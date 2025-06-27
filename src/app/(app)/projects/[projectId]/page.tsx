@@ -61,9 +61,9 @@ const createInitialFamilyHeads = (ownersMap: Record<string, SurveyRecord[]>): Pe
 };
 
 // Creates the default acquisition status for a given land plot.
-function createDefaultAcquisitionStatus(projectId: string, plot: typeof siteSketchData[0]): AcquisitionStatus {
+function createDefaultAcquisitionStatus(projectId: string, plot: typeof siteSketchData[0], index: number): AcquisitionStatus {
     const status: AcquisitionStatus = {
-        id: `${projectId}-${plot.surveyNumber}`,
+        id: `${projectId}-${plot.surveyNumber}-${index}`,
         projectId: projectId,
         surveyNumber: plot.surveyNumber,
         familyHeadName: plot.ownerName,
@@ -155,7 +155,7 @@ export default function ProjectDetailsPage() {
     const [isLoaded, setIsLoaded] = useState(false);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [activeTab, setActiveTab] = useState('site-sketch');
-    const [activeSurvey, setActiveSurvey] = useState<string | undefined>(siteSketchData[0]?.surveyNumber);
+    const [activeStatusId, setActiveStatusId] = useState<string | undefined>(undefined);
     
     const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
     const [editedProjectName, setEditedProjectName] = useState('');
@@ -189,46 +189,54 @@ export default function ProjectDetailsPage() {
             }
 
             // Lineage Data
-            const savedLineage = localStorage.getItem(lineageStorageKey);
             let lineageData: Person[] = [];
+            const savedLineage = localStorage.getItem(lineageStorageKey);
             if (savedLineage) {
                 try {
                     const parsedData = JSON.parse(savedLineage);
-                    if (Array.isArray(parsedData)) {
+                     if (Array.isArray(parsedData) && parsedData.length > 0) {
                         lineageData = parsedData;
                     }
                 } catch {
-                    // Data is corrupted, treat as empty
                     lineageData = [];
                 }
             }
-
-            if (lineageData.length > 0) {
-                setFamilyHeads(lineageData);
-            } else {
-                // If no saved data, it's empty, or corrupted, initialize.
+            if (lineageData.length === 0) {
                 const ownersMap = createOwnersMap();
                 const initialHeads = createInitialFamilyHeads(ownersMap);
-                setFamilyHeads(initialHeads);
+                lineageData = initialHeads;
             }
+            setFamilyHeads(lineageData);
+
             
             // Acquisition Statuses
+            let initialAcquisitionStatuses: AcquisitionStatus[] = [];
             const savedAcquisition = localStorage.getItem(acquisitionStorageKey);
             if (savedAcquisition) {
-                setAcquisitionStatuses(JSON.parse(savedAcquisition));
-            } else {
-                const demoStatuses = siteSketchData.map(plot => createDefaultAcquisitionStatus(projectId, plot));
-                setAcquisitionStatuses(demoStatuses);
+                 try {
+                    const parsedData = JSON.parse(savedAcquisition);
+                    if (Array.isArray(parsedData) && parsedData.length > 0) {
+                        initialAcquisitionStatuses = parsedData;
+                    }
+                } catch {
+                    initialAcquisitionStatuses = [];
+                }
             }
-            
+            if (initialAcquisitionStatuses.length === 0) {
+                const demoStatuses = siteSketchData.map((plot, index) => createDefaultAcquisitionStatus(projectId, plot, index));
+                initialAcquisitionStatuses = demoStatuses;
+            }
+            setAcquisitionStatuses(initialAcquisitionStatuses);
+            if (initialAcquisitionStatuses.length > 0 && !activeStatusId) {
+                setActiveStatusId(initialAcquisitionStatuses[0].id);
+            }
+
             // Document Folders
             const savedFolders = localStorage.getItem(folderStorageKey);
              if (savedFolders) {
                 setFolders(JSON.parse(savedFolders));
             } else {
-                // We need familyHeads to generate folders, so we do it based on what was just set
-                const lineageForFolders = lineageData.length > 0 ? lineageData : createInitialFamilyHeads(createOwnersMap());
-                const defaultFolders = createDefaultFolders(lineageForFolders);
+                const defaultFolders = createDefaultFolders(lineageData);
                 setFolders(defaultFolders);
             }
 
@@ -238,7 +246,7 @@ export default function ProjectDetailsPage() {
         }
         setLoading(false);
         setIsLoaded(true);
-    }, [projectId, lineageStorageKey, folderStorageKey, acquisitionStorageKey]);
+    }, [projectId, lineageStorageKey, folderStorageKey, acquisitionStorageKey, activeStatusId]);
 
 
     // --- Data Persistence ---
@@ -458,13 +466,13 @@ export default function ProjectDetailsPage() {
     }, []);
 
 
-    const handleSelectSurvey = useCallback((surveyNumber: string) => {
-        setActiveSurvey(surveyNumber);
+    const handleSelectSurvey = useCallback((statusId: string) => {
+        setActiveStatusId(statusId);
         setActiveTab('acquisition-tracker');
     }, []);
 
 
-    if (loading) {
+    if (loading || !isLoaded) {
         return (
             <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -596,8 +604,8 @@ export default function ProjectDetailsPage() {
                     <AcquisitionTrackerView 
                         statuses={acquisitionStatuses} 
                         onUpdateStatus={handleUpdateAcquisitionStatus}
-                        activeSurvey={activeSurvey}
-                        onActiveSurveyChange={setActiveSurvey}
+                        activeStatusId={activeStatusId}
+                        onActiveStatusChange={setActiveStatusId}
                     />
                 </TabsContent>
                 <TabsContent value="title-documents" className="mt-6">

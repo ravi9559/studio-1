@@ -12,7 +12,7 @@ import { siteSketchData } from '@/lib/site-sketch-data';
 
 interface SiteSketchViewProps {
   acquisitionStatuses: AcquisitionStatus[];
-  onSelectSurvey: (surveyNumber: string) => void;
+  onSelectSurvey: (statusId: string) => void;
 }
 
 const getStatusVariant = (status?: AcquisitionStatus): 'default' | 'secondary' | 'destructive' => {
@@ -30,7 +30,7 @@ const getStatusText = (status?: AcquisitionStatus) => {
 }
 
 
-const PlotCard = ({ plot, status, onSelectSurvey }: { plot: typeof siteSketchData[0], status?: AcquisitionStatus, onSelectSurvey: (surveyNumber: string) => void; }) => {
+const PlotCard = ({ plot, status, onSelectSurvey }: { plot: typeof siteSketchData[0], status?: AcquisitionStatus, onSelectSurvey: (statusId: string) => void; }) => {
   const statusVariant = getStatusVariant(status);
   const statusText = getStatusText(status);
   
@@ -63,7 +63,7 @@ const PlotCard = ({ plot, status, onSelectSurvey }: { plot: typeof siteSketchDat
             </div>
         </div>
       </div>
-       <Button variant="ghost" size="sm" className="w-full h-6 mt-1 text-xs" onClick={() => onSelectSurvey(plot.surveyNumber)}>
+       <Button variant="ghost" size="sm" className="w-full h-6 mt-1 text-xs" onClick={() => status && onSelectSurvey(status.id)}>
             View Details
         </Button>
     </div>
@@ -71,8 +71,7 @@ const PlotCard = ({ plot, status, onSelectSurvey }: { plot: typeof siteSketchDat
 };
 
 export function SiteSketchView({ acquisitionStatuses, onSelectSurvey }: SiteSketchViewProps) {
-  const statusMap = new Map(acquisitionStatuses.map(s => [s.surveyNumber, s]));
-
+  
   return (
     <Card>
       <CardHeader>
@@ -89,10 +88,10 @@ export function SiteSketchView({ acquisitionStatuses, onSelectSurvey }: SiteSket
            </div>
            
            <div className="relative h-full w-full grid grid-cols-20 grid-rows-10 gap-1 mb-20">
-            {siteSketchData.map((plot) => {
-              const status = statusMap.get(plot.surveyNumber);
+            {siteSketchData.map((plot, index) => {
+              const status = acquisitionStatuses[index];
               return (
-              <div key={plot.surveyNumber} className={cn(plot.gridClass)}>
+              <div key={`${plot.surveyNumber}-${index}`} className={cn(plot.gridClass)}>
                 <PlotCard plot={plot} status={status} onSelectSurvey={onSelectSurvey} />
               </div>
             )})}

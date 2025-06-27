@@ -12,23 +12,23 @@ import { useToast } from '@/hooks/use-toast';
 interface AcquisitionTrackerViewProps {
   statuses: AcquisitionStatus[];
   onUpdateStatus: (updatedStatus: AcquisitionStatus) => void;
-  activeSurvey?: string;
-  onActiveSurveyChange: (surveyNumber: string) => void;
+  activeStatusId?: string;
+  onActiveStatusChange: (statusId: string) => void;
 }
 
-export function AcquisitionTrackerView({ statuses, onUpdateStatus, activeSurvey, onActiveSurveyChange }: AcquisitionTrackerViewProps) {
+export function AcquisitionTrackerView({ statuses, onUpdateStatus, activeStatusId, onActiveStatusChange }: AcquisitionTrackerViewProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [statusToEdit, setStatusToEdit] = useState<AcquisitionStatus | null>(null);
   const { toast } = useToast();
 
-  const selectedStatus = statuses.find(s => s.surveyNumber === activeSurvey);
+  const selectedStatus = statuses.find(s => s.id === activeStatusId);
   
   // Effect to handle initial selection if none is provided
   useEffect(() => {
-    if (!activeSurvey && statuses.length > 0) {
-      onActiveSurveyChange(statuses[0].surveyNumber);
+    if (!activeStatusId && statuses.length > 0) {
+      onActiveStatusChange(statuses[0].id);
     }
-  }, [activeSurvey, statuses, onActiveSurveyChange]);
+  }, [activeStatusId, statuses, onActiveStatusChange]);
 
 
   const handleEditClick = (status: AcquisitionStatus) => {
@@ -69,14 +69,14 @@ export function AcquisitionTrackerView({ statuses, onUpdateStatus, activeSurvey,
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Select onValueChange={onActiveSurveyChange} value={activeSurvey}>
+            <Select onValueChange={onActiveStatusChange} value={activeStatusId}>
               <SelectTrigger className="w-full md:w-1/3">
                 <SelectValue placeholder="Select a Survey Number..." />
               </SelectTrigger>
               <SelectContent>
                 {statuses.map(status => (
-                  <SelectItem key={status.id} value={status.surveyNumber}>
-                    Survey No: {status.surveyNumber}
+                  <SelectItem key={status.id} value={status.id}>
+                    Survey No: {status.surveyNumber} ({status.familyHeadName})
                   </SelectItem>
                 ))}
               </SelectContent>
