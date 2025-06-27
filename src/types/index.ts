@@ -1,3 +1,4 @@
+
 // src/types/index.ts
 
 export type LandClassification = 'Wet' | 'Dry' | 'Unclassified';
@@ -8,6 +9,7 @@ export type SurveyRecord = {
   acres: string;
   cents: string;
   landClassification: LandClassification;
+  googleMapsLink?: string;
 };
 
 export type SurveyRecordWithOwner = SurveyRecord & {
@@ -69,12 +71,13 @@ export type LegalNote = {
 };
 
 export type AcquisitionStatus = {
-  id: string; // e.g., `${projectId}-${surveyNumber}`
+  id: string; // e.g., `${projectId}-${surveyNumber}-${index}`
   projectId: string;
   surveyNumber: string;
   familyHeadName: string;
   extent: { acres: string; cents: string };
   landClassification: LandClassification;
+  googleMapsLink?: string;
   financials: {
     advancePayment: 'Paid' | 'Pending';
     agreementStatus: 'Signed' | 'Pending';

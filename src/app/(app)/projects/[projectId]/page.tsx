@@ -21,7 +21,8 @@ import { LegalNotes } from '@/components/project/legal-notes';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
 import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
-import { siteSketchData } from '@/lib/site-sketch-data';
+import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 // --- Default Data Constants ---
 const PROJECTS_STORAGE_KEY = 'projects';
@@ -52,6 +53,7 @@ const createOwnersMap = () => {
         acres: plot.acres,
         cents: plot.cents,
         landClassification: plot.classification,
+        googleMapsLink: plot.googleMapsLink,
       });
     }
     return acc;
@@ -75,7 +77,7 @@ const createInitialFamilyHeads = (ownersMap: Record<string, SurveyRecord[]>): Pe
 };
 
 // Creates the default acquisition status for a given land plot.
-function createDefaultAcquisitionStatus(projectId: string, plot: typeof siteSketchData[0], index: number): AcquisitionStatus {
+function createDefaultAcquisitionStatus(projectId: string, plot: SiteSketchPlot, index: number): AcquisitionStatus {
     const status: AcquisitionStatus = {
         id: `${projectId}-${plot.surveyNumber}-${index}`,
         projectId: projectId,
@@ -83,6 +85,7 @@ function createDefaultAcquisitionStatus(projectId: string, plot: typeof siteSket
         familyHeadName: plot.ownerName,
         extent: { acres: plot.acres, cents: plot.cents },
         landClassification: plot.classification,
+        googleMapsLink: plot.googleMapsLink,
         financials: { advancePayment: 'Pending', agreementStatus: 'Pending' },
         operations: { meetingDate: null, documentCollection: 'Pending' },
         legal: { queryStatus: 'Not Started' },
@@ -185,17 +188,8 @@ export default function ProjectDetailsPage() {
         if (!projectId) return;
         try {
             // --- Project Data Loading (Robust Initialization) ---
-            let allProjects: Project[] = [];
             const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-            if (savedProjects) {
-                try {
-                    allProjects = JSON.parse(savedProjects);
-                } catch {
-                    allProjects = []; // Handle potential JSON parsing errors
-                }
-            }
-            
-            // If local storage is empty or invalid, initialize with default projects
+            let allProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : [];
             if (allProjects.length === 0) {
                 allProjects = initialProjects;
                 localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
@@ -216,7 +210,7 @@ export default function ProjectDetailsPage() {
                 if (users.length > 0) setCurrentUser(users[0]);
             }
 
-            // Lineage Data
+            // --- SINGLE SOURCE OF TRUTH INITIALIZATION ---
             let lineageData: Person[] = [];
             const savedLineage = localStorage.getItem(lineageStorageKey);
             if (savedLineage) {
@@ -225,65 +219,60 @@ export default function ProjectDetailsPage() {
                      if (Array.isArray(parsedData) && parsedData.length > 0) {
                         lineageData = parsedData;
                     }
-                } catch {
-                    lineageData = [];
-                }
+                } catch { /* Will be regenerated below */ }
             }
-            if (lineageData.length === 0) {
-                const ownersMap = createOwnersMap();
-                const initialHeads = createInitialFamilyHeads(ownersMap);
-                lineageData = initialHeads;
-            }
-            setFamilyHeads(lineageData);
 
-            
-            // Acquisition Statuses - with robust handling of old data
             let loadedStatuses: AcquisitionStatus[] = [];
             const savedAcquisition = localStorage.getItem(acquisitionStorageKey);
             if (savedAcquisition) {
-                try {
+                 try {
                     const parsedData = JSON.parse(savedAcquisition);
                     if (Array.isArray(parsedData) && parsedData.length > 0) {
-                        // Check for duplicate IDs, a sign of the old data structure
                         const idSet = new Set(parsedData.map((d: AcquisitionStatus) => d.id));
                         if (idSet.size === parsedData.length) {
                             loadedStatuses = parsedData;
                         } else {
-                             // This is old data, regenerate it
-                             loadedStatuses = [];
-                             localStorage.removeItem(acquisitionStorageKey);
+                             loadedStatuses = []; // old data, regenerate
                         }
                     }
-                } catch (e) {
-                    console.error("Failed to parse acquisition statuses from storage, will regenerate.", e);
-                    loadedStatuses = [];
-                }
+                } catch { /* Will be regenerated below */ }
             }
 
-            let finalStatuses: AcquisitionStatus[];
-            if (loadedStatuses.length === 0) {
-                const demoStatuses = siteSketchData.map((plot, index) => createDefaultAcquisitionStatus(projectId, plot, index));
-                finalStatuses = demoStatuses;
-            } else {
-                finalStatuses = loadedStatuses;
-            }
-            
-            setAcquisitionStatuses(finalStatuses);
-            
-            if (finalStatuses.length > 0 && (!activeStatusId || !finalStatuses.some(s => s.id === activeStatusId))) {
-                setActiveStatusId(finalStatuses[0].id);
-            }
-
-
-            // Document Folders
+            let loadedFolders: Folder[] = [];
             const savedFolders = localStorage.getItem(folderStorageKey);
-             if (savedFolders) {
-                setFolders(JSON.parse(savedFolders));
-            } else {
-                const defaultFolders = createDefaultFolders(lineageData);
-                setFolders(defaultFolders);
+            if(savedFolders) {
+                try {
+                    const parsedData = JSON.parse(savedFolders);
+                    if (Array.isArray(parsedData) && parsedData.length > 0) {
+                        loadedFolders = parsedData;
+                    }
+                } catch { /* Will be regenerated below */ }
             }
+            
+            // If any of the main data items are missing, regenerate EVERYTHING from the single source of truth
+            if (lineageData.length === 0 || loadedStatuses.length === 0 || loadedFolders.length === 0) {
+                const ownersMap = createOwnersMap();
+                const initialHeads = createInitialFamilyHeads(ownersMap);
+                const demoStatuses = siteSketchData.map((plot, index) => createDefaultAcquisitionStatus(projectId, plot, index));
+                const defaultFolders = createDefaultFolders(initialHeads);
 
+                lineageData = initialHeads;
+                loadedStatuses = demoStatuses;
+                loadedFolders = defaultFolders;
+
+                // Save regenerated data back to storage
+                localStorage.setItem(lineageStorageKey, JSON.stringify(lineageData));
+                localStorage.setItem(acquisitionStorageKey, JSON.stringify(loadedStatuses));
+                localStorage.setItem(folderStorageKey, JSON.stringify(loadedFolders));
+            }
+            
+            setFamilyHeads(lineageData);
+            setAcquisitionStatuses(loadedStatuses);
+            setFolders(loadedFolders);
+            
+            if (loadedStatuses.length > 0 && (!activeStatusId || !loadedStatuses.some(s => s.id === activeStatusId))) {
+                setActiveStatusId(loadedStatuses[0].id);
+            }
 
         } catch (e) {
             console.error("Could not load project data", e);
@@ -418,13 +407,15 @@ export default function ProjectDetailsPage() {
         setAcquisitionStatuses(currentStatuses => {
             let statuses = [...currentStatuses];
             (personData.landRecords || []).forEach(record => {
-                const existingIndex = statuses.findIndex(s => s.surveyNumber === record.surveyNumber);
+                // Find status by survey number and owner name for more accuracy
+                const existingIndex = statuses.findIndex(s => s.surveyNumber === record.surveyNumber && s.familyHeadName === personData.name);
                 if (existingIndex > -1) {
                     statuses[existingIndex] = {
                         ...statuses[existingIndex],
                         familyHeadName: personData.name,
                         extent: { acres: record.acres, cents: record.cents },
-                        landClassification: record.landClassification
+                        landClassification: record.landClassification,
+                        googleMapsLink: record.googleMapsLink,
                     };
                 }
             });
@@ -614,23 +605,26 @@ export default function ProjectDetailsPage() {
                 </div>
             </header>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full sm:inline-flex sm:w-auto">
-                    <TabsTrigger value="site-sketch">Site Sketch</TabsTrigger>
-                    <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
-                    <TabsTrigger value="acquisition-tracker">Acquisition Tracker</TabsTrigger>
-                    <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
-                    <TabsTrigger value="transactions">Transaction History</TabsTrigger>
-                    <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
-                    {canSeeLegalNotes && (
-                         <TabsTrigger value="legal-notes">Legal Notes</TabsTrigger>
-                    )}
-                    {canSeeSensitiveTabs && (
-                        <>
-                            <TabsTrigger value="notes">Notes</TabsTrigger>
-                            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-                        </>
-                    )}
-                </TabsList>
+                <ScrollArea className="w-full pb-2.5">
+                    <TabsList>
+                        <TabsTrigger value="site-sketch">Site Sketch</TabsTrigger>
+                        <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
+                        <TabsTrigger value="acquisition-tracker">Acquisition Tracker</TabsTrigger>
+                        <TabsTrigger value="title-documents">Title Documents</TabsTrigger>
+                        <TabsTrigger value="transactions">Transaction History</TabsTrigger>
+                        <TabsTrigger value="files">Files &amp; Documents</TabsTrigger>
+                        {canSeeLegalNotes && (
+                            <TabsTrigger value="legal-notes">Legal Notes</TabsTrigger>
+                        )}
+                        {canSeeSensitiveTabs && (
+                            <>
+                                <TabsTrigger value="notes">Notes</TabsTrigger>
+                                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                            </>
+                        )}
+                    </TabsList>
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
                 <TabsContent value="lineage" className="mt-6">
                     <LineageView 
                         familyHeads={familyHeads}

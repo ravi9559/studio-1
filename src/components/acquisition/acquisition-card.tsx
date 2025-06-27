@@ -1,12 +1,14 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Circle, CircleDashed, FileCheck, FileClock, FileQuestion, FileX, HandCoins, Landmark, LandPlot, Scale, SquareUserRound, Users, Calendar as CalendarIcon, Wallet, FilePen, Microscope } from 'lucide-react';
+import { CheckCircle2, Circle, CircleDashed, FileCheck, FileClock, FileQuestion, FileX, HandCoins, Landmark, LandPlot, Scale, SquareUserRound, Users, Calendar as CalendarIcon, Wallet, FilePen, Microscope, MapPin } from 'lucide-react';
 import type { AcquisitionStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
+import { useMemo } from 'react';
 
 interface AcquisitionCardProps {
   status: AcquisitionStatus;
@@ -87,6 +89,20 @@ export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
 
   const overallStatus = getStageStatus('legal');
   
+  const mapEmbedUrl = useMemo(() => {
+    if (!status.googleMapsLink) return null;
+    try {
+        const url = new URL(status.googleMapsLink);
+        if (url.hostname.includes('google.com') && url.pathname.includes('/maps/')) {
+            // Convert a standard share/view URL to an embed URL
+            return status.googleMapsLink.replace('/view', '/embed');
+        }
+        return status.googleMapsLink; // Assume it's already an embed link
+    } catch (e) {
+        return null; // Invalid URL
+    }
+  }, [status.googleMapsLink]);
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -94,7 +110,7 @@ export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
           <div>
             <CardTitle>Acquisition Status for S.No: {status.surveyNumber}</CardTitle>
             <CardDescription>
-              A visual game-like overview of the acquisition process for this land parcel.
+              A visual overview of the acquisition process for this land parcel.
             </CardDescription>
           </div>
           <Button variant="outline" onClick={() => onEdit(status)}>
@@ -187,8 +203,32 @@ export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
                     />
                 </CardContent>
             </Card>
-
         </div>
+        
+        {/* Google Maps Embed */}
+        <Card>
+             <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2"><MapPin /> Geographic Location</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {mapEmbedUrl ? (
+                    <div className="aspect-video w-full rounded-md overflow-hidden border">
+                        <iframe
+                            width="100%"
+                            height="100%"
+                            loading="lazy"
+                            allowFullScreen
+                            referrerPolicy="no-referrer-when-downgrade"
+                            src={mapEmbedUrl}>
+                        </iframe>
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md">
+                        <p className="text-muted-foreground">No Google Maps link provided for this plot.</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
       </CardContent>
     </Card>
   );

@@ -1,11 +1,13 @@
 
 'use client';
 
+import { useState } from 'react';
 import { PersonCard } from './person-card';
 import { LineageSuggestion } from './lineage-suggestion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import type { Person } from '@/types';
+import { Input } from '../ui/input';
 
 interface LineageViewProps {
     familyHeads: Person[];
@@ -14,6 +16,7 @@ interface LineageViewProps {
 }
 
 export function LineageView({ familyHeads, onAddHeir, onUpdatePerson }: LineageViewProps) {
+  const [searchQuery, setSearchQuery] = useState('');
 
   if (!Array.isArray(familyHeads) || familyHeads.length === 0) {
     return (
@@ -23,6 +26,10 @@ export function LineageView({ familyHeads, onAddHeir, onUpdatePerson }: LineageV
         </div>
     )
   }
+
+  const filteredHeads = familyHeads.filter(person => 
+    person.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const allOwnersDataString = JSON.stringify(familyHeads, null, 2);
 
@@ -34,12 +41,25 @@ export function LineageView({ familyHeads, onAddHeir, onUpdatePerson }: LineageV
             <CardTitle>Owner & Lineage Management</CardTitle>
             <CardDescription>
                 A list of all landowners for this project, generated from the site sketch data. 
-                You can manage each owner's details, land records, and heirs below.
+                You can search by name, manage details, add heirs, and update land records below.
             </CardDescription>
           </CardHeader>
+           <CardContent>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search for an owner by name..."
+                  className="w-full pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+          </CardContent>
         </Card>
         
-        {familyHeads.map(person => (
+        {filteredHeads.length > 0 ? (
+          filteredHeads.map(person => (
              <PersonCard 
                 key={person.id} 
                 person={person} 
@@ -47,7 +67,14 @@ export function LineageView({ familyHeads, onAddHeir, onUpdatePerson }: LineageV
                 onUpdatePerson={onUpdatePerson} 
                 isFamilyHead={true}
              />
-        ))}
+          ))
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              No owners found matching your search.
+            </CardContent>
+          </Card>
+        )}
 
       </div>
       <div>

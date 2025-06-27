@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, UserPlus, Edit, Trash2, Milestone, Scale } from 'lucide-react';
+import { User, UserPlus, Edit, Trash2, Milestone, Scale, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from '../ui/separator';
 import type { Person, SurveyRecord, LandClassification } from '@/types';
+import Link from 'next/link';
 
 interface PersonCardProps {
   person: Person;
@@ -133,6 +134,8 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
     const [newAcres, setNewAcres] = useState('');
     const [newCents, setNewCents] = useState('');
     const [newLandClassification, setNewLandClassification] = useState<LandClassification>('Unclassified');
+    const [newGoogleMapsLink, setNewGoogleMapsLink] = useState('');
+
 
     const handleAddLandRecord = () => {
         if (!newSurveyNumber.trim() || (!newAcres.trim() && !newCents.trim())) return;
@@ -141,13 +144,15 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
             surveyNumber: newSurveyNumber,
             acres: newAcres,
             cents: newCents,
-            landClassification: newLandClassification
+            landClassification: newLandClassification,
+            googleMapsLink: newGoogleMapsLink,
         };
         setLandRecords([...landRecords, newRecord]);
         setNewSurveyNumber('');
         setNewAcres('');
         setNewCents('');
         setNewLandClassification('Unclassified');
+        setNewGoogleMapsLink('');
     };
 
     const handleDeleteLandRecord = (recordId: string) => {
@@ -242,8 +247,8 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
 
                     <div className="p-4 border rounded-lg space-y-4">
                         <h5 className="font-medium">Add New Survey Record</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                            <div className="space-y-2 md:col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
                                 <Label htmlFor="survey-number">Survey/Sub-Div No.</Label>
                                 <Input id="survey-number" value={newSurveyNumber} onChange={e => setNewSurveyNumber(e.target.value)} placeholder="e.g., 256/2B" />
                             </div>
@@ -266,6 +271,10 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                     </SelectContent>
                                 </Select>
                             </div>
+                             <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="google-maps-link">Google Maps Link</Label>
+                                <Input id="google-maps-link" value={newGoogleMapsLink} onChange={e => setNewGoogleMapsLink(e.target.value)} placeholder="https://maps.app.goo.gl/..." />
+                            </div>
                         </div>
                         <Button type="button" onClick={handleAddLandRecord}>Add Record</Button>
                     </div>
@@ -275,9 +284,9 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Survey No.</TableHead>
-                                    <TableHead>Acres</TableHead>
-                                    <TableHead>Cents</TableHead>
-                                    <TableHead>Classification</TableHead>
+                                    <TableHead>Extent</TableHead>
+                                    <TableHead>Class</TableHead>
+                                    <TableHead>Map</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -286,9 +295,17 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                                     landRecords.map(rec => (
                                         <TableRow key={rec.id}>
                                             <TableCell>{rec.surveyNumber}</TableCell>
-                                            <TableCell>{rec.acres || '0'}</TableCell>
-                                            <TableCell>{rec.cents || '0'}</TableCell>
+                                            <TableCell>{rec.acres || '0'}ac {rec.cents || '0'}c</TableCell>
                                             <TableCell><Badge variant="outline">{rec.landClassification}</Badge></TableCell>
+                                             <TableCell>
+                                                {rec.googleMapsLink ? (
+                                                    <Link href={rec.googleMapsLink} target="_blank">
+                                                        <MapPin className="h-4 w-4 text-primary" />
+                                                    </Link>
+                                                ) : (
+                                                    <MapPin className="h-4 w-4 text-muted-foreground/50" />
+                                                )}
+                                            </TableCell>
                                             <TableCell className="text-right">
                                                 <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteLandRecord(rec.id)}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -365,18 +382,26 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Survey No.</TableHead>
-                                <TableHead className="text-right">Acres</TableHead>
-                                <TableHead className="text-right">Cents</TableHead>
+                                <TableHead>Extent</TableHead>
                                 <TableHead>Class</TableHead>
+                                <TableHead>Map</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                            {person.landRecords.map(rec => (
                                 <TableRow key={rec.id}>
                                     <TableCell>{rec.surveyNumber}</TableCell>
-                                    <TableCell className="text-right">{rec.acres || '0'}</TableCell>
-                                    <TableCell className="text-right">{rec.cents || '0'}</TableCell>
+                                    <TableCell>{rec.acres || '0'}ac {rec.cents || '0'}c</TableCell>
                                     <TableCell><Badge variant="outline">{rec.landClassification}</Badge></TableCell>
+                                    <TableCell>
+                                        {rec.googleMapsLink ? (
+                                            <Link href={rec.googleMapsLink} target="_blank">
+                                                <MapPin className="h-4 w-4 text-primary" />
+                                            </Link>
+                                        ) : (
+                                            <MapPin className="h-4 w-4 text-muted-foreground/50" />
+                                        )}
+                                    </TableCell>
                                 </TableRow>
                            ))}
                         </TableBody>

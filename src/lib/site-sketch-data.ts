@@ -9,12 +9,13 @@ export type SiteSketchPlot = {
   acres: string;
   cents: string;
   gridClass: string;
+  googleMapsLink?: string;
 };
 
 // This is the single source of truth for the site sketch layout and initial data.
 export const siteSketchData: SiteSketchPlot[] = [
   // Top Row
-  { surveyNumber: '10/1', classification: 'Wet', ownerName: 'Marimuthu Pillai', status: 'Sale Advance', acres: '0', cents: '30', gridClass: 'col-start-1 col-span-2 row-start-1' },
+  { surveyNumber: '10/1', classification: 'Wet', ownerName: 'Marimuthu Pillai', status: 'Sale Advance', acres: '0', cents: '30', gridClass: 'col-start-1 col-span-2 row-start-1', googleMapsLink: 'https://maps.app.goo.gl/example1' },
   { surveyNumber: '10/2', classification: 'Wet', ownerName: 'Alaghakesan', status: 'Sale Advance', acres: '0', cents: '44', gridClass: 'col-start-3 col-span-1 row-start-1' },
   { surveyNumber: '10/3A1', classification: 'Wet', ownerName: 'Alaghakesan', status: 'Sale Advance', acres: '0', cents: '9', gridClass: 'col-start-4 col-span-1 row-start-1' },
   { surveyNumber: '10/3A2', classification: 'Wet', ownerName: 'Marimuthu Pillai', status: 'Sale Advance', acres: '0', cents: 'N/A', gridClass: 'col-start-5 col-span-1 row-start-1' },
@@ -31,7 +32,6 @@ export const siteSketchData: SiteSketchPlot[] = [
   // Second Row
   { surveyNumber: '7/1A', classification: 'Wet', ownerName: 'Annamalai', status: 'Sale Advance', acres: '0', cents: '26', gridClass: 'col-start-1 col-span-1 row-start-2' },
   { surveyNumber: '7/1B', classification: 'Wet', ownerName: 'Nanjundan Achari', status: 'Pending', acres: '0', cents: '30', gridClass: 'col-start-2 col-span-1 row-start-2' },
-  { surveyNumber: '7/1C', classification: 'Wet', ownerName: 'Arumugha Naicker', status: 'Sale Advance', acres: '0', cents: '26', gridClass: 'col-start-3 col-span-1 row-start-2' },
   { surveyNumber: '7/1D', classification: 'Wet', ownerName: 'N/A', status: 'Agreement', acres: '0', cents: '30', gridClass: 'col-start-4 col-span-1 row-start-2' },
   { surveyNumber: '7/1E', classification: 'Wet', ownerName: 'Subramaniya Achari', status: 'Pending', acres: '0', cents: '28', gridClass: 'col-start-5 col-span-1 row-start-2' },
   { surveyNumber: '7/2A', classification: 'Wet', ownerName: 'Annamalai', status: 'Sale Advance', acres: '0', cents: '47', gridClass: 'col-start-6 col-span-1 row-start-2' },
@@ -104,5 +104,3 @@ export const siteSketchData: SiteSketchPlot[] = [
   { surveyNumber: '33/1B', classification: 'Wet', ownerName: 'VRV Imports & Exports', status: 'Pending', acres: '0', cents: '54', gridClass: 'col-start-15 col-span-2 row-start-3' },
   { surveyNumber: '33/3', classification: 'Wet', ownerName: 'VRV Imports & Exports', status: 'Pending', acres: 'N/A', cents: 'N/A', gridClass: 'col-start-16 col-span-1 row-start-3' },
 ];
-
-    
