@@ -29,16 +29,13 @@ const prompt = ai.definePrompt({
   output: { schema: ImportFromSheetOutputSchema },
   prompt: `You are an expert data processor specializing in genealogical and land ownership data. Your task is to parse the provided CSV data and transform it into a hierarchical JSON structure.
 
-**THE ABSOLUTE MOST IMPORTANT RULE: IGNORE INVALID ROWS**
-Before you do anything else, you must validate each row of the CSV.
-A row is considered **INVALID** and **MUST BE DISCARDED** if:
-- The row is completely empty.
-- The 'Name' column is empty, blank, or contains only whitespace.
+**CRITICAL RULE #1: DATA VALIDATION & DISCARDING INVALID ROWS**
+Your absolute most important task is to validate every single row from the CSV input before processing it.
+A row is considered **INVALID** and **MUST BE IGNORED COMPLETELY** if the 'Name' column for that row is empty, blank, or contains only whitespace.
+If you find such a row, you will not create a person object, you will not create land records, and you will not include it in the output in any way. You will proceed to the next valid row. This rule is non-negotiable and takes precedence over all other instructions.
 
-If a row is invalid, you must ignore it completely. Do not create a person object for it, and do not create any land records from it. This rule is more important than any other.
-
-**DATA SCHEMA AND HIERARCHY**
-For every **VALID** row, you will create or update person objects according to these rules:
+**CRITICAL RULE #2: DATA SCHEMA AND HIERARCHY**
+Only for **VALID** rows (where 'Name' is present), you will create or update person objects according to these rules:
 
 **CSV Columns:**
 - Name, Relation, Gender, Age, MaritalStatus, Status, SourceOfLand, HoldingPattern, ParentName, SurveyNumber, Acres, Cents, Classification.
@@ -48,10 +45,10 @@ For every **VALID** row, you will create or update person objects according to t
 2.  **Heirs**: All other individuals are heirs. Find their parent using the 'ParentName' and add them to the parent's 'heirs' array.
 3.  **Data Aggregation**: A person can appear on multiple rows. Aggregate all land records for the same person into their 'landRecords' array.
 
-**DATA FORMATTING AND DEFAULTS (CRITICAL)**
+**CRITICAL RULE #3: DATA FORMATTING AND DEFAULTS**
 You must strictly adhere to the following formatting rules for every person object you create:
-1.  **NO NULLS**: No field in the output JSON should ever be \`null\` or \`undefined\`.
-2.  **Default Person Values**:
+1.  **NO NULLS**: No field in the output JSON should ever be \`null\` or \`undefined\`. This is a critical requirement.
+2.  **Default Person Values**: If data is missing for a valid person, use these defaults:
     - If 'Relation' is empty for a Family Head, set it to "Family Head".
     - If 'Gender' is empty, default to "Male".
     - If 'Age' is empty or not a number, default to 40.
