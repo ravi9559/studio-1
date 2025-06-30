@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { FC } from 'react';
@@ -6,20 +5,20 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, UserPlus, Edit, Trash2, Milestone, Scale, MapPin, Save, Plus, X, Link as LinkIcon, Bell, BellOff, StickyNote, ListTodo, Gavel } from 'lucide-react';
+import { User, UserPlus, Edit, Trash2, Milestone, Scale, Save, Plus, X, Link as LinkIcon, Bell, BellOff, StickyNote, ListTodo, Gavel, ScrollText } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from '../ui/separator';
-import type { Person, SurveyRecord, LandClassification, Note, Task, LegalNote, User } from '@/types';
+import type { Person, SurveyRecord, LandClassification, Note, Task, LegalNote, User, Transaction } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { format, isPast } from 'date-fns';
 import { Textarea } from '../ui/textarea';
 import { Checkbox } from '../ui/checkbox';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type AggregatedNote = Note & { surveyNumber: string };
 type AggregatedTask = Task & { surveyNumber: string };
@@ -340,6 +339,100 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
     );
 };
 
+// Transaction Form Dialog Component
+const TransactionFormDialog: FC<{
+    isOpen: boolean;
+    onOpenChange: (isOpen: boolean) => void;
+    onSave: (transactionData: Omit<Transaction, 'id'>) => void;
+    transaction: Transaction | null;
+    ownerName: string;
+}> = ({ isOpen, onOpenChange, onSave, transaction, ownerName }) => {
+    const [owner, setOwner] = useState(ownerName);
+    const [sourceName, setSourceName] = useState('');
+    const [mode, setMode] = useState<Transaction['mode']>('Purchase');
+    const [year, setYear] = useState('');
+    const [doc, setDoc] = useState('');
+
+    useEffect(() => {
+        if (transaction) {
+            setOwner(transaction.owner);
+            setSourceName(transaction.sourceName);
+            setMode(transaction.mode);
+            setYear(String(transaction.year));
+            setDoc(transaction.doc);
+        } else {
+            // Reset form for new record, pre-filling the owner
+            setOwner(ownerName);
+            setSourceName('');
+            setMode('Purchase');
+            setYear('');
+            setDoc('');
+        }
+    }, [transaction, isOpen, ownerName]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!owner || !sourceName || !year) return;
+
+        onSave({
+            owner,
+            sourceName,
+            mode,
+            year: parseInt(year, 10),
+            doc,
+        });
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>{transaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
+                        <DialogDescription>
+                            Record a transaction for {ownerName}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="owner" className="text-right">Owner</Label>
+                            <Input id="owner" value={owner} onChange={e => setOwner(e.target.value)} className="col-span-3" required />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="sourceName" className="text-right">Source Name</Label>
+                            <Input id="sourceName" value={sourceName} onChange={e => setSourceName(e.target.value)} className="col-span-3" required />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Source Mode</Label>
+                            <Select onValueChange={(v: Transaction['mode']) => setMode(v)} value={mode}>
+                                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Purchase">Purchase</SelectItem>
+                                    <SelectItem value="Legal Heir">Legal Heir</SelectItem>
+                                    <SelectItem value="Gift">Gift</SelectItem>
+                                    <SelectItem value="Settlement">Settlement</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="year" className="text-right">Year</Label>
+                            <Input id="year" type="number" value={year} onChange={e => setYear(e.target.value)} className="col-span-3" required />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="doc" className="text-right">Doc Number</Label>
+                            <Input id="doc" value={doc} onChange={e => setDoc(e.target.value)} className="col-span-3" />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit">Save Record</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+
 export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePerson, isFamilyHead, projectId, currentUser }) => {
   const [isAddHeirOpen, setIsAddHeirOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -348,6 +441,7 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
   const [version, setVersion] = useState(0);
   const refreshData = useCallback(() => setVersion(v => v + 1), []);
 
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [aggregatedNotes, setAggregatedNotes] = useState<AggregatedNote[]>([]);
   const [aggregatedTasks, setAggregatedTasks] = useState<AggregatedTask[]>([]);
   const [aggregatedLegalNotes, setAggregatedLegalNotes] = useState<AggregatedLegalNote[]>([]);
@@ -355,10 +449,12 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
   const [isNoteDialogOpen, setNoteDialogOpen] = useState(false);
   const [isTaskDialogOpen, setTaskDialogOpen] = useState(false);
   const [isLegalNoteDialogOpen, setLegalNoteDialogOpen] = useState(false);
+  const [isTxDialogOpen, setIsTxDialogOpen] = useState(false);
 
   const [editingNote, setEditingNote] = useState<AggregatedNote | null>(null);
   const [editingTask, setEditingTask] = useState<AggregatedTask | null>(null);
   const [editingLegalNote, setEditingLegalNote] = useState<AggregatedLegalNote | null>(null);
+  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
 
   const canDeleteLegalNote = currentUser?.role !== 'Lawyer';
 
@@ -373,8 +469,29 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
     return Array.from(numbers);
   }, [person]);
 
+  const txStorageKey = useMemo(() => `transactions-${projectId}`, [projectId]);
+
   useEffect(() => {
-    if (!isFamilyHead || surveyNumbers.length === 0) return;
+    if (!isFamilyHead) return;
+
+    // Load Transactions
+    try {
+        const allTransactions: Transaction[] = JSON.parse(localStorage.getItem(txStorageKey) || '[]');
+        const personAndHeirsNames = new Set<string>();
+        const collectNames = (p: Person) => {
+            personAndHeirsNames.add(p.name);
+            p.heirs.forEach(collectNames);
+        };
+        collectNames(person);
+
+        setTransactions(allTransactions.filter(tx => personAndHeirsNames.has(tx.owner)));
+    } catch (e) {
+        console.error('Could not load transaction data', e);
+    }
+    
+
+    // Load Notes, Tasks, Legal Notes
+    if (surveyNumbers.length === 0) return;
 
     const allNotes: AggregatedNote[] = [];
     const allTasks: AggregatedTask[] = [];
@@ -399,7 +516,7 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
     setAggregatedTasks(allTasks.sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()));
     setAggregatedLegalNotes(allLegalNotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
-  }, [projectId, surveyNumbers, isFamilyHead, version]);
+  }, [projectId, person, surveyNumbers, txStorageKey, isFamilyHead, version]);
 
   const totalExtent = useMemo(() => {
     let totalAcres = 0;
@@ -418,6 +535,30 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
     return { acres: totalAcres, cents: parseFloat(totalCents.toFixed(2)) };
   }, [person.landRecords]);
   
+  const handleSaveTransaction = useCallback((txData: Omit<Transaction, 'id'>) => {
+    const allTransactions: Transaction[] = JSON.parse(localStorage.getItem(txStorageKey) || '[]');
+    if (transactionToEdit) {
+        const updated = allTransactions.map(tx => tx.id === transactionToEdit.id ? { ...transactionToEdit, ...txData } : tx);
+        localStorage.setItem(txStorageKey, JSON.stringify(updated));
+        toast({ title: 'Transaction Updated' });
+    } else {
+        const newTransaction: Transaction = { id: `tx-${Date.now()}`, ...txData };
+        localStorage.setItem(txStorageKey, JSON.stringify([newTransaction, ...allTransactions]));
+        toast({ title: 'Transaction Added' });
+    }
+    setTransactionToEdit(null);
+    setIsTxDialogOpen(false);
+    refreshData();
+  }, [txStorageKey, transactionToEdit, refreshData, toast]);
+
+  const handleDeleteTransaction = useCallback((txId: string) => {
+    const allTransactions: Transaction[] = JSON.parse(localStorage.getItem(txStorageKey) || '[]');
+    const updated = allTransactions.filter(tx => tx.id !== txId);
+    localStorage.setItem(txStorageKey, JSON.stringify(updated));
+    toast({ title: 'Transaction Deleted' });
+    refreshData();
+  }, [txStorageKey, refreshData, toast]);
+
   const handleSaveNote = useCallback((surveyNumber: string, data: Omit<Note, 'id'>) => {
     const storageKey = `notes-${projectId}-${surveyNumber}`;
     const items: Note[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -518,11 +659,12 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
     }
   };
 
-  const openEditDialog = (item: any, type: 'note' | 'task' | 'legal-note') => {
+  const openEditDialog = (item: any, type: 'note' | 'task' | 'legal-note' | 'transaction') => {
     switch(type) {
         case 'note': setEditingNote(item); setNoteDialogOpen(true); break;
         case 'task': setEditingTask(item); setTaskDialogOpen(true); break;
         case 'legal-note': setEditingLegalNote(item); setLegalNoteDialogOpen(true); break;
+        case 'transaction': setTransactionToEdit(item); setIsTxDialogOpen(true); break;
     }
   }
 
@@ -618,6 +760,55 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
       {isFamilyHead && (
         <div className="border-t p-4">
             <Accordion type="multiple" className="w-full space-y-4">
+                 {/* Transaction History Section */}
+                <AccordionItem value="transactions" className="border-b-0">
+                    <AccordionTrigger className="text-lg font-medium hover:no-underline rounded-md p-2 hover:bg-muted/50">
+                        <div className="flex items-center gap-2"><ScrollText /> Transaction History</div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 border-t">
+                        <div className="flex justify-end mb-4">
+                           <Button size="sm" onClick={() => { setTransactionToEdit(null); setIsTxDialogOpen(true); }}><Plus className="mr-2 h-4 w-4" />Add Transaction</Button>
+                        </div>
+                        <div className="rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Owner</TableHead>
+                                <TableHead>Source Name</TableHead>
+                                <TableHead>Mode</TableHead>
+                                <TableHead>Year</TableHead>
+                                <TableHead>Doc No.</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {transactions.length > 0 ? (
+                                transactions.map((tx) => (
+                                  <TableRow key={tx.id}>
+                                    <TableCell className="font-medium">{tx.owner}</TableCell>
+                                    <TableCell>{tx.sourceName}</TableCell>
+                                    <TableCell><Badge variant={tx.mode === 'Purchase' ? 'default' : 'secondary'}>{tx.mode}</Badge></TableCell>
+                                    <TableCell>{tx.year}</TableCell>
+                                    <TableCell>{tx.doc}</TableCell>
+                                    <TableCell className="text-right space-x-1">
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(tx, 'transaction')}><Edit className="h-4 w-4" /></Button>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this transaction record.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteTransaction(tx.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                      </AlertDialog>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              ) : (
+                                <TableRow>
+                                  <TableCell colSpan={6} className="h-24 text-center">No transaction history for this family.</TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
                 {/* Notes Section */}
                 <AccordionItem value="notes" className="border-b-0">
                     <AccordionTrigger className="text-lg font-medium hover:no-underline rounded-md p-2 hover:bg-muted/50">
@@ -726,6 +917,14 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
         </div>
       )}
     </Card>
+
+    <TransactionFormDialog 
+        isOpen={isTxDialogOpen}
+        onOpenChange={setIsTxDialogOpen}
+        onSave={handleSaveTransaction}
+        transaction={transactionToEdit}
+        ownerName={person.name}
+    />
 
     {/* Note Dialog */}
     <FormDialog
@@ -851,7 +1050,7 @@ function FormDialog<T>({ isOpen, onOpenChange, title, surveyNumbers, onSave, ini
                                     <div className="space-y-2">
                                         <div className="flex gap-2"><Input placeholder="Add a URL" value={currentUrl} onChange={e => setCurrentUrl(e.target.value)} /><Button type="button" variant="outline" size="sm" onClick={handleAddUrl}>Add</Button></div>
                                         <div className="flex flex-wrap gap-1">{urls.map((url, i) => <Badge key={i} variant="secondary">{url}<button type="button" onClick={() => handleRemoveUrl(url)} className="ml-1 p-0.5 rounded-full hover:bg-muted-foreground/20"><X className="h-3 w-3"/></button></Badge>)}</div>
-                                    </div>
+                                    )}
                                 )}
                             </div>
                         ))}

@@ -1,11 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
-import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { FileManager } from "@/components/files/file-manager";
 import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon, BarChart3, X } from "lucide-react";
 import Link from "next/link";
@@ -395,8 +393,6 @@ export default function ProjectDetailsPage() {
                 return <SiteAcquisitionChart projectId={projectId} />;
             case 'title-documents':
                 return <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} onAddFile={handleAddFileToFolder} onDeleteFile={handleDeleteFileFromFolder} />;
-            case 'transactions':
-                return <TransactionHistory projectId={projectId} />;
             case 'files':
                 return <FileManager projectId={projectId} />;
             case 'dashboard':
@@ -560,14 +556,13 @@ export default function ProjectDetailsPage() {
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant={['acquisition-tracker', 'title-documents', 'transactions'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <Button variant={['acquisition-tracker', 'title-documents'].includes(activeView) ? 'secondary' : 'ghost'}>
                                     <LandmarkIcon className="mr-2 h-4 w-4" /> Land &amp; Legal <ChevronDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('title-documents')}>Title Documents</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setActiveView('transactions')}>Transaction History</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>

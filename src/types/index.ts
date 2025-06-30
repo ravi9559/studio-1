@@ -1,4 +1,3 @@
-
 // src/types/index.ts
 
 export type LandClassification = 'Wet' | 'Dry' | 'Unclassified';
@@ -78,6 +77,14 @@ export type User = {
   accountType?: 'Individual' | 'Corporate';
 };
 
+export type Task = {
+  id: string;
+  text: string;
+  dueDate: string;
+  completed: boolean;
+  reminder: boolean;
+};
+
 export type LegalNote = {
   id: string;
   date: string;
@@ -86,6 +93,15 @@ export type LegalNote = {
     id: string;
     name: string;
   };
+};
+
+export type Transaction = {
+  id: string;
+  owner: string;
+  sourceName: string;
+  mode: 'Purchase' | 'Legal Heir' | 'Gift' | 'Settlement';
+  year: number;
+  doc: string;
 };
 
 export type AcquisitionStatus = {
