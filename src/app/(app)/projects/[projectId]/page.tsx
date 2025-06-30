@@ -451,11 +451,11 @@ export default function ProjectDetailsPage() {
                                 <CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader>
                                 <CardContent>
                                     {siteSketchPdf ? (
-                                        <div className="aspect-w-16 aspect-h-9">
+                                        <div className="w-full h-[80vh]">
                                             <iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/>
                                         </div>
                                     ) : (
-                                        <div className="aspect-w-16 aspect-h-9 flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center">
+                                        <div className="w-full h-[80vh] flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center">
                                             <FileUp className="h-10 w-10 text-muted-foreground mb-4" />
                                             <p className="mb-4 font-semibold">No Site Sketch Uploaded</p>
                                             <Button asChild size="sm">
@@ -600,3 +600,5 @@ export default function ProjectDetailsPage() {
         </div>
     );
 }
+
+    
