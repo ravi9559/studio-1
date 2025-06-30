@@ -33,14 +33,15 @@ type GridData = (PlotData | null)[][];
 
 // Helper Functions
 const statusClasses: Record<AcquisitionStatus, string> = {
-    'Sale Deed Registered': 'bg-green-100 hover:bg-green-200 border-green-400 text-green-800 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700 dark:hover:bg-green-800/60',
-    'Sale Agreement': 'bg-yellow-100 hover:bg-yellow-200 border-yellow-400 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700 dark:hover:bg-yellow-800/60',
-    'Sale Advance': 'bg-orange-100 hover:bg-orange-200 border-orange-400 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700 dark:hover:bg-orange-800/60',
-    'Under Negotiation': 'bg-blue-100 hover:bg-blue-200 border-blue-400 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-800/60',
-    'POA': 'bg-purple-100 hover:bg-purple-200 border-purple-400 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-800/60',
-    'Pending': 'bg-gray-200 hover:bg-gray-300 border-gray-400 text-gray-800 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700/80',
-    'Empty': 'bg-white hover:bg-gray-50 border-gray-300 dark:bg-background dark:hover:bg-muted/50 dark:border-gray-700',
+    'Sale Deed Registered': 'bg-green-100 hover:bg-green-200 border-green-200 text-green-800 dark:bg-green-900/50 dark:text-green-300 dark:border-green-800 dark:hover:bg-green-800/60',
+    'Sale Agreement': 'bg-yellow-100 hover:bg-yellow-200 border-yellow-200 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-800 dark:hover:bg-yellow-800/60',
+    'Sale Advance': 'bg-orange-100 hover:bg-orange-200 border-orange-200 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-800 dark:hover:bg-orange-800/60',
+    'Under Negotiation': 'bg-blue-100 hover:bg-blue-200 border-blue-200 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-800/60',
+    'POA': 'bg-purple-200 hover:bg-purple-300 border-purple-300 text-purple-800 dark:bg-purple-800/50 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-700/60',
+    'Pending': 'bg-gray-200 hover:bg-gray-300 border-gray-300 text-gray-800 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700/80',
+    'Empty': 'bg-lime-50 hover:bg-lime-100 border-lime-200 text-lime-800 dark:bg-lime-900/50 dark:text-lime-300 dark:border-lime-800 dark:hover:bg-lime-800/60',
 };
+
 
 const parseCell = (cell: string): PlotData | null => {
     if (!cell || typeof cell !== 'string' || !cell.trim()) return null;
@@ -112,7 +113,7 @@ const parseCell = (cell: string): PlotData | null => {
 
 
 // Main Component
-export function SiteAcquisitionChart({ projectId }: SiteAcquisitionChartProps) {
+export function SiteAcquisitionChart({ projectId }: { projectId: string; }) {
     const [gridData, setGridData] = useState<GridData>([]);
     const [uploadTimestamp, setUploadTimestamp] = useState<Date | null>(null);
     const [isLoading, setIsLoading] = useState(false);
