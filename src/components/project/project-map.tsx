@@ -10,10 +10,21 @@ const containerStyle = {
   height: '100%',
 };
 
+const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+function MapErrorDisplay() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full bg-destructive/10 text-destructive p-4 rounded-md">
+      <p className="font-semibold">Map Error</p>
+      <p className="text-sm text-center">Could not load Google Maps. Please add your API key to the `.env` file as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="..."` and ensure the Maps JavaScript API is enabled in your Google Cloud console.</p>
+    </div>
+  );
+}
+
 export function ProjectMap() {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+    googleMapsApiKey: mapsApiKey || '',
   });
 
   const center = useMemo(() => {
@@ -21,13 +32,8 @@ export function ProjectMap() {
     return { lat: 13.0, lng: 79.9 };
   }, []);
 
-  if (loadError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full bg-destructive/10 text-destructive p-4 rounded-md">
-        <p className="font-semibold">Map Error</p>
-        <p className="text-sm text-center">Could not load Google Maps. Please ensure your API key is correctly configured in the .env file and the Maps JavaScript API is enabled in your Google Cloud console.</p>
-      </div>
-    );
+  if (!mapsApiKey || loadError) {
+    return <MapErrorDisplay />;
   }
 
   if (!isLoaded) {
