@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { FileManager } from "@/components/files/file-manager";
-import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,6 +30,7 @@ import { roadData } from '@/lib/road-data';
 import { MindMapView } from '@/components/mindmap/mind-map-view';
 import { Progress } from "@/components/ui/progress";
 import { createOwnersMap, createInitialOwners, createDefaultAcquisitionStatus, createDefaultFolders } from '@/lib/project-template';
+import { SiteAcquisitionChart } from '@/components/acquisition/site-acquisition-chart';
 
 
 // --- Storage Keys ---
@@ -405,6 +406,8 @@ export default function ProjectDetailsPage() {
                 return <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>;
             case 'acquisition-tracker':
                 return <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />;
+            case 'acquisition-chart':
+                return <SiteAcquisitionChart projectId={projectId} />;
             case 'title-documents':
                 return <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} onAddFile={handleAddFileToFolder} onDeleteFile={handleDeleteFileFromFolder} />;
             case 'transactions':
@@ -544,12 +547,13 @@ export default function ProjectDetailsPage() {
 
                      <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant={['acquisition-tracker', 'title-documents', 'transactions', 'legal-notes'].includes(activeView) ? 'secondary' : 'ghost'}>
+                            <Button variant={['acquisition-tracker', 'acquisition-chart', 'title-documents', 'transactions', 'legal-notes'].includes(activeView) ? 'secondary' : 'ghost'}>
                                 <LandmarkIcon className="mr-2 h-4 w-4" /> Land &amp; Legal <ChevronDown className="ml-2 h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
                             <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setActiveView('title-documents')}>Title Documents</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setActiveView('transactions')}>Transaction History</DropdownMenuItem>
                              {canSeeLegalNotes && <DropdownMenuItem onClick={() => setActiveView('legal-notes')}>Legal Notes</DropdownMenuItem>}
@@ -565,5 +569,7 @@ export default function ProjectDetailsPage() {
         </div>
     );
 }
+
+    
 
     
