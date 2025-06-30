@@ -16,9 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { TitleDocumentsView } from '@/components/documents/title-documents-view';
-import { Notes } from '@/components/project/notes';
-import { Tasks } from '@/components/project/tasks';
-import { LegalNotes } from '@/components/project/legal-notes';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
 import type { User, Project, Person, Folder, AcquisitionStatus, DocumentFile } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
@@ -364,9 +361,6 @@ export default function ProjectDetailsPage() {
             docsCollectedPercent: Math.round((docsCollectedCount / total) * 100),
         };
     }, [acquisitionStatuses]);
-
-
-    const allSurveyNumbers = useMemo(() => Array.from(new Set(siteSketchData.map(d => d.surveyNumber))), []);
     
     const handleSelectSurvey = useCallback((statusId: string) => { 
         setActiveStatusId(statusId);
@@ -374,9 +368,6 @@ export default function ProjectDetailsPage() {
     }, []);
 
     const currentUserRole = currentUser?.role;
-    const canSeeSensitiveTabs = currentUserRole === 'Super Admin';
-    const canSeeLegalNotes = currentUserRole === 'Super Admin' || currentUserRole === 'Lawyer';
-
 
     if (loading) {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>
@@ -397,7 +388,7 @@ export default function ProjectDetailsPage() {
     const renderActiveView = () => {
         switch(activeView) {
             case 'lineage':
-                return <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>;
+                return <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)} projectId={projectId} currentUser={currentUser} />;
             case 'acquisition-tracker':
                 return <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />;
             case 'acquisition-chart':
@@ -408,12 +399,6 @@ export default function ProjectDetailsPage() {
                 return <TransactionHistory projectId={projectId} />;
             case 'files':
                 return <FileManager projectId={projectId} />;
-            case 'legal-notes':
-                return canSeeLegalNotes ? <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} /> : null;
-            case 'notes':
-                 return canSeeSensitiveTabs ? <Notes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} /> : null;
-            case 'tasks':
-                return canSeeSensitiveTabs ? <Tasks projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} /> : null;
             case 'dashboard':
             default:
                 return (
@@ -428,7 +413,7 @@ export default function ProjectDetailsPage() {
                         <div className="space-y-8">
                             <Card className="overflow-hidden">
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><MapPin /> Site Location & Major Roads</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><MapPin /> Site Location &amp; Major Roads</CardTitle>
                                         <CardDescription>
                                         Showing project context with key transportation corridors.
                                     </CardDescription>
@@ -562,7 +547,7 @@ export default function ProjectDetailsPage() {
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant={['lineage', 'notes', 'tasks', 'files', 'acquisition-chart'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <Button variant={['lineage', 'acquisition-chart', 'files'].includes(activeView) ? 'secondary' : 'ghost'}>
                                 <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -570,14 +555,12 @@ export default function ProjectDetailsPage() {
                                 <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('files')}>Files &amp; Documents</DropdownMenuItem>
-                                {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('notes')}>Notes</DropdownMenuItem>}
-                                {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('tasks')}>Tasks</DropdownMenuItem>}
                             </DropdownMenuContent>
                         </DropdownMenu>
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant={['acquisition-tracker', 'title-documents', 'transactions', 'legal-notes'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <Button variant={['acquisition-tracker', 'title-documents', 'transactions'].includes(activeView) ? 'secondary' : 'ghost'}>
                                     <LandmarkIcon className="mr-2 h-4 w-4" /> Land &amp; Legal <ChevronDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -585,7 +568,6 @@ export default function ProjectDetailsPage() {
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('title-documents')}>Title Documents</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('transactions')}>Transaction History</DropdownMenuItem>
-                                {canSeeLegalNotes && <DropdownMenuItem onClick={() => setActiveView('legal-notes')}>Legal Notes</DropdownMenuItem>}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -600,5 +582,3 @@ export default function ProjectDetailsPage() {
         </div>
     );
 }
-
-    
