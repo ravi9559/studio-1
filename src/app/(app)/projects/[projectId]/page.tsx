@@ -29,7 +29,7 @@ import { ProjectMap } from '@/components/project/project-map';
 import { roadData } from '@/lib/road-data';
 import { MindMapView } from '@/components/mindmap/mind-map-view';
 import { Progress } from "@/components/ui/progress";
-import { createOwnersMap, createInitialOwners, createDefaultAcquisitionStatus, createDefaultFolders } from '@/lib/project-template';
+import { createOwnersMap, createInitialOwners, createDefaultAcquisitionStatus, createDefaultFolders, initializeNewProjectData } from '@/lib/project-template';
 import { SiteAcquisitionChart } from '@/components/acquisition/site-acquisition-chart';
 
 
@@ -117,18 +117,11 @@ export default function ProjectDetailsPage() {
                     title: "Initializing Project",
                     description: "Setting up default data for this project..."
                 });
-                const ownersMap = createOwnersMap();
-                const initialHeads = createInitialOwners(ownersMap);
-                const demoStatuses = siteSketchData.map((plot, index) => createDefaultAcquisitionStatus(projectId, plot, index));
-                const defaultFolders = createDefaultFolders(initialHeads);
-
-                loadedOwners = initialHeads;
-                loadedStatuses = demoStatuses;
-                loadedFolders = defaultFolders;
-
-                localStorage.setItem(ownersStorageKey, JSON.stringify(loadedOwners));
-                localStorage.setItem(acquisitionStorageKey, JSON.stringify(loadedStatuses));
-                localStorage.setItem(folderStorageKey, JSON.stringify(loadedFolders));
+                initializeNewProjectData(projectId);
+                
+                loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || 'null');
+                loadedStatuses = JSON.parse(localStorage.getItem(acquisitionStorageKey) || 'null');
+                loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || 'null');
             }
             
             setOwners(loadedOwners);
@@ -452,7 +445,7 @@ export default function ProjectDetailsPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card><CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader><CardContent>{siteSketchPdf ? (<div className="aspect-[4/5]"><iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/></div>) : (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center"><FileUp className="h-10 w-10 text-muted-foreground mb-4" /><p className="mb-4 font-semibold">No Site Sketch Uploaded</p><Button asChild size="sm"><label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label></Button><Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} /></div>)}</CardContent></Card>
+                        <Card><CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader><CardContent>{siteSketchPdf ? (<div className="aspect-[4/5]"><iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/></div>) : (<div className="aspect-[4/5] flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center"><FileUp className="h-10 w-10 text-muted-foreground mb-4" /><p className="mb-4 font-semibold">No Site Sketch Uploaded</p><Button asChild size="sm"><label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label></Button><Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} /></div>)}</CardContent></Card>
                         <Card><CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader><CardContent><Carousel className="w-full"><CarouselContent>{Array.from({ length: 3 }).map((_, index) => (<CarouselItem key={index}><div className="p-1"><Card><CardContent className="flex aspect-video items-center justify-center p-0"><Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" /></CardContent></Card></div></CarouselItem>))}</CarouselContent><CarouselPrevious /><CarouselNext /></Carousel></CardContent></Card>
 
                         <div>
@@ -568,3 +561,6 @@ export default function ProjectDetailsPage() {
 
     
 
+
+
+    
