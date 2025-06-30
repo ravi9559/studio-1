@@ -18,7 +18,7 @@ import Link from 'next/link';
 // Types
 type AcquisitionStatus = 'Empty' | 'Under Negotiation' | 'Sale Agreement' | 'Sale Advance' | 'POA' | 'Sale Deed Registered' | 'Pending';
 
-const ALL_STATUSES: AcquisitionStatus[] = ['Empty', 'Under Negotiation', 'Sale Agreement', 'Sale Advance', 'POA', 'Sale Deed Registered', 'Pending'];
+const ALL_STATUSES: AcquisitionStatus[] = ['Sale Deed Registered', 'Sale Agreement', 'Sale Advance', 'Under Negotiation', 'POA', 'Pending', 'Empty'];
 
 type PlotData = {
     surveyNumber: string;
@@ -31,10 +31,6 @@ type PlotData = {
 
 type GridData = (PlotData | null)[][];
 
-interface SiteAcquisitionChartProps {
-    projectId: string;
-}
-
 // Helper Functions
 const statusClasses: Record<AcquisitionStatus, string> = {
     'Sale Deed Registered': 'bg-green-100 hover:bg-green-200 border-green-400 text-green-800 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700 dark:hover:bg-green-800/60',
@@ -43,7 +39,7 @@ const statusClasses: Record<AcquisitionStatus, string> = {
     'Under Negotiation': 'bg-blue-100 hover:bg-blue-200 border-blue-400 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-800/60',
     'POA': 'bg-purple-100 hover:bg-purple-200 border-purple-400 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-800/60',
     'Pending': 'bg-gray-200 hover:bg-gray-300 border-gray-400 text-gray-800 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700/80',
-    'Empty': 'bg-lime-50 hover:bg-lime-100 border-lime-400 text-lime-800 dark:bg-lime-900/50 dark:text-lime-300 dark:border-lime-700 dark:hover:bg-lime-800/60',
+    'Empty': 'bg-white hover:bg-gray-50 border-gray-300 dark:bg-background dark:hover:bg-muted/50 dark:border-gray-700',
 };
 
 const parseCell = (cell: string): PlotData | null => {
@@ -53,37 +49,56 @@ const parseCell = (cell: string): PlotData | null => {
 
     let surveyNumber = parts[0];
     let classification = parts[1] || 'N/A';
-
-    // This logic is complex, find the longest matching status string from the parts array.
     let status: AcquisitionStatus = 'Pending';
     let owner = '';
     let extent = '';
 
+    // The logic to find the status string is complex because it can contain spaces.
+    // We prioritize longer matches (e.g., "Sale Deed Registered" over "Registered").
     let bestMatch = { status: 'Pending' as AcquisitionStatus, startIndex: -1, endIndex: -1 };
+    const searchableParts = parts.slice(2).join(' ');
 
-    for (let i = 2; i < parts.length; i++) {
-        for (const s of ALL_STATUSES) {
-            const statusParts = s.split(' ');
-            if (parts.slice(i, i + statusParts.length).join(' ') === s) {
-                if (statusParts.length > bestMatch.status.split(' ').length || bestMatch.startIndex === -1) {
-                    bestMatch = { status: s, startIndex: i, endIndex: i + statusParts.length };
-                }
-            }
-        }
+    for (const s of ALL_STATUSES) {
+      if (s === 'Pending' || s === 'Empty') continue;
+      const index = searchableParts.indexOf(s);
+      if (index !== -1) {
+          const statusParts = s.split(' ');
+          // Logic to check if we found a better (longer) match
+          if (statusParts.length > bestMatch.status.split(' ').length || bestMatch.startIndex === -1) {
+              const preText = searchableParts.substring(0, index).trim();
+              const ownerParts = preText.split(' ');
+              bestMatch = { status: s, startIndex: 2 + ownerParts.length, endIndex: 2 + ownerParts.length + statusParts.length };
+          }
+      }
     }
-    
+
     if (bestMatch.startIndex !== -1) {
         owner = parts.slice(2, bestMatch.startIndex).join(' ');
         status = bestMatch.status;
         extent = parts.slice(bestMatch.endIndex).join(' ');
     } else {
-        owner = parts.slice(2).join(' ');
+        // If no status is found, assume the rest of the string is owner and extent
+        const potentialOwner: string[] = [];
+        const potentialExtent: string[] = [];
+        let foundNumber = false;
+        for (let i = 2; i < parts.length; i++) {
+            if (!isNaN(parseFloat(parts[i])) && !foundNumber) {
+                foundNumber = true;
+            }
+            if (foundNumber) {
+                potentialExtent.push(parts[i]);
+            } else {
+                potentialOwner.push(parts[i]);
+            }
+        }
+        owner = potentialOwner.join(' ');
+        extent = potentialExtent.join(' ');
     }
     
     owner = owner || 'N/A';
     extent = extent || 'N/A';
     
-    const isEmpty = surveyNumber === 'N/A' && owner === 'N/A';
+    const isEmpty = (surveyNumber === 'N/A' && owner === 'N/A') || cell.trim() === "N/A N/A N/A";
 
     return {
         surveyNumber,
@@ -94,6 +109,7 @@ const parseCell = (cell: string): PlotData | null => {
         isEmpty: isEmpty || status === 'Empty'
     };
 };
+
 
 // Main Component
 export function SiteAcquisitionChart({ projectId }: SiteAcquisitionChartProps) {
@@ -192,7 +208,7 @@ export function SiteAcquisitionChart({ projectId }: SiteAcquisitionChartProps) {
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", `land-data-${projectId}-${Date.now()}.csv`);
+        link.setAttribute("download", `land-data-${projectId}-${new Date().toISOString()}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -212,7 +228,7 @@ export function SiteAcquisitionChart({ projectId }: SiteAcquisitionChartProps) {
 
     const handleOpenModal = (rowIndex: number, colIndex: number) => {
         const data = gridData[rowIndex]?.[colIndex];
-        if (!data) return; // Cannot edit truly empty cells
+        if (!data) return;
         setCurrentEditIndex({ rowIndex, colIndex });
         setSelectedStatus(data.acquisitionStatus);
         setIsModalOpen(true);
@@ -272,41 +288,51 @@ export function SiteAcquisitionChart({ projectId }: SiteAcquisitionChartProps) {
                 </Alert>
             )}
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                  {ALL_STATUSES.map(status => {
-                     if (status === 'Empty') return null;
+                     const count = summary[status];
+                     const display = status === 'Empty' ? 'Empty' : `${status}: ${count}`;
                      return (
                         <div key={status} className="bg-card p-4 rounded-lg shadow flex items-center gap-2">
-                             <div className={cn("h-5 w-5 rounded-md border", statusClasses[status])} />
-                             <span className="text-sm font-medium">{status}: {summary[status]}</span>
+                             <div className={cn("h-5 w-5 rounded-sm border", statusClasses[status])} />
+                             <span className="text-sm font-medium">{display}</span>
                         </div>
                     )
                  })}
             </div>
 
             <div className="bg-card rounded-lg shadow overflow-x-auto">
-                 <table className="w-full" style={{ borderCollapse: 'collapse' }}>
-                    <tbody >
-                        {gridData.map((row, rowIndex) => (
-                            <tr key={rowIndex}>
-                                {row.map((plot, colIndex) => (
-                                    <td key={`${rowIndex}-${colIndex}`} 
-                                        className={cn("border-2 border-slate-300 p-2 text-xs text-center cursor-pointer min-w-[150px] transition-colors", plot ? statusClasses[plot.acquisitionStatus] : 'bg-gray-50 dark:bg-gray-900')}
-                                        onClick={() => handleOpenModal(rowIndex, colIndex)}
-                                    >
-                                        {plot && !plot.isEmpty ? (
-                                             <div className="leading-tight">
-                                                <span>{`${plot.surveyNumber} ${plot.classification} ${plot.owner} `}</span>
-                                                <span className="font-semibold text-green-700 dark:text-green-400">{plot.extent}</span>
-                                            </div>
-                                        ) : 'Empty'}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                 {gridData.length === 0 && <div className="p-12 text-center text-muted-foreground">No data loaded. Please upload a CSV file to see the chart.</div>}
+                {gridData.length > 0 ? (
+                    <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                        <tbody>
+                            {gridData.map((row, rowIndex) => (
+                                <tr key={rowIndex}>
+                                    {row.map((plot, colIndex) => (
+                                        <td 
+                                            key={`${rowIndex}-${colIndex}`} 
+                                            className={cn(
+                                                "border border-slate-200 dark:border-slate-700 p-2 text-xs text-center transition-colors align-top",
+                                                plot ? statusClasses[plot.acquisitionStatus] : 'bg-gray-50 dark:bg-gray-900/50',
+                                                plot && 'cursor-pointer'
+                                            )}
+                                            onClick={plot ? () => handleOpenModal(rowIndex, colIndex) : undefined}
+                                            style={{ height: '70px', minWidth: '160px' }}
+                                        >
+                                            {plot && !plot.isEmpty ? (
+                                                <div className="flex flex-col h-full justify-start items-center leading-tight">
+                                                    <span>{`${plot.surveyNumber} ${plot.classification} ${plot.owner}`}</span>
+                                                    <span className="font-semibold text-green-700 dark:text-green-400 mt-1">{plot.extent}</span>
+                                                </div>
+                                            ) : ''}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <div className="p-12 text-center text-muted-foreground">No data loaded. Please upload a CSV file to see the chart.</div>
+                )}
             </div>
 
              {isModalOpen && currentPlotData && (
