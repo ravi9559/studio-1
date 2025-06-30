@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { FileManager } from "@/components/files/file-manager";
-import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon, BarChart3 } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon, BarChart3, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,8 +29,9 @@ import { ProjectMap } from '@/components/project/project-map';
 import { roadData } from '@/lib/road-data';
 import { MindMapView } from '@/components/mindmap/mind-map-view';
 import { Progress } from "@/components/ui/progress";
-import { initializeNewProjectData } from '@/lib/project-template';
+import { initializeNewProjectData, createDefaultFolders } from '@/lib/project-template';
 import { SiteAcquisitionChart } from '@/components/acquisition/site-acquisition-chart';
+import { LineageSuggestion } from '@/components/lineage/lineage-suggestion';
 
 
 // --- Storage Keys ---
@@ -424,32 +425,72 @@ export default function ProjectDetailsPage() {
                             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Dry Land Plots</CardTitle><Sun className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.dryPlots}</div><p className="text-xs text-muted-foreground">Count of dry land parcels</p></CardContent></Card>
                         </div>
                         
-                        <Card className="overflow-hidden">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><MapPin /> Site Location & Major Roads</CardTitle>
-                                    <CardDescription>
-                                    Showing project context with key transportation corridors.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500">
-                                    <ProjectMap />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
-                                    {roadData.map(road => (
-                                        <div key={road.name} className="flex items-center gap-2">
-                                            <span className="h-4 w-4 rounded" style={{ backgroundColor: road.color }} />
-                                            <span>{road.name}</span>
+                        <div className="space-y-8">
+                            <Card className="overflow-hidden">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2"><MapPin /> Site Location & Major Roads</CardTitle>
+                                        <CardDescription>
+                                        Showing project context with key transportation corridors.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500">
+                                        <ProjectMap />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
+                                        {roadData.map(road => (
+                                            <div key={road.name} className="flex items-center gap-2">
+                                                <span className="h-4 w-4 rounded" style={{ backgroundColor: road.color }} />
+                                                <span>{road.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader>
+                                <CardContent>
+                                    {siteSketchPdf ? (
+                                        <div className="aspect-w-16 aspect-h-9">
+                                            <iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/>
                                         </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card><CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader><CardContent>{siteSketchPdf ? (<div className="aspect-video"><iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/></div>) : (<div className="aspect-video flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center"><FileUp className="h-10 w-10 text-muted-foreground mb-4" /><p className="mb-4 font-semibold">No Site Sketch Uploaded</p><Button asChild size="sm"><label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label></Button><Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} /></div>)}</CardContent></Card>
-                        <Card><CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader><CardContent><Carousel className="w-full"><CarouselContent>{Array.from({ length: 3 }).map((_, index) => (<CarouselItem key={index}><div className="p-1"><Card><CardContent className="flex aspect-video items-center justify-center p-0"><Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" /></CardContent></Card></div></CarouselItem>))}</CarouselContent><CarouselPrevious /><CarouselNext /></Carousel></CardContent></Card>
-
-                        <div>
-                            <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
+                                    ) : (
+                                        <div className="aspect-w-16 aspect-h-9 flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center">
+                                            <FileUp className="h-10 w-10 text-muted-foreground mb-4" />
+                                            <p className="mb-4 font-semibold">No Site Sketch Uploaded</p>
+                                            <Button asChild size="sm">
+                                                <label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label>
+                                            </Button>
+                                            <Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} />
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader>
+                                <CardContent>
+                                    <Carousel className="w-full">
+                                        <CarouselContent>
+                                            {Array.from({ length: 3 }).map((_, index) => (
+                                                <CarouselItem key={index}>
+                                                    <div className="p-1">
+                                                        <Card>
+                                                            <CardContent className="flex aspect-video items-center justify-center p-0">
+                                                                <Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" />
+                                                            </CardContent>
+                                                        </Card>
+                                                    </div>
+                                                </CarouselItem>
+                                            ))}
+                                        </CarouselContent>
+                                        <CarouselPrevious />
+                                        <CarouselNext />
+                                    </Carousel>
+                                </CardContent>
+                            </Card>
+                            <div>
+                                <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
+                            </div>
                         </div>
 
                         <div>
@@ -487,81 +528,75 @@ export default function ProjectDetailsPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-4">
-            <header className="flex items-center justify-between">
-                <div>
-                    <Button variant="ghost" asChild className="mb-2 -ml-4"><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link></Button>
-                    <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-                    <p className="text-muted-foreground">Project ID: {project.siteId} &middot; {project.location}</p>
+        <div className="relative">
+            <div className="p-4 sm:p-6 lg:p-8 space-y-4">
+                <header className="flex items-center justify-between">
+                    <div>
+                        <Button variant="ghost" asChild className="mb-2 -ml-4"><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link></Button>
+                        <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+                        <p className="text-muted-foreground">Project ID: {project.siteId} &middot; {project.location}</p>
+                    </div>
+                    <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
+                        <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader><DialogTitle>Edit Project Details</DialogTitle><DialogDescription>Make changes to your project here. Click save when you're done.</DialogDescription></DialogHeader>
+                            <form onSubmit={handleUpdateProject}>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right">Name</Label><Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-siteId" className="text-right">Site ID</Label><Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-location" className="text-right">Location</Label><Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label><Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" placeholder="Google Maps URL..."/></div>
+                                </div>
+                                <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </header>
+
+                {/* --- Main Navigation Bar --- */}
+                <nav className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center gap-2">
+                        <Button variant={activeView === 'dashboard' ? 'secondary' : 'ghost'} onClick={() => setActiveView('dashboard')}>
+                            <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                        </Button>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant={['lineage', 'notes', 'tasks', 'files', 'acquisition-chart'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                                <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setActiveView('files')}>Files &amp; Documents</DropdownMenuItem>
+                                {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('notes')}>Notes</DropdownMenuItem>}
+                                {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('tasks')}>Tasks</DropdownMenuItem>}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant={['acquisition-tracker', 'title-documents', 'transactions', 'legal-notes'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                    <LandmarkIcon className="mr-2 h-4 w-4" /> Land &amp; Legal <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                                <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setActiveView('title-documents')}>Title Documents</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setActiveView('transactions')}>Transaction History</DropdownMenuItem>
+                                {canSeeLegalNotes && <DropdownMenuItem onClick={() => setActiveView('legal-notes')}>Legal Notes</DropdownMenuItem>}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </nav>
+
+                <div className="pt-6">
+                    {renderActiveView()}
                 </div>
-                 <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
-                    <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
-                    <DialogContent className="sm:max-w-xl">
-                        <DialogHeader><DialogTitle>Edit Project Details</DialogTitle><DialogDescription>Make changes to your project here. Click save when you're done.</DialogDescription></DialogHeader>
-                        <form onSubmit={handleUpdateProject}>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right">Name</Label><Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required /></div>
-                                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-siteId" className="text-right">Site ID</Label><Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required /></div>
-                                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-location" className="text-right">Location</Label><Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required /></div>
-                                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label><Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" placeholder="Google Maps URL..."/></div>
-                            </div>
-                            <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-            </header>
-
-            {/* --- Main Navigation Bar --- */}
-            <nav className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center gap-2">
-                    <Button variant={activeView === 'dashboard' ? 'secondary' : 'ghost'} onClick={() => setActiveView('dashboard')}>
-                        <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
-                    </Button>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant={['lineage', 'notes', 'tasks', 'files', 'acquisition-chart'].includes(activeView) ? 'secondary' : 'ghost'}>
-                               <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                            <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
-                             <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setActiveView('files')}>Files &amp; Documents</DropdownMenuItem>
-                            {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('notes')}>Notes</DropdownMenuItem>}
-                            {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('tasks')}>Tasks</DropdownMenuItem>}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant={['acquisition-tracker', 'title-documents', 'transactions', 'legal-notes'].includes(activeView) ? 'secondary' : 'ghost'}>
-                                <LandmarkIcon className="mr-2 h-4 w-4" /> Land &amp; Legal <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                            <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setActiveView('title-documents')}>Title Documents</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setActiveView('transactions')}>Transaction History</DropdownMenuItem>
-                             {canSeeLegalNotes && <DropdownMenuItem onClick={() => setActiveView('legal-notes')}>Legal Notes</DropdownMenuItem>}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </nav>
-
-            <div className="pt-6">
-                {renderActiveView()}
             </div>
             
+            <LineageSuggestion existingData={JSON.stringify(owners, null, 2)} />
         </div>
     );
 }
-
-    
-
-    
-
-
-
-    
-
