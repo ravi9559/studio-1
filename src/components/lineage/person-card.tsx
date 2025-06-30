@@ -1050,7 +1050,7 @@ function FormDialog<T>({ isOpen, onOpenChange, title, surveyNumbers, onSave, ini
                                     <div className="space-y-2">
                                         <div className="flex gap-2"><Input placeholder="Add a URL" value={currentUrl} onChange={e => setCurrentUrl(e.target.value)} /><Button type="button" variant="outline" size="sm" onClick={handleAddUrl}>Add</Button></div>
                                         <div className="flex flex-wrap gap-1">{urls.map((url, i) => <Badge key={i} variant="secondary">{url}<button type="button" onClick={() => handleRemoveUrl(url)} className="ml-1 p-0.5 rounded-full hover:bg-muted-foreground/20"><X className="h-3 w-3"/></button></Badge>)}</div>
-                                    )}
+                                    </div>
                                 )}
                             </div>
                         ))}
