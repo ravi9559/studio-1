@@ -431,35 +431,29 @@ export default function ProjectDetailsPage() {
                             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Dry Land Plots</CardTitle><Sun className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.dryPlots}</div><p className="text-xs text-muted-foreground">Count of dry land parcels</p></CardContent></Card>
                         </div>
                         
-                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                            <div className="lg:col-span-3">
-                                <Card className="overflow-hidden">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2"><MapPin /> Site Location & Major Roads</CardTitle>
-                                         <CardDescription>
-                                            Showing project context with key transportation corridors.
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500">
-                                            <ProjectMap />
+                        <Card className="overflow-hidden">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><MapPin /> Site Location & Major Roads</CardTitle>
+                                    <CardDescription>
+                                    Showing project context with key transportation corridors.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500">
+                                    <ProjectMap />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
+                                    {roadData.map(road => (
+                                        <div key={road.name} className="flex items-center gap-2">
+                                            <span className="h-4 w-4 rounded" style={{ backgroundColor: road.color }} />
+                                            <span>{road.name}</span>
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
-                                            {roadData.map(road => (
-                                                <div key={road.name} className="flex items-center gap-2">
-                                                    <span className="h-4 w-4 rounded" style={{ backgroundColor: road.color }} />
-                                                    <span>{road.name}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                            <div className="lg:col-span-2 space-y-8">
-                                <Card><CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader><CardContent>{siteSketchPdf ? (<div className="aspect-[4/5]"><iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/></div>) : (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center"><FileUp className="h-10 w-10 text-muted-foreground mb-4" /><p className="mb-4 font-semibold">No Site Sketch Uploaded</p><Button asChild size="sm"><label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label></Button><Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} /></div>)}</CardContent></Card>
-                                <Card><CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader><CardContent><Carousel className="w-full"><CarouselContent>{Array.from({ length: 3 }).map((_, index) => (<CarouselItem key={index}><div className="p-1"><Card><CardContent className="flex aspect-video items-center justify-center p-0"><Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" /></CardContent></Card></div></CarouselItem>))}</CarouselContent><CarouselPrevious /><CarouselNext /></Carousel></CardContent></Card>
-                            </div>
-                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card><CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader><CardContent>{siteSketchPdf ? (<div className="aspect-[4/5]"><iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/></div>) : (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center"><FileUp className="h-10 w-10 text-muted-foreground mb-4" /><p className="mb-4 font-semibold">No Site Sketch Uploaded</p><Button asChild size="sm"><label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label></Button><Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} /></div>)}</CardContent></Card>
+                        <Card><CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader><CardContent><Carousel className="w-full"><CarouselContent>{Array.from({ length: 3 }).map((_, index) => (<CarouselItem key={index}><div className="p-1"><Card><CardContent className="flex aspect-video items-center justify-center p-0"><Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" /></CardContent></Card></div></CarouselItem>))}</CarouselContent><CarouselPrevious /><CarouselNext /></Carousel></CardContent></Card>
 
                         <div>
                             <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
@@ -573,3 +567,4 @@ export default function ProjectDetailsPage() {
     
 
     
+
