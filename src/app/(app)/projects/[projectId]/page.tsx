@@ -29,7 +29,7 @@ import { ProjectMap } from '@/components/project/project-map';
 import { roadData } from '@/lib/road-data';
 import { MindMapView } from '@/components/mindmap/mind-map-view';
 import { Progress } from "@/components/ui/progress";
-import { createOwnersMap, createInitialOwners, createDefaultAcquisitionStatus, createDefaultFolders, initializeNewProjectData } from '@/lib/project-template';
+import { initializeNewProjectData } from '@/lib/project-template';
 import { SiteAcquisitionChart } from '@/components/acquisition/site-acquisition-chart';
 
 
@@ -410,9 +410,9 @@ export default function ProjectDetailsPage() {
             case 'legal-notes':
                 return canSeeLegalNotes ? <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} /> : null;
             case 'notes':
-                 return canSeeSensitiveTabs ? <Notes projectId={projectId} /> : null;
+                 return canSeeSensitiveTabs ? <Notes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} /> : null;
             case 'tasks':
-                return canSeeSensitiveTabs ? <Tasks projectId={projectId} /> : null;
+                return canSeeSensitiveTabs ? <Tasks projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} /> : null;
             case 'dashboard':
             default:
                 return (
@@ -564,3 +564,4 @@ export default function ProjectDetailsPage() {
 
 
     
+

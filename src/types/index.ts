@@ -39,6 +39,13 @@ export type DocumentFile = {
   url?: string;
 };
 
+export type Note = {
+  id: string;
+  date: string;
+  content: string;
+  urls: string[];
+};
+
 export type Folder = {
   id: string;
   name: string;

@@ -12,6 +12,8 @@ import { PlusCircle, Edit, Trash2, Bell, BellOff } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
 import { format, isPast } from 'date-fns';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import type { User } from '@/types';
 
 export type Task = {
   id: string;
@@ -21,150 +23,12 @@ export type Task = {
   reminder: boolean;
 };
 
-// Initial mock data for new projects is now handled by the project template
-const initialTasks: Task[] = [];
-
 interface TasksProps {
     projectId: string;
+    surveyNumbers: string[];
+    currentUser: User | null;
 }
 
-export function Tasks({ projectId }: TasksProps) {
-    const { toast } = useToast();
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [isLoaded, setIsLoaded] = useState(false);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-    const storageKey = `tasks-${projectId}`;
-
-    useEffect(() => {
-        if (!projectId) return;
-        try {
-            const savedTasks = localStorage.getItem(storageKey);
-            if (savedTasks) {
-                setTasks(JSON.parse(savedTasks));
-            } else {
-                setTasks(initialTasks);
-            }
-        } catch (e) {
-            console.error("Could not load tasks", e);
-            setTasks(initialTasks);
-        }
-        setIsLoaded(true);
-    }, [projectId, storageKey]);
-
-    useEffect(() => {
-        if (isLoaded) {
-            try {
-                localStorage.setItem(storageKey, JSON.stringify(tasks));
-            } catch (e) {
-                console.error("Could not save tasks", e);
-            }
-        }
-    }, [tasks, isLoaded, storageKey]);
-
-    const handleAddTask = () => {
-        setTaskToEdit(null);
-        setIsDialogOpen(true);
-    };
-
-    const handleEditTask = (task: Task) => {
-        setTaskToEdit(task);
-        setIsDialogOpen(true);
-    };
-
-    const handleDeleteTask = (taskId: string) => {
-        setTasks(tasks.filter(task => task.id !== taskId));
-        toast({ title: "Task Deleted", description: "The task has been removed." });
-    };
-
-    const handleSaveTask = (taskData: Omit<Task, 'id' | 'completed' | 'reminder'>) => {
-        if (taskToEdit) {
-            setTasks(tasks.map(task => task.id === taskToEdit.id ? { ...taskToEdit, ...taskData } : task));
-            toast({ title: "Task Updated", description: "The task details have been saved." });
-        } else {
-            const newTask: Task = {
-                id: `task-${Date.now()}`,
-                ...taskData,
-                completed: false,
-                reminder: false,
-            };
-            setTasks([...tasks, newTask]);
-            toast({ title: "Task Added", description: "The new task has been created." });
-        }
-        setIsDialogOpen(false);
-    };
-    
-    const toggleCompletion = (taskId: string) => {
-        setTasks(tasks.map(task => task.id === taskId ? { ...task, completed: !task.completed } : task));
-    };
-    
-    const toggleReminder = (taskId: string) => {
-        setTasks(tasks.map(task => task.id === taskId ? { ...task, reminder: !task.reminder } : task));
-    };
-
-    return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle>Tasks & Schedule</CardTitle>
-                    <CardDescription>Manage your to-do list for this project.</CardDescription>
-                </div>
-                <Button onClick={handleAddTask}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Task
-                </Button>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[50px]">Done</TableHead>
-                            <TableHead>Task</TableHead>
-                            <TableHead>Due Date</TableHead>
-                            <TableHead>Reminder</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {tasks.map(task => (
-                            <TableRow key={task.id} className={task.completed ? 'text-muted-foreground line-through' : ''}>
-                                <TableCell>
-                                    <Checkbox checked={task.completed} onCheckedChange={() => toggleCompletion(task.id)} />
-                                </TableCell>
-                                <TableCell className="font-medium">{task.text}</TableCell>
-                                <TableCell>
-                                    <Badge variant={!task.completed && task.dueDate && isPast(new Date(task.dueDate)) ? 'destructive' : 'outline'}>
-                                        {task.dueDate ? format(new Date(task.dueDate), 'PPP') : 'No Date'}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Button variant="ghost" size="icon" onClick={() => toggleReminder(task.id)}>
-                                        {task.reminder ? <Bell className="h-4 w-4 text-primary" /> : <BellOff className="h-4 w-4 text-muted-foreground" />}
-                                    </Button>
-                                </TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <Button variant="ghost" size="icon" onClick={() => handleEditTask(task)} disabled={task.completed}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteTask(task.id)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-            <TaskFormDialog
-                isOpen={isDialogOpen}
-                onOpenChange={setIsDialogOpen}
-                onSave={handleSaveTask}
-                task={taskToEdit}
-            />
-        </Card>
-    );
-}
-
-// Task Form Dialog
 interface TaskFormDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
@@ -214,5 +78,171 @@ function TaskFormDialog({ isOpen, onOpenChange, onSave, task }: TaskFormDialogPr
                 </form>
             </DialogContent>
         </Dialog>
+    );
+}
+
+export function Tasks({ projectId, surveyNumbers, currentUser }: TasksProps) {
+    const { toast } = useToast();
+    const [tasksBySurvey, setTasksBySurvey] = useState<Record<string, Task[]>>({});
+    const [version, setVersion] = useState(0);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+    const [activeSurveyNumber, setActiveSurveyNumber] = useState<string | null>(null);
+
+    useEffect(() => {
+        const allTasks: Record<string, Task[]> = {};
+        surveyNumbers.forEach(sn => {
+            try {
+                const storageKey = `tasks-${projectId}-${sn}`;
+                const savedTasks = localStorage.getItem(storageKey);
+                allTasks[sn] = savedTasks ? JSON.parse(savedTasks) : [];
+            } catch (e) {
+                console.error(`Could not load tasks for S.No. ${sn}`, e);
+                allTasks[sn] = [];
+            }
+        });
+        setTasksBySurvey(allTasks);
+    }, [projectId, surveyNumbers, version]);
+
+    const refreshTasks = () => setVersion(v => v + 1);
+
+    const handleAddTask = (surveyNumber: string) => {
+        setTaskToEdit(null);
+        setActiveSurveyNumber(surveyNumber);
+        setIsDialogOpen(true);
+    };
+
+    const handleEditTask = (task: Task, surveyNumber: string) => {
+        setTaskToEdit(task);
+        setActiveSurveyNumber(surveyNumber);
+        setIsDialogOpen(true);
+    };
+
+    const handleDeleteTask = (surveyNumber: string, taskId: string) => {
+        const storageKey = `tasks-${projectId}-${surveyNumber}`;
+        const updatedTasks = (tasksBySurvey[surveyNumber] || []).filter(task => task.id !== taskId);
+        localStorage.setItem(storageKey, JSON.stringify(updatedTasks));
+        refreshTasks();
+        toast({ title: "Task Deleted", description: "The task has been removed." });
+    };
+
+    const handleSaveTask = (taskData: Omit<Task, 'id' | 'completed' | 'reminder'>) => {
+        if (!activeSurveyNumber) return;
+        const storageKey = `tasks-${projectId}-${activeSurveyNumber}`;
+        const currentTasks = tasksBySurvey[activeSurveyNumber] || [];
+        let updatedTasks;
+
+        if (taskToEdit) {
+            updatedTasks = currentTasks.map(task => task.id === taskToEdit.id ? { ...taskToEdit, ...taskData } : task);
+            toast({ title: "Task Updated" });
+        } else {
+            const newTask: Task = { id: `task-${Date.now()}`, ...taskData, completed: false, reminder: false };
+            updatedTasks = [...currentTasks, newTask];
+            toast({ title: "Task Added" });
+        }
+        localStorage.setItem(storageKey, JSON.stringify(updatedTasks));
+        refreshTasks();
+        setIsDialogOpen(false);
+        setActiveSurveyNumber(null);
+        setTaskToEdit(null);
+    };
+    
+    const toggleCompletion = (surveyNumber: string, taskId: string) => {
+        const storageKey = `tasks-${projectId}-${surveyNumber}`;
+        const updatedTasks = (tasksBySurvey[surveyNumber] || []).map(task => 
+            task.id === taskId ? { ...task, completed: !task.completed } : task
+        );
+        localStorage.setItem(storageKey, JSON.stringify(updatedTasks));
+        refreshTasks();
+    };
+    
+    const toggleReminder = (surveyNumber: string, taskId: string) => {
+        const storageKey = `tasks-${projectId}-${surveyNumber}`;
+        const updatedTasks = (tasksBySurvey[surveyNumber] || []).map(task => 
+            task.id === taskId ? { ...task, reminder: !task.reminder } : task
+        );
+        localStorage.setItem(storageKey, JSON.stringify(updatedTasks));
+        refreshTasks();
+    };
+
+    if (!currentUser) return null;
+
+    if (surveyNumbers.length === 0) {
+        return (
+            <Card>
+                <CardHeader><CardTitle>Tasks & Schedule</CardTitle></CardHeader>
+                <CardContent className="text-center text-muted-foreground p-8">
+                    No survey records found for this project. Add land records in the "Family Lineage" tab to enable tasks.
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <>
+            <Accordion type="multiple" className="w-full space-y-4">
+                {surveyNumbers.map(sn => (
+                    <AccordionItem value={sn} key={sn} className="border rounded-lg">
+                        <AccordionTrigger className="p-4 text-lg font-medium hover:no-underline">
+                           Tasks for Survey No: {sn}
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4 border-t">
+                            <div className="flex justify-end mb-4">
+                                <Button onClick={() => handleAddTask(sn)}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Task for S.No. {sn}
+                                </Button>
+                            </div>
+                            <Card>
+                                <CardContent className="p-0">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[50px]">Done</TableHead>
+                                                <TableHead>Task</TableHead>
+                                                <TableHead>Due Date</TableHead>
+                                                <TableHead>Reminder</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {tasksBySurvey[sn]?.length > 0 ? (
+                                                tasksBySurvey[sn].map(task => (
+                                                    <TableRow key={task.id} className={task.completed ? 'text-muted-foreground line-through' : ''}>
+                                                        <TableCell><Checkbox checked={task.completed} onCheckedChange={() => toggleCompletion(sn, task.id)} /></TableCell>
+                                                        <TableCell className="font-medium">{task.text}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={!task.completed && task.dueDate && isPast(new Date(task.dueDate)) ? 'destructive' : 'outline'}>
+                                                                {task.dueDate ? format(new Date(task.dueDate), 'PPP') : 'No Date'}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Button variant="ghost" size="icon" onClick={() => toggleReminder(sn, task.id)}>
+                                                                {task.reminder ? <Bell className="h-4 w-4 text-primary" /> : <BellOff className="h-4 w-4 text-muted-foreground" />}
+                                                            </Button>
+                                                        </TableCell>
+                                                        <TableCell className="text-right space-x-2">
+                                                            <Button variant="ghost" size="icon" onClick={() => handleEditTask(task, sn)} disabled={task.completed}><Edit className="h-4 w-4" /></Button>
+                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteTask(sn, task.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow><TableCell colSpan={5} className="h-24 text-center">No tasks found for this survey number.</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </AccordionContent>
+                    </AccordionItem>
+                ))}
+            </Accordion>
+            <TaskFormDialog
+                isOpen={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+                onSave={handleSaveTask}
+                task={taskToEdit}
+            />
+        </>
     );
 }
