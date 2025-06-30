@@ -1,16 +1,17 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { FileManager } from "@/components/files/file-manager";
-import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
@@ -19,7 +20,7 @@ import { Notes } from '@/components/project/notes';
 import { Tasks } from '@/components/project/tasks';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
-import type { User, Project, Person, Folder, AcquisitionStatus, SurveyRecord, DocumentFile } from '@/types';
+import type { User, Project, Person, Folder, AcquisitionStatus, DocumentFile } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 import { siteSketchData } from '@/lib/site-sketch-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,8 +29,6 @@ import { ProjectMap } from '@/components/project/project-map';
 import { roadData } from '@/lib/road-data';
 import { MindMapView } from '@/components/mindmap/mind-map-view';
 import { Progress } from "@/components/ui/progress";
-import { useSidebar } from '@/components/ui/sidebar';
-import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { createOwnersMap, createInitialOwners, createDefaultAcquisitionStatus, createDefaultFolders } from '@/lib/project-template';
 
 
@@ -43,7 +42,6 @@ export default function ProjectDetailsPage() {
     const params = useParams();
     const projectId = params.projectId as string;
     const { toast } = useToast();
-    const { setContextualMenu } = useSidebar();
 
     const [project, setProject] = useState<Project | null>(null);
     const [owners, setOwners] = useState<Person[]>([]);
@@ -53,8 +51,8 @@ export default function ProjectDetailsPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     
     // --- Navigation State ---
+    const [activeView, setActiveView] = useState('dashboard');
     const [activeStatusId, setActiveStatusId] = useState<string | undefined>(undefined);
-    const [visibleSection, setVisibleSection] = useState('mind-map');
     
     const [siteSketchPdf, setSiteSketchPdf] = useState<string | null>(null);
     
@@ -375,94 +373,14 @@ export default function ProjectDetailsPage() {
 
     const allSurveyNumbers = useMemo(() => Array.from(new Set(siteSketchData.map(d => d.surveyNumber))), []);
     
-    const scrollToSection = (sectionId: string) => {
-        const element = document.getElementById(sectionId);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            setVisibleSection(sectionId); // Eagerly set active state
-        }
-    };
-    
     const handleSelectSurvey = useCallback((statusId: string) => { 
         setActiveStatusId(statusId);
-        scrollToSection('acquisition-tracker');
+        setActiveView('acquisition-tracker');
     }, []);
 
     const currentUserRole = currentUser?.role;
     const canSeeSensitiveTabs = currentUserRole === 'Super Admin';
     const canSeeLegalNotes = currentUserRole === 'Super Admin' || currentUserRole === 'Lawyer';
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        setVisibleSection(entry.target.id);
-                    }
-                });
-            },
-            { rootMargin: '-20% 0px -75% 0px' } // Trigger when a section is in the top quarter of the viewport
-        );
-
-        const sections = document.querySelectorAll('.workspace-section');
-        sections.forEach(section => observer.observe(section));
-
-        return () => sections.forEach(section => observer.unobserve(section));
-    }, [loading]); // Re-run observer when loading is finished and sections are in the DOM
-
-    useEffect(() => {
-        const projectMenu = (
-          <>
-            <SidebarSeparator />
-            <SidebarGroup>
-              <SidebarGroupLabel>Project Workspace</SidebarGroupLabel>
-              <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => scrollToSection('mind-map')} isActive={visibleSection === 'mind-map'}>Mind Map</SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => scrollToSection('lineage')} isActive={visibleSection === 'lineage'}>Family Lineage</SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => scrollToSection('acquisition-tracker')} isActive={visibleSection === 'acquisition-tracker'}>Acquisition Tracker</SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => scrollToSection('title-documents')} isActive={visibleSection === 'title-documents'}>Title Documents</SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => scrollToSection('transactions')} isActive={visibleSection === 'transactions'}>Transaction History</SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => scrollToSection('files')} isActive={visibleSection === 'files'}>Files &amp; Documents</SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {canSeeLegalNotes && 
-                    <SidebarMenuItem>
-                        <SidebarMenuButton onClick={() => scrollToSection('legal-notes')} isActive={visibleSection === 'legal-notes'}>Legal Notes</SidebarMenuButton>
-                    </SidebarMenuItem>
-                  }
-                  {canSeeSensitiveTabs && (
-                      <>
-                          <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => scrollToSection('notes')} isActive={visibleSection === 'notes'}>Notes</SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => scrollToSection('tasks')} isActive={visibleSection === 'tasks'}>Tasks</SidebarMenuButton>
-                          </SidebarMenuItem>
-                      </>
-                  )}
-              </SidebarMenu>
-            </SidebarGroup>
-          </>
-        );
-
-        if (project?.name) { // only set if project is loaded
-            setContextualMenu(projectMenu);
-        }
-
-        return () => {
-            setContextualMenu(null);
-        }
-    }, [visibleSection, project?.name, canSeeLegalNotes, canSeeSensitiveTabs, setContextualMenu]);
 
 
     if (loading) {
@@ -481,8 +399,105 @@ export default function ProjectDetailsPage() {
         )
     }
 
+    const renderActiveView = () => {
+        switch(activeView) {
+            case 'lineage':
+                return <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>;
+            case 'acquisition-tracker':
+                return <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />;
+            case 'title-documents':
+                return <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} onAddFile={handleAddFileToFolder} onDeleteFile={handleDeleteFileFromFolder} />;
+            case 'transactions':
+                return <TransactionHistory projectId={projectId} />;
+            case 'files':
+                return <FileManager projectId={projectId} />;
+            case 'legal-notes':
+                return canSeeLegalNotes ? <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} /> : null;
+            case 'notes':
+                 return canSeeSensitiveTabs ? <Notes projectId={projectId} /> : null;
+            case 'tasks':
+                return canSeeSensitiveTabs ? <Tasks projectId={projectId} /> : null;
+            case 'dashboard':
+            default:
+                return (
+                    <div className="space-y-8">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Extent</CardTitle><AreaChart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.totalAcres} Acres</div><p className="text-xs text-muted-foreground">{projectStats.totalCents} Cents</p></CardContent></Card>
+                            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Number of Owners</CardTitle><Users2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.ownerCount}</div><p className="text-xs text-muted-foreground">Unique family heads</p></CardContent></Card>
+                            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Wet Land Plots</CardTitle><Droplets className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.wetPlots}</div><p className="text-xs text-muted-foreground">Count of wet land parcels</p></CardContent></Card>
+                            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Dry Land Plots</CardTitle><Sun className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.dryPlots}</div><p className="text-xs text-muted-foreground">Count of dry land parcels</p></CardContent></Card>
+                        </div>
+                        
+                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                            <div className="lg:col-span-3">
+                                <Card className="overflow-hidden">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2"><MapPin /> Site Location & Major Roads</CardTitle>
+                                         <CardDescription>
+                                            Showing project context with key transportation corridors.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500">
+                                            <ProjectMap />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
+                                            {roadData.map(road => (
+                                                <div key={road.name} className="flex items-center gap-2">
+                                                    <span className="h-4 w-4 rounded" style={{ backgroundColor: road.color }} />
+                                                    <span>{road.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            <div className="lg:col-span-2 space-y-8">
+                                <Card><CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader><CardContent>{siteSketchPdf ? (<div className="aspect-[4/5]"><iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/></div>) : (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center"><FileUp className="h-10 w-10 text-muted-foreground mb-4" /><p className="mb-4 font-semibold">No Site Sketch Uploaded</p><Button asChild size="sm"><label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label></Button><Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} /></div>)}</CardContent></Card>
+                                <Card><CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader><CardContent><Carousel className="w-full"><CarouselContent>{Array.from({ length: 3 }).map((_, index) => (<CarouselItem key={index}><div className="p-1"><Card><CardContent className="flex aspect-video items-center justify-center p-0"><Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" /></CardContent></Card></div></CarouselItem>))}</CarouselContent><CarouselPrevious /><CarouselNext /></Carousel></CardContent></Card>
+                            </div>
+                        </div>
+
+                        <div>
+                            <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
+                        </div>
+
+                        <div>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Project Progress Dashboard</CardTitle>
+                                    <CardDescription>A high-level overview of key acquisition milestones.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="space-y-2">
+                                        <Label>Advance Payments ({progressStats.advancePaidPercent}%)</Label>
+                                        <Progress value={progressStats.advancePaidPercent} />
+                                        <p className="text-sm text-muted-foreground">Percentage of land parcels where an advance has been paid.</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>In-Person Meetings ({progressStats.meetingsDonePercent}%)</Label>
+                                        <Progress value={progressStats.meetingsDonePercent} />
+                                        <p className="text-sm text-muted-foreground">Percentage of owners who have had an in-person meeting.</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Document Collection ({progressStats.docsCollectedPercent}%)</Label>
+                                        <Progress value={progressStats.docsCollectedPercent} />
+                                        <p className="text-sm text-muted-foreground">Percentage of land parcels with fully collected documents.</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        
+                        <div>
+                            <MindMapView projectName={project.name} familyHeads={owners} />
+                        </div>
+                    </div>
+                );
+        }
+    };
+
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-4">
             <header className="flex items-center justify-between">
                 <div>
                     <Button variant="ghost" asChild className="mb-2 -ml-4"><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link></Button>
@@ -506,109 +521,49 @@ export default function ProjectDetailsPage() {
                 </Dialog>
             </header>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Extent</CardTitle><AreaChart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.totalAcres} Acres</div><p className="text-xs text-muted-foreground">{projectStats.totalCents} Cents</p></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Number of Owners</CardTitle><Users2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.ownerCount}</div><p className="text-xs text-muted-foreground">Unique family heads</p></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Wet Land Plots</CardTitle><Droplets className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.wetPlots}</div><p className="text-xs text-muted-foreground">Count of wet land parcels</p></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Dry Land Plots</CardTitle><Sun className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.dryPlots}</div><p className="text-xs text-muted-foreground">Count of dry land parcels</p></CardContent></Card>
+            {/* --- Main Navigation Bar --- */}
+            <nav className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center gap-2">
+                    <Button variant={activeView === 'dashboard' ? 'secondary' : 'ghost'} onClick={() => setActiveView('dashboard')}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                    </Button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant={['lineage', 'notes', 'tasks', 'files'].includes(activeView) ? 'secondary' : 'ghost'}>
+                               <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setActiveView('files')}>Files &amp; Documents</DropdownMenuItem>
+                            {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('notes')}>Notes</DropdownMenuItem>}
+                            {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('tasks')}>Tasks</DropdownMenuItem>}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant={['acquisition-tracker', 'title-documents', 'transactions', 'legal-notes'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <LandmarkIcon className="mr-2 h-4 w-4" /> Land &amp; Legal <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setActiveView('title-documents')}>Title Documents</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setActiveView('transactions')}>Transaction History</DropdownMenuItem>
+                             {canSeeLegalNotes && <DropdownMenuItem onClick={() => setActiveView('legal-notes')}>Legal Notes</DropdownMenuItem>}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </nav>
+
+            <div className="pt-6">
+                {renderActiveView()}
             </div>
             
-             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                <div className="lg:col-span-3">
-                    <Card className="overflow-hidden">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><MapPin /> Site Location & Major Roads</CardTitle>
-                             <CardDescription>
-                                Showing project context with key transportation corridors.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500">
-                                <ProjectMap />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
-                                {roadData.map(road => (
-                                    <div key={road.name} className="flex items-center gap-2">
-                                        <span className="h-4 w-4 rounded" style={{ backgroundColor: road.color }} />
-                                        <span>{road.name}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="lg:col-span-2 space-y-8">
-                    <Card><CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader><CardContent>{siteSketchPdf ? (<div className="aspect-[4/5]"><iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/></div>) : (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center"><FileUp className="h-10 w-10 text-muted-foreground mb-4" /><p className="mb-4 font-semibold">No Site Sketch Uploaded</p><Button asChild size="sm"><label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label></Button><Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} /></div>)}</CardContent></Card>
-                    <Card><CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader><CardContent><Carousel className="w-full"><CarouselContent>{Array.from({ length: 3 }).map((_, index) => (<CarouselItem key={index}><div className="p-1"><Card><CardContent className="flex aspect-video items-center justify-center p-0"><Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" /></CardContent></Card></div></CarouselItem>))}</CarouselContent><CarouselPrevious /><CarouselNext /></Carousel></CardContent></Card>
-                </div>
-            </div>
-
-            <div className="pt-8">
-                <h2 className="text-2xl font-bold tracking-tight mb-4">Site Overview</h2>
-                <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
-            </div>
-
-            <div className="pt-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Project Progress Dashboard</CardTitle>
-                        <CardDescription>A high-level overview of key acquisition milestones.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="space-y-2">
-                            <Label>Advance Payments ({progressStats.advancePaidPercent}%)</Label>
-                            <Progress value={progressStats.advancePaidPercent} />
-                            <p className="text-sm text-muted-foreground">Percentage of land parcels where an advance has been paid.</p>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>In-Person Meetings ({progressStats.meetingsDonePercent}%)</Label>
-                            <Progress value={progressStats.meetingsDonePercent} />
-                            <p className="text-sm text-muted-foreground">Percentage of owners who have had an in-person meeting.</p>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Document Collection ({progressStats.docsCollectedPercent}%)</Label>
-                            <Progress value={progressStats.docsCollectedPercent} />
-                            <p className="text-sm text-muted-foreground">Percentage of land parcels with fully collected documents.</p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-            
-            <div className="space-y-12">
-                <div id="mind-map" className="workspace-section pt-8">
-                    <MindMapView projectName={project.name} familyHeads={owners} />
-                </div>
-                <div id="lineage" className="workspace-section pt-8">
-                    <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)}/>
-                </div>
-                <div id="acquisition-tracker" className="workspace-section pt-8">
-                    <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />
-                </div>
-                <div id="title-documents" className="workspace-section pt-8">
-                    <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} onAddFile={handleAddFileToFolder} onDeleteFile={handleDeleteFileFromFolder} />
-                </div>
-                <div id="transactions" className="workspace-section pt-8">
-                    <TransactionHistory projectId={projectId} />
-                </div>
-                <div id="files" className="workspace-section pt-8">
-                    <FileManager projectId={projectId} />
-                </div>
-                {canSeeLegalNotes && (
-                    <div id="legal-notes" className="workspace-section pt-8">
-                        <LegalNotes projectId={projectId} surveyNumbers={allSurveyNumbers} currentUser={currentUser} />
-                    </div>
-                )}
-                 {canSeeSensitiveTabs && (
-                    <>
-                        <div id="notes" className="workspace-section pt-8">
-                            <Notes projectId={projectId} />
-                        </div>
-                        <div id="tasks" className="workspace-section pt-8">
-                            <Tasks projectId={projectId} />
-                        </div>
-                    </>
-                )}
-            </div>
         </div>
     );
 }
+
+    
