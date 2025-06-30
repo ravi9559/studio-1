@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Upload, Download, Trash2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 // Types
 type AcquisitionStatus = 'Empty' | 'Under Negotiation' | 'Sale Agreement' | 'Sale Advance' | 'POA' | 'Sale Deed Registered' | 'Pending';
@@ -249,74 +250,64 @@ export function SiteAcquisitionChart({ projectId }: SiteAcquisitionChartProps) {
     const currentPlotData = currentEditIndex ? gridData[currentEditIndex.rowIndex][currentEditIndex.colIndex] : null;
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Site Acquisition Chart</CardTitle>
-                <CardDescription>
-                    Interactive grid for tracking land acquisition status. Upload a CSV to begin or manage plots individually.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <Card className="bg-muted/50">
-                    <CardContent className="p-4 flex flex-wrap items-center gap-4">
-                        <Button onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
-                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                            Upload CSV
-                        </Button>
-                        <Input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                        <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
-                        <Button variant="destructive" onClick={handleClearFile}><Trash2 className="mr-2 h-4 w-4" /> Clear Data</Button>
-                        {uploadTimestamp && <p className="text-sm text-muted-foreground ml-auto">Last Upload: {uploadTimestamp.toLocaleString()}</p>}
-                    </CardContent>
-                </Card>
+        <div className="space-y-6">
+             <Card className="bg-muted/30 shadow">
+                <CardContent className="p-4 flex flex-wrap items-center gap-4">
+                    <Button onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                        Upload CSV
+                    </Button>
+                    <Input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                    <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export to CSV</Button>
+                    <Button variant="destructive" onClick={handleClearFile}><Trash2 className="mr-2 h-4 w-4" /> Clear File</Button>
+                    {uploadTimestamp && <p className="text-sm text-muted-foreground ml-auto">Last Upload: {uploadTimestamp.toLocaleString()}</p>}
+                </CardContent>
+            </Card>
 
-                {error && (
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Error</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                )}
+            {error && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
 
-                <div>
-                    <h3 className="text-lg font-semibold mb-2">Acquisition Summary</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                        {ALL_STATUSES.map(status => (
-                            <div key={status} className="flex items-center gap-2 text-sm p-2 rounded-md" style={{ backgroundColor: statusClasses[status].split(' ')[0].replace('bg-', 'var(--color-') }}>
-                                <span className={cn('h-4 w-4 rounded-full border', statusClasses[status])}></span>
-                                <span>{status}:</span>
-                                <span className="font-semibold">{summary[status]}</span>
-                            </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                 {ALL_STATUSES.map(status => {
+                     if (status === 'Empty') return null;
+                     return (
+                        <div key={status} className="bg-card p-4 rounded-lg shadow flex items-center gap-2">
+                             <div className={cn("h-5 w-5 rounded-md border", statusClasses[status])} />
+                             <span className="text-sm font-medium">{status}: {summary[status]}</span>
+                        </div>
+                    )
+                 })}
+            </div>
+
+            <div className="bg-card rounded-lg shadow overflow-x-auto">
+                 <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                    <tbody >
+                        {gridData.map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                                {row.map((plot, colIndex) => (
+                                    <td key={`${rowIndex}-${colIndex}`} 
+                                        className={cn("border-2 border-slate-300 p-2 text-xs text-center cursor-pointer min-w-[150px] transition-colors", plot ? statusClasses[plot.acquisitionStatus] : 'bg-gray-50 dark:bg-gray-900')}
+                                        onClick={() => handleOpenModal(rowIndex, colIndex)}
+                                    >
+                                        {plot && !plot.isEmpty ? (
+                                             <div className="leading-tight">
+                                                <span>{`${plot.surveyNumber} ${plot.classification} ${plot.owner} `}</span>
+                                                <span className="font-semibold text-green-700 dark:text-green-400">{plot.extent}</span>
+                                            </div>
+                                        ) : 'Empty'}
+                                    </td>
+                                ))}
+                            </tr>
                         ))}
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto border rounded-lg bg-card">
-                    <table className="min-w-full">
-                        <tbody>
-                            {gridData.map((row, rowIndex) => (
-                                <tr key={rowIndex}>
-                                    {row.map((plot, colIndex) => (
-                                        <td key={`${rowIndex}-${colIndex}`} 
-                                            className={cn("border p-2 text-xs text-center cursor-pointer min-w-[150px] transition-colors", plot ? statusClasses[plot.acquisitionStatus] : 'bg-gray-50 dark:bg-gray-900')}
-                                            onClick={() => handleOpenModal(rowIndex, colIndex)}
-                                        >
-                                            {plot && !plot.isEmpty ? (
-                                                <div>
-                                                    <p className="font-bold">{plot.surveyNumber}</p>
-                                                    <p>{plot.owner}</p>
-                                                    <p className="text-green-700 dark:text-green-400 font-semibold">{plot.extent}</p>
-                                                </div>
-                                            ) : 'Empty'}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                     {gridData.length === 0 && <div className="p-8 text-center text-muted-foreground">No data loaded. Please upload a CSV file.</div>}
-                </div>
-            </CardContent>
+                    </tbody>
+                </table>
+                 {gridData.length === 0 && <div className="p-12 text-center text-muted-foreground">No data loaded. Please upload a CSV file to see the chart.</div>}
+            </div>
 
              {isModalOpen && currentPlotData && (
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -348,8 +339,18 @@ export function SiteAcquisitionChart({ projectId }: SiteAcquisitionChartProps) {
                     </DialogContent>
                 </Dialog>
             )}
-        </Card>
+
+            <footer className="mt-12">
+                <div className="text-center p-6 bg-card rounded-lg shadow">
+                    <strong className="text-lg block mb-2">Partner with Lakshmi Balaji O2O to accelerate your growth.</strong>
+                    <p className="mb-4 text-muted-foreground">We offer mutually beneficial partnerships in Property Sourcing, Customer Sourcing, and Transaction Execution.</p>
+                    <Button asChild>
+                        <Link href="https://wa.me/919841098170?text=Hi,%20I%27m%20interested%20in%20your%20O2O%20services!" target="_blank">
+                           Connect on WhatsApp
+                        </Link>
+                    </Button>
+                </div>
+            </footer>
+        </div>
     );
 }
-
-    

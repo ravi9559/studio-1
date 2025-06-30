@@ -533,12 +533,13 @@ export default function ProjectDetailsPage() {
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant={['lineage', 'notes', 'tasks', 'files'].includes(activeView) ? 'secondary' : 'ghost'}>
+                            <Button variant={['lineage', 'notes', 'tasks', 'files', 'acquisition-chart'].includes(activeView) ? 'secondary' : 'ghost'}>
                                <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
                             <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setActiveView('files')}>Files &amp; Documents</DropdownMenuItem>
                             {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('notes')}>Notes</DropdownMenuItem>}
                             {canSeeSensitiveTabs && <DropdownMenuItem onClick={() => setActiveView('tasks')}>Tasks</DropdownMenuItem>}
@@ -547,13 +548,12 @@ export default function ProjectDetailsPage() {
 
                      <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant={['acquisition-tracker', 'acquisition-chart', 'title-documents', 'transactions', 'legal-notes'].includes(activeView) ? 'secondary' : 'ghost'}>
+                            <Button variant={['acquisition-tracker', 'title-documents', 'transactions', 'legal-notes'].includes(activeView) ? 'secondary' : 'ghost'}>
                                 <LandmarkIcon className="mr-2 h-4 w-4" /> Land &amp; Legal <ChevronDown className="ml-2 h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
                             <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setActiveView('title-documents')}>Title Documents</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setActiveView('transactions')}>Transaction History</DropdownMenuItem>
                              {canSeeLegalNotes && <DropdownMenuItem onClick={() => setActiveView('legal-notes')}>Legal Notes</DropdownMenuItem>}
