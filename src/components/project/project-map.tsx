@@ -1,6 +1,6 @@
 'use client';
 
-import { GoogleMap, useJsApiLoader, Polyline } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Polyline, Polygon, MarkerF } from '@react-google-maps/api';
 import { useMemo } from 'react';
 import { roadData } from '@/lib/road-data';
 import { Loader2 } from 'lucide-react';
@@ -11,6 +11,34 @@ const containerStyle = {
 };
 
 const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+// New data for the site layout
+const siteLayoutPath = [
+    { lat: 12.91738, lng: 79.9066 },
+    { lat: 12.91887, lng: 79.9072 },
+    { lat: 12.91863, lng: 79.90786 },
+    { lat: 12.91866, lng: 79.90964 },
+    { lat: 12.91805, lng: 79.90956 },
+    { lat: 12.91775, lng: 79.91052 },
+    { lat: 12.91592, lng: 79.90958 },
+];
+
+// New data for the dry port marker
+const dryPortPosition = { lat: 13.02614, lng: 79.86819 };
+
+// Polygon options for the site layout
+const polygonOptions = {
+    fillColor: "#3b82f6",
+    fillOpacity: 0.3,
+    strokeColor: "#2563eb",
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    clickable: false,
+    draggable: false,
+    editable: false,
+    geodesic: false,
+    zIndex: 1
+};
 
 function MapErrorDisplay() {
   return (
@@ -27,10 +55,8 @@ export function ProjectMap() {
     googleMapsApiKey: mapsApiKey || '',
   });
 
-  const center = useMemo(() => {
-    // A default center for the map of Chennai area
-    return { lat: 13.0, lng: 79.9 };
-  }, []);
+  // Updated center and zoom to focus on the new layout and marker
+  const center = useMemo(() => ({ lat: 12.97, lng: 79.95 }), []);
 
   if (!mapsApiKey || loadError) {
     return <MapErrorDisplay />;
@@ -49,8 +75,9 @@ export function ProjectMap() {
     <GoogleMap
       mapContainerStyle={containerStyle}
       center={center}
-      zoom={9}
+      zoom={12}
     >
+      {/* Existing roads */}
       {roadData.map(road => (
         <Polyline
           key={road.name}
@@ -63,6 +90,18 @@ export function ProjectMap() {
           }}
         />
       ))}
+
+      {/* New Site Layout Polygon */}
+      <Polygon
+        paths={siteLayoutPath}
+        options={polygonOptions}
+      />
+
+      {/* New Dry Port Marker */}
+      <MarkerF
+        position={dryPortPosition}
+        label={{ text: "Dry Port", fontWeight: 'bold', color: '#000000' }}
+      />
     </GoogleMap>
   );
 }
