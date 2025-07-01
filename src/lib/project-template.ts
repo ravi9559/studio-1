@@ -1,8 +1,8 @@
 
 // src/lib/project-template.ts
-import type { Person, AcquisitionStatus, Folder, Task, Transaction, DocumentFile, SurveyRecord } from '@/types';
+import type { Person, AcquisitionStatus, Folder, Transaction, SurveyRecord } from '@/types';
 import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
-import { initialTasks, initialTransactions, initialFiles } from '@/lib/initial-data';
+import { initialTransactions } from '@/lib/initial-data';
 
 
 // --- Owner and Folder Creation Logic ---
@@ -87,42 +87,27 @@ export function createDefaultFolders(owners: Person[], oldFolders: Folder[] = []
   };
     
   return owners.map((owner, ownerIndex) => {
-    const allSurveyNumbers = new Set<string>();
-    const collectSurveyNumbers = (person: Person) => {
-        (person.landRecords || []).forEach(lr => allSurveyNumbers.add(lr.surveyNumber));
-        (person.heirs || []).forEach(collectSurveyNumbers);
-    };
-    collectSurveyNumbers(owner);
-    const surveyNumbersForFamily = Array.from(allSurveyNumbers);
-
-    const revenueSurveyFolders = surveyNumbersForFamily.map((sn, snIndex) => {
-        const oldSubFolder = findOldFolder([owner.name, 'Revenue Records', sn]);
-        return {
-            id: `revenue-survey-${sn.replace(/[^a-zA-Z0-9]/g, '-')}-${owner.id}-${snIndex}`,
-            name: sn,
-            children: oldSubFolder?.children || [],
-            files: oldSubFolder?.files || [],
-        };
-    });
-    const sroSurveyFolders = surveyNumbersForFamily.map((sn, snIndex) => {
-        const oldSubFolder = findOldFolder([owner.name, 'SRO Documents', sn]);
-        return {
-            id: `sro-survey-${sn.replace(/[^a-zA-Z0-9]/g, '-')}-${owner.id}-${snIndex}`,
-            name: sn,
-            children: oldSubFolder?.children || [],
-            files: oldSubFolder?.files || [],
-        };
-    });
-    
     const oldOwnerFolder = findOldFolder([owner.name]);
+    const oldRevenueFolder = findOldFolder([owner.name, 'Revenue Records']);
+    const oldSroFolder = findOldFolder([owner.name, 'SRO Documents']);
 
     return {
       id: `head-${owner.id}-${ownerIndex}`,
       name: owner.name,
       files: oldOwnerFolder?.files || [],
       children: [
-        { id: `revenue-${owner.id}`, name: 'Revenue Records', children: revenueSurveyFolders, files: findOldFolder([owner.name, 'Revenue Records'])?.files || [] },
-        { id: `sro-${owner.id}`, name: 'SRO Documents', children: sroSurveyFolders, files: findOldFolder([owner.name, 'SRO Documents'])?.files || [] },
+        { 
+            id: `revenue-${owner.id}`, 
+            name: 'Revenue Records', 
+            children: oldRevenueFolder?.children || [], 
+            files: oldRevenueFolder?.files || [] 
+        },
+        { 
+            id: `sro-${owner.id}`, 
+            name: 'SRO Documents', 
+            children: oldSroFolder?.children || [], 
+            files: oldSroFolder?.files || []
+        },
       ],
     };
   });
@@ -146,25 +131,9 @@ export function initializeNewProjectData(projectId: string) {
     const defaultFolders = createDefaultFolders(initialHeads);
     localStorage.setItem(`document-folders-${projectId}`, JSON.stringify(defaultFolders));
 
-    // Initial Tasks
-    const tasksWithIds: Task[] = initialTasks.map((task, i) => ({ ...task, id: `task-${Date.now()}-${i}`}));
-    localStorage.setItem(`tasks-${projectId}`, JSON.stringify(tasksWithIds));
-
     // Initial Transactions
     const transactionsWithIds: Transaction[] = initialTransactions.map((tx, i) => ({ ...tx, id: `tx-${Date.now()}-${i}`}));
     localStorage.setItem(`transactions-${projectId}`, JSON.stringify(transactionsWithIds));
 
-    // Initial Files
-    const filesWithIds: DocumentFile[] = initialFiles.map((file, i) => {
-        const dummyContent = `This is a dummy file named ${file.name}.`;
-        const url = typeof window !== 'undefined' ? `data:text/plain;base64,${btoa(dummyContent)}` : undefined;
-        return {
-            ...file,
-            id: `file-${Date.now()}-${i}`,
-            url,
-        };
-    });
-    localStorage.setItem(`files-${projectId}`, JSON.stringify(filesWithIds));
-
-    // We don't initialize notes or legal notes, they should start empty.
+    // We don't initialize notes, tasks, files or legal notes; they should start empty.
 }
