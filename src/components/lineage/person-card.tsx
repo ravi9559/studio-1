@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, isPast } from 'date-fns';
 import { Textarea } from '../ui/textarea';
 import { Checkbox } from '../ui/checkbox';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const statusColors: { [key in Person['status']]: string } = {
   Alive: 'bg-green-500',
@@ -1225,7 +1225,7 @@ interface FormDialogProps<T> {
   fields: FormFieldType[];
 }
 
-function FormDialog<T>({ isOpen, onOpenChange, title, surveyNumbers, onSave, initialData, fields }: FormDialogProps<T>) {
+function FormDialog<T,>({ isOpen, onOpenChange, title, surveyNumbers, onSave, initialData, fields }: FormDialogProps<T>) {
     const [formData, setFormData] = useState<Partial<T>>({});
     const [selectedSurveyNumber, setSelectedSurveyNumber] = useState('');
     
