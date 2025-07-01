@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { FC } from 'react';
@@ -5,7 +6,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, UserPlus, Edit, Trash2, Milestone, Scale, Save, Plus, X, Link as LinkIcon, Bell, BellOff, StickyNote, ListTodo, Gavel, ScrollText, FolderArchive, FolderIcon, FolderPlus, File as FileIcon, FilePlus, Download } from 'lucide-react';
+import { User, UserPlus, Edit, Trash2, Milestone, Scale, Save, Plus, X, Link as LinkIcon, Bell, BellOff, StickyNote, ListTodo, Gavel, ScrollText, FolderArchive, FolderIcon, FolderPlus, File as FileIcon, FilePlus, Download, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,50 +75,94 @@ const AddFileDialog: FC<{
   onSave: (fileData: Omit<DocumentFile, 'id'>) => void;
   onOpenChange: (open: boolean) => void;
 }> = ({ folderName, onSave, onOpenChange }) => {
-  const [fileName, setFileName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFile(event.target.files[0]);
+    } else {
+      setSelectedFile(null);
+    }
+  };
+
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (fileName.trim()) {
-        const getFileExtension = (filename: string) => {
-            return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
-        }
-        const dummyContent = `This is a dummy file named ${fileName.trim()}.`;
-        const dataUrl = `data:text/plain;base64,${btoa(dummyContent)}`;
+    if (!selectedFile) {
+      toast({
+        variant: 'destructive',
+        title: 'No file selected',
+        description: 'Please choose a file to upload.',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const fileExtension = selectedFile.name.slice((selectedFile.name.lastIndexOf(".") - 1 >>> 0) + 2).toUpperCase();
 
       onSave({
-        name: fileName.trim(),
-        type: getFileExtension(fileName.trim()).toUpperCase() || 'File',
-        size: `${(Math.random() * 8 + 0.5).toFixed(1)} MB`,
+        name: selectedFile.name,
+        type: fileExtension || 'File',
+        size: formatBytes(selectedFile.size),
         uploaded: new Date().toISOString(),
         url: dataUrl,
       });
-      setFileName('');
+      
+      setIsLoading(false);
       onOpenChange(false);
+    };
+    reader.onerror = () => {
+        setIsLoading(false);
+        toast({
+            variant: 'destructive',
+            title: 'File Read Error',
+            description: 'Could not read the selected file.',
+        });
     }
+    reader.readAsDataURL(selectedFile);
   };
 
   return (
     <DialogContent className="sm:max-w-md">
       <form onSubmit={handleSubmit}>
         <DialogHeader>
-          <DialogTitle>Add New File Record</DialogTitle>
+          <DialogTitle>Upload a File</DialogTitle>
           <DialogDescription>
-            Enter a file name to create a new record in "{folderName}".
+            Choose a file from your local drive to upload to "{folderName}".
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="file-name" className="text-right">File Name</Label>
-            <Input id="file-name" value={fileName} onChange={(e) => setFileName(e.target.value)} className="col-span-3" placeholder="e.g., SaleDeed.pdf" required />
+            <Label htmlFor="file-upload" className="text-right">File</Label>
+            <Input id="file-upload" type="file" onChange={handleFileChange} className="col-span-3" required />
           </div>
         </div>
         <DialogFooter>
-          <Button type="submit">Add File</Button>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancel</Button>
+          <Button type="submit" disabled={!selectedFile || isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Upload
+          </Button>
         </DialogFooter>
       </form>
     </DialogContent>
   );
 };
+
 
 // --- FOLDER VIEW ---
 const FolderView: FC<{
@@ -1225,7 +1270,9 @@ interface FormDialogProps<T> {
   fields: FormFieldType[];
 }
 
-function FormDialog<T,>({ isOpen, onOpenChange, title, surveyNumbers, onSave, initialData, fields }: FormDialogProps<T>) {
+function FormDialog<T>(
+    { isOpen, onOpenChange, title, surveyNumbers, onSave, initialData, fields }: FormDialogProps<T>
+) {
     const [formData, setFormData] = useState<Partial<T>>({});
     const [selectedSurveyNumber, setSelectedSurveyNumber] = useState('');
     
