@@ -12,10 +12,6 @@ The project dashboard includes a map feature to visualize project locations. To 
 2.  **Update Environment File**: Open the `.env` file in the root of this project.
 3.  **Add Your Key**: Find the line that starts with `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and paste your key inside the quotes.
 
-```
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="YOUR_API_KEY_HERE"
-```
-
 ## Deploying and Adding a Custom Domain
 
 Your application is hosted using **Firebase App Hosting**. To connect your custom domain (e.g., `https://lakshmibalajio2o.com/`), follow these steps in the Firebase Console:
