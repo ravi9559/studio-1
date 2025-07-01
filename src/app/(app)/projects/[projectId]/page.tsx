@@ -416,7 +416,7 @@ export default function ProjectDetailsPage() {
             case 'acquisition-tracker':
                 return <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />;
             case 'acquisition-chart':
-                return <SiteAcquisitionChart projectId={projectId} />;
+                return <SiteAcquisitionChart acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />;
             case 'dashboard':
             default:
                 return (
