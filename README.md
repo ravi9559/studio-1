@@ -4,6 +4,18 @@ This is a NextJS starter in Firebase Studio.
 
 To get started, take a look at src/app/page.tsx.
 
+## Setting up Google Maps
+
+The project dashboard includes a map feature to visualize project locations. To enable this, you need to provide a Google Maps API key.
+
+1.  **Get an API Key**: If you don't have one, create a project in the [Google Cloud Console](https://console.cloud.google.com/) and enable the "Maps JavaScript API". Then, create an API key.
+2.  **Update Environment File**: Open the `.env` file in the root of this project.
+3.  **Add Your Key**: Find the line that starts with `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and paste your key inside the quotes.
+
+```
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="YOUR_API_KEY_HERE"
+```
+
 ## Deploying and Adding a Custom Domain
 
 Your application is hosted using **Firebase App Hosting**. To connect your custom domain (e.g., `https://lakshmibalajio2o.com/`), follow these steps in the Firebase Console:
