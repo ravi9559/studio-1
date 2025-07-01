@@ -26,19 +26,6 @@ const siteLayoutPath = [
 // New data for the dry port marker
 const dryPortPosition = { lat: 13.02614, lng: 79.86819 };
 
-// Polygon options for the site layout
-const polygonOptions = {
-    fillColor: "#3b82f6",
-    fillOpacity: 0.3,
-    strokeColor: "#2563eb",
-    strokeOpacity: 0.8,
-    strokeWeight: 2,
-    clickable: false,
-    draggable: false,
-    editable: false,
-    geodesic: false,
-    zIndex: 1
-};
 
 function MapErrorDisplay() {
   return (
@@ -71,6 +58,26 @@ export function ProjectMap() {
     );
   }
 
+  const customMarkerIcon = {
+    url: "data:image/svg+xml," + encodeURIComponent('<svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 0C11.82 0 6 5.82 6 13C6 22.25 19 38 19 38S32 22.25 32 13C32 5.82 26.18 0 19 0Z" fill="#7BC9A4"/><circle cx="19" cy="13" r="5" fill="white"/></svg>'),
+    scaledSize: new window.google.maps.Size(38, 38),
+    anchor: new window.google.maps.Point(19, 38),
+    labelOrigin: new window.google.maps.Point(19, 13)
+  };
+
+  const themedPolygonOptions = {
+    fillColor: "#7bc9a4", // HSL 150, 40%, 62% (primary theme color)
+    fillOpacity: 0.3,
+    strokeColor: "#61a183", // A slightly darker shade of primary for the border
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    clickable: false,
+    draggable: false,
+    editable: false,
+    geodesic: false,
+    zIndex: 1
+  };
+
   return (
     <GoogleMap
       mapContainerStyle={containerStyle}
@@ -94,13 +101,14 @@ export function ProjectMap() {
       {/* New Site Layout Polygon */}
       <Polygon
         paths={siteLayoutPath}
-        options={polygonOptions}
+        options={themedPolygonOptions}
       />
 
       {/* New Dry Port Marker */}
       <MarkerF
         position={dryPortPosition}
-        label={{ text: "Dry Port", fontWeight: 'bold', color: '#000000' }}
+        label={{ text: "Dry Port", fontWeight: 'bold', color: '#344c41' }} // HSL 150, 25%, 15% (primary-foreground)
+        icon={customMarkerIcon}
       />
     </GoogleMap>
   );
