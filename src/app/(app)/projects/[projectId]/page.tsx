@@ -544,23 +544,13 @@ export default function ProjectDetailsPage() {
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant={['lineage', 'acquisition-chart'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <Button variant={['lineage', 'acquisition-chart', 'acquisition-tracker'].includes(activeView) ? 'secondary' : 'ghost'}>
                                 <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                                 <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant={['acquisition-tracker'].includes(activeView) ? 'secondary' : 'ghost'}>
-                                    <LandmarkIcon className="mr-2 h-4 w-4" /> Land &amp; Legal <ChevronDown className="ml-2 h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
