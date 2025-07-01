@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
-import { FileManager } from "@/components/files/file-manager";
-import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon, BarChart3, X } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon, BarChart3, X, FolderArchive } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +12,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { TitleDocumentsView } from '@/components/documents/title-documents-view';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
 import type { User, Project, Person, Folder, AcquisitionStatus, DocumentFile } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
@@ -386,15 +384,23 @@ export default function ProjectDetailsPage() {
     const renderActiveView = () => {
         switch(activeView) {
             case 'lineage':
-                return <LineageView familyHeads={owners} onAddHeir={handleAddHeir} onUpdatePerson={handleUpdatePerson} onImport={(newOwners) => updateAndPersistOwners(newOwners)} projectId={projectId} currentUser={currentUser} />;
+                return <LineageView 
+                    familyHeads={owners} 
+                    onAddHeir={handleAddHeir} 
+                    onUpdatePerson={handleUpdatePerson} 
+                    onImport={(newOwners) => updateAndPersistOwners(newOwners)} 
+                    projectId={projectId} 
+                    currentUser={currentUser}
+                    folders={folders}
+                    onAddFolder={handleAddFolder}
+                    onDeleteFolder={handleDeleteFolder}
+                    onAddFile={handleAddFileToFolder}
+                    onDeleteFile={handleDeleteFileFromFolder}
+                />;
             case 'acquisition-tracker':
                 return <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />;
             case 'acquisition-chart':
                 return <SiteAcquisitionChart projectId={projectId} />;
-            case 'title-documents':
-                return <TitleDocumentsView folders={folders} onAddFolder={handleAddFolder} onDeleteFolder={handleDeleteFolder} onAddFile={handleAddFileToFolder} onDeleteFile={handleDeleteFileFromFolder} />;
-            case 'files':
-                return <FileManager projectId={projectId} />;
             case 'dashboard':
             default:
                 return (
@@ -543,26 +549,24 @@ export default function ProjectDetailsPage() {
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant={['lineage', 'acquisition-chart', 'files'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <Button variant={['lineage', 'acquisition-chart'].includes(activeView) ? 'secondary' : 'ghost'}>
                                 <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                                 <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setActiveView('files')}>Files &amp; Documents</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant={['acquisition-tracker', 'title-documents'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <Button variant={['acquisition-tracker'].includes(activeView) ? 'secondary' : 'ghost'}>
                                     <LandmarkIcon className="mr-2 h-4 w-4" /> Land &amp; Legal <ChevronDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setActiveView('title-documents')}>Title Documents</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>

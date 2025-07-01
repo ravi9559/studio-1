@@ -6,7 +6,7 @@ import { PersonCard } from './person-card';
 import { LineageSuggestion } from './lineage-suggestion';
 import { Card, CardContent } from '../ui/card';
 import { Loader2, Search, FileInput } from 'lucide-react';
-import type { Person, User } from '@/types';
+import type { Person, User, Folder, DocumentFile } from '@/types';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { ImportSheetDialog } from './import-sheet-dialog';
@@ -18,6 +18,11 @@ interface LineageViewProps {
     onImport: (newOwners: Person[]) => void;
     projectId: string;
     currentUser: User | null;
+    folders: Folder[];
+    onAddFolder: (parentId: string, name: string) => void;
+    onDeleteFolder: (folderId: string) => void;
+    onAddFile: (folderId: string, fileData: Omit<DocumentFile, 'id'>) => void;
+    onDeleteFile: (folderId: string, fileId: string) => void;
 }
 
 const searchInFamily = (person: Person, query: string): boolean => {
@@ -41,7 +46,19 @@ const searchInFamily = (person: Person, query: string): boolean => {
     return checkPerson(person);
 }
 
-export function LineageView({ familyHeads, onAddHeir, onUpdatePerson, onImport, projectId, currentUser }: LineageViewProps) {
+export function LineageView({ 
+    familyHeads, 
+    onAddHeir, 
+    onUpdatePerson, 
+    onImport, 
+    projectId, 
+    currentUser,
+    folders,
+    onAddFolder,
+    onDeleteFolder,
+    onAddFile,
+    onDeleteFile
+}: LineageViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isImportOpen, setIsImportOpen] = useState(false);
 
@@ -89,17 +106,25 @@ export function LineageView({ familyHeads, onAddHeir, onUpdatePerson, onImport, 
         </div>
         
         {filteredHeads.length > 0 ? (
-          filteredHeads.map(person => (
-            <PersonCard 
-                key={person.id} 
-                person={person} 
-                onAddHeir={onAddHeir} 
-                onUpdatePerson={onUpdatePerson} 
-                isFamilyHead={true}
-                projectId={projectId}
-                currentUser={currentUser}
-            />
-          ))
+          filteredHeads.map(person => {
+            const personFolders = folders.filter(f => f.name === person.name);
+            return (
+                <PersonCard 
+                    key={person.id} 
+                    person={person} 
+                    onAddHeir={onAddHeir} 
+                    onUpdatePerson={onUpdatePerson} 
+                    isFamilyHead={true}
+                    projectId={projectId}
+                    currentUser={currentUser}
+                    personFolders={personFolders}
+                    onAddFolder={onAddFolder}
+                    onDeleteFolder={onDeleteFolder}
+                    onAddFile={onAddFile}
+                    onDeleteFile={onDeleteFile}
+                />
+            )
+          })
         ) : (
           <Card>
             <CardContent className="p-8 text-center text-muted-foreground">

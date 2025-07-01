@@ -5,14 +5,14 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, UserPlus, Edit, Trash2, Milestone, Scale, Save, Plus, X, Link as LinkIcon, Bell, BellOff, StickyNote, ListTodo, Gavel, ScrollText } from 'lucide-react';
+import { User, UserPlus, Edit, Trash2, Milestone, Scale, Save, Plus, X, Link as LinkIcon, Bell, BellOff, StickyNote, ListTodo, Gavel, ScrollText, FolderArchive, FolderIcon, FolderPlus, File as FileIcon, FilePlus, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from '../ui/separator';
-import type { Person, SurveyRecord, LandClassification, Note, Task, LegalNote, User, Transaction } from '@/types';
+import type { Person, SurveyRecord, LandClassification, Note, Task, LegalNote, User, Transaction, Folder, DocumentFile } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { format, isPast } from 'date-fns';
@@ -20,9 +20,194 @@ import { Textarea } from '../ui/textarea';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-type AggregatedNote = Note & { surveyNumber: string };
-type AggregatedTask = Task & { surveyNumber: string };
-type AggregatedLegalNote = LegalNote & { surveyNumber: string };
+const statusColors: { [key in Person['status']]: string } = {
+  Alive: 'bg-green-500',
+  Died: 'bg-gray-500',
+  Missing: 'bg-yellow-500',
+  Unknown: 'bg-blue-500',
+};
+
+// --- DIALOGS FOR FOLDER VIEW ---
+
+const AddFolderDialog: FC<{
+  folderName: string;
+  onSave: (name: string) => void;
+  onOpenChange: (open: boolean) => void;
+}> = ({ folderName, onSave, onOpenChange }) => {
+  const [newFolderName, setNewFolderName] = useState('');
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newFolderName.trim()) {
+      onSave(newFolderName.trim());
+      setNewFolderName('');
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <DialogContent className="sm:max-w-md">
+      <form onSubmit={handleSubmit}>
+        <DialogHeader>
+          <DialogTitle>Add New Folder</DialogTitle>
+          <DialogDescription>
+            Enter a name for the new folder inside "{folderName}".
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="folder-name" className="text-right">Name</Label>
+            <Input id="folder-name" value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} className="col-span-3" required />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="submit">Add Folder</Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+};
+
+
+// Dialog for adding a new file
+const AddFileDialog: FC<{
+  folderName: string;
+  onSave: (fileData: Omit<DocumentFile, 'id'>) => void;
+  onOpenChange: (open: boolean) => void;
+}> = ({ folderName, onSave, onOpenChange }) => {
+  const [fileName, setFileName] = useState('');
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (fileName.trim()) {
+        const getFileExtension = (filename: string) => {
+            return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
+        }
+        const dummyContent = `This is a dummy file named ${fileName.trim()}.`;
+        const dataUrl = `data:text/plain;base64,${btoa(dummyContent)}`;
+
+      onSave({
+        name: fileName.trim(),
+        type: getFileExtension(fileName.trim()).toUpperCase() || 'File',
+        size: `${(Math.random() * 8 + 0.5).toFixed(1)} MB`,
+        uploaded: new Date().toISOString(),
+        url: dataUrl,
+      });
+      setFileName('');
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <DialogContent className="sm:max-w-md">
+      <form onSubmit={handleSubmit}>
+        <DialogHeader>
+          <DialogTitle>Add New File Record</DialogTitle>
+          <DialogDescription>
+            Enter a file name to create a new record in "{folderName}".
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="file-name" className="text-right">File Name</Label>
+            <Input id="file-name" value={fileName} onChange={(e) => setFileName(e.target.value)} className="col-span-3" placeholder="e.g., SaleDeed.pdf" required />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="submit">Add File</Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+};
+
+// --- FOLDER VIEW ---
+const FolderView: FC<{
+  folder: Folder;
+  onAddFolder: (parentId: string, name: string) => void;
+  onDeleteFolder: (folderId: string) => void;
+  onAddFile: (folderId: string, fileData: Omit<DocumentFile, 'id'>) => void;
+  onDeleteFile: (folderId: string, fileId: string) => void;
+  level: number;
+}> = ({ folder, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile, level }) => {
+  const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
+  const [isAddFileOpen, setIsAddFileOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleDownload = (file: DocumentFile) => {
+    if (!file.url) {
+        toast({
+            variant: 'destructive',
+            title: 'Download Error',
+            description: 'This file does not have downloadable content.'
+        });
+        return;
+    }
+    const link = document.createElement('a');
+    link.href = file.url;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div style={{ marginLeft: `${level * 20}px` }} className="mt-2">
+      <div className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50">
+        <FolderIcon className="h-5 w-5 text-primary" />
+        <span className="flex-grow font-medium">{folder.name}</span>
+        
+        {/* Add File Dialog */}
+        <Dialog open={isAddFileOpen} onOpenChange={setIsAddFileOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Add File">
+              <FilePlus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <AddFileDialog folderName={folder.name} onSave={(data) => onAddFile(folder.id, data)} onOpenChange={setIsAddFileOpen} />
+        </Dialog>
+
+        {/* Add Folder Dialog */}
+        <Dialog open={isAddFolderOpen} onOpenChange={setIsAddFolderOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Add Sub-folder">
+              <FolderPlus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <AddFolderDialog folderName={folder.name} onSave={(name) => onAddFolder(folder.id, name)} onOpenChange={setIsAddFolderOpen} />
+        </Dialog>
+        
+        {level > 2 && ( // Only allow deleting folders deeper than the main categories
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDeleteFolder(folder.id)} title="Delete Folder">
+                <Trash2 className="h-4 w-4" />
+            </Button>
+        )}
+      </div>
+
+      {/* Render Files */}
+      <div className="pl-6 mt-1 space-y-1">
+        {(folder.files || []).map(file => (
+          <div key={file.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/50 text-sm">
+            <FileIcon className="h-4 w-4 text-muted-foreground" />
+            <span className="flex-grow">{file.name}</span>
+            <span className="text-xs text-muted-foreground">{file.size}</span>
+            <span className="text-xs text-muted-foreground">{format(new Date(file.uploaded), 'PP')}</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(file)} title="Download File" disabled={!file.url}>
+                <Download className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDeleteFile(folder.id, file.id)} title="Delete File">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      {/* Render Sub-folders */}
+      {folder.children.map((child) => (
+        <FolderView key={child.id} folder={child} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} onAddFile={onAddFile} onDeleteFile={onDeleteFile} level={level + 1} />
+      ))}
+    </div>
+  );
+};
+
 
 interface PersonCardProps {
   person: Person;
@@ -31,14 +216,12 @@ interface PersonCardProps {
   isFamilyHead?: boolean;
   projectId: string;
   currentUser: User | null;
+  personFolders: Folder[];
+  onAddFolder: (parentId: string, name: string) => void;
+  onDeleteFolder: (folderId: string) => void;
+  onAddFile: (folderId: string, fileData: Omit<DocumentFile, 'id'>) => void;
+  onDeleteFile: (folderId: string, fileId: string) => void;
 }
-
-const statusColors: { [key in Person['status']]: string } = {
-  Alive: 'bg-green-500',
-  Died: 'bg-gray-500',
-  Missing: 'bg-yellow-500',
-  Unknown: 'bg-blue-500',
-};
 
 // A form component for adding an heir
 const AddHeirForm: FC<{ personName: string, parentId: string, onAddHeir: PersonCardProps['onAddHeir'], closeDialog: () => void }> = ({ personName, parentId, onAddHeir, closeDialog }) => {
@@ -433,7 +616,23 @@ const TransactionFormDialog: FC<{
 };
 
 
-export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePerson, isFamilyHead, projectId, currentUser }) => {
+type AggregatedNote = Note & { surveyNumber: string };
+type AggregatedTask = Task & { surveyNumber: string };
+type AggregatedLegalNote = LegalNote & { surveyNumber: string };
+
+export const PersonCard: FC<PersonCardProps> = ({ 
+    person, 
+    onAddHeir, 
+    onUpdatePerson, 
+    isFamilyHead, 
+    projectId, 
+    currentUser,
+    personFolders,
+    onAddFolder,
+    onDeleteFolder,
+    onAddFile,
+    onDeleteFile
+}) => {
   const [isAddHeirOpen, setIsAddHeirOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const { toast } = useToast();
@@ -751,7 +950,19 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
           <div className="pl-6 border-l-2 border-primary/20 ml-4 my-4 space-y-4">
               <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2 pt-4 -ml-1"><Milestone className="h-4 w-4" />Heirs</h4>
             {person.heirs.map((heir) => (
-              <PersonCard key={heir.id} person={heir} onAddHeir={onAddHeir} onUpdatePerson={onUpdatePerson} projectId={projectId} currentUser={currentUser} />
+              <PersonCard 
+                key={heir.id} 
+                person={heir} 
+                onAddHeir={onAddHeir} 
+                onUpdatePerson={onUpdatePerson} 
+                projectId={projectId} 
+                currentUser={currentUser}
+                personFolders={[]}
+                onAddFolder={onAddFolder}
+                onDeleteFolder={onDeleteFolder}
+                onAddFile={onAddFile}
+                onDeleteFile={onDeleteFile}
+              />
             ))}
           </div>
         </div>
@@ -807,6 +1018,31 @@ export const PersonCard: FC<PersonCardProps> = ({ person, onAddHeir, onUpdatePer
                             </TableBody>
                           </Table>
                         </div>
+                    </AccordionContent>
+                </AccordionItem>
+                {/* Title Documents Section */}
+                 <AccordionItem value="documents" className="border-b-0">
+                    <AccordionTrigger className="text-lg font-medium hover:no-underline rounded-md p-2 hover:bg-muted/50">
+                        <div className="flex items-center gap-2"><FolderArchive /> Title Documents</div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 border-t">
+                         {personFolders.length > 0 ? (
+                            personFolders.map((folder) => (
+                                <FolderView 
+                                    key={folder.id} 
+                                    folder={folder} 
+                                    onAddFolder={onAddFolder} 
+                                    onDeleteFolder={onDeleteFolder} 
+                                    onAddFile={onAddFile} 
+                                    onDeleteFile={onDeleteFile} 
+                                    level={0} 
+                                />
+                            ))
+                            ) : (
+                            <div className="text-center text-muted-foreground p-8">
+                                No document folders found for this family head.
+                            </div>
+                            )}
                     </AccordionContent>
                 </AccordionItem>
                 {/* Notes Section */}
