@@ -366,18 +366,8 @@ export function SiteAcquisitionChart({ projectId }: { projectId: string; }) {
                     </DialogContent>
                 </Dialog>
             )}
-
-            <footer className="mt-12">
-                <div className="text-center p-6 bg-card rounded-lg shadow">
-                    <strong className="text-lg block mb-2">Partner with Lakshmi Balaji O2O to accelerate your growth.</strong>
-                    <p className="mb-4 text-muted-foreground">We offer mutually beneficial partnerships in Property Sourcing, Customer Sourcing, and Transaction Execution.</p>
-                    <Button asChild>
-                        <Link href="https://wa.me/919841098170?text=Hi,%20I%27m%20interested%20in%20your%20O2O%20services!" target="_blank">
-                           Connect on WhatsApp
-                        </Link>
-                    </Button>
-                </div>
-            </footer>
         </div>
     );
 }
+
+    

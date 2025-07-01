@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -468,28 +469,7 @@ export default function ProjectDetailsPage() {
                                     )}
                                 </CardContent>
                             </Card>
-                            <Card>
-                                <CardHeader><CardTitle>Photo &amp; Video Gallery</CardTitle><CardDescription>Visuals from the project site.</CardDescription></CardHeader>
-                                <CardContent>
-                                    <Carousel className="w-full">
-                                        <CarouselContent>
-                                            {Array.from({ length: 3 }).map((_, index) => (
-                                                <CarouselItem key={index}>
-                                                    <div className="p-1">
-                                                        <Card>
-                                                            <CardContent className="flex aspect-video items-center justify-center p-0">
-                                                                <Image src={`https://placehold.co/600x400.png`} width={600} height={400} alt={`Placeholder ${index + 1}`} data-ai-hint="landscape field" className="rounded-lg object-cover w-full h-full" />
-                                                            </CardContent>
-                                                        </Card>
-                                                    </div>
-                                                </CarouselItem>
-                                            ))}
-                                        </CarouselContent>
-                                        <CarouselPrevious />
-                                        <CarouselNext />
-                                    </Carousel>
-                                </CardContent>
-                            </Card>
+                            
                             <div>
                                 <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
                             </div>
@@ -596,3 +576,5 @@ export default function ProjectDetailsPage() {
         </div>
     );
 }
+
+    
