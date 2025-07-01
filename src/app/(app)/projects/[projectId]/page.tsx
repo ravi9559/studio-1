@@ -167,6 +167,21 @@ export default function ProjectDetailsPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to update project details.' });
         }
     };
+
+    const handleAddFamilyHead = useCallback((personData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
+        const newFamilyHead: Person = {
+            ...personData,
+            id: `owner-${Date.now()}`,
+            heirs: [],
+            landRecords: [],
+        };
+        const newOwners = [...owners, newFamilyHead];
+        updateAndPersistOwners(newOwners);
+        toast({
+            title: "Family Head Added",
+            description: `${newFamilyHead.name} has been added to the lineage.`,
+        });
+    }, [owners, updateAndPersistOwners, toast]);
     
     const handleAddHeir = useCallback((parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
         const newOwners = JSON.parse(JSON.stringify(owners));
@@ -388,7 +403,7 @@ export default function ProjectDetailsPage() {
                     familyHeads={owners} 
                     onAddHeir={handleAddHeir} 
                     onUpdatePerson={handleUpdatePerson} 
-                    onImport={(newOwners) => updateAndPersistOwners(newOwners)} 
+                    onAddFamilyHead={handleAddFamilyHead}
                     projectId={projectId} 
                     currentUser={currentUser}
                     folders={folders}
