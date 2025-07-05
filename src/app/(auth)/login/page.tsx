@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -89,7 +90,7 @@ export default function LoginPage() {
                             <LandPlot className="h-8 w-8 text-primary" />
                         </div>
                         <CardTitle>TitleLine</CardTitle>
-                        <CardDescription>Enter your credentials to access your dashboard</CardDescription>
+                        <CardDescription>Trace the Origin</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
