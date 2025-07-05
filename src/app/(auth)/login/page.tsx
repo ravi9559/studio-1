@@ -42,8 +42,8 @@ export default function LoginPage() {
             if (matchingUser && matchingUser.password === password) {
                 localStorage.setItem('loggedInUser', JSON.stringify(matchingUser));
                 toast({ title: 'Login Successful', description: `Welcome back, ${matchingUser.name}!` });
-                router.push('/dashboard');
-                router.refresh(); // To ensure sidebar updates
+                // Using window.location.href to ensure a full page refresh which correctly updates the app's state.
+                window.location.href = '/dashboard';
             } else {
                  throw new Error("Invalid email or password.");
             }
@@ -53,7 +53,6 @@ export default function LoginPage() {
                 title: 'Login Failed',
                 description: error.message || 'Please check your credentials and try again.',
             });
-        } finally {
             setIsLoading(false);
         }
     };
