@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Moon, Sun, Trash2, User as UserIcon, Edit, LogOut } from 'lucide-react';
+import { Moon, Sun, Trash2, User as UserIcon, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -193,12 +193,6 @@ export default function SettingsPage() {
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('loggedInUser');
-        toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-        router.push('/login');
-    };
-
     const handleAddRole = () => {
         setRoleToEdit(null);
         setIsRoleDialogOpen(true);
@@ -336,7 +330,6 @@ export default function SettingsPage() {
                         </DialogContent>
                     </Dialog>
                     <Button variant="outline" onClick={() => setIsPasswordDialogOpen(true)}>Change Password</Button>
-                    <Button variant="destructive" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" /> Logout</Button>
                  </CardFooter>
             </Card>
 
@@ -578,5 +571,7 @@ function ChangePasswordDialog({ isOpen, onOpenChange, currentUser, onPasswordCha
         </Dialog>
     )
 }
+
+    
 
     

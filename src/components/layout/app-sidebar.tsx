@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -5,6 +6,7 @@ import {
   Users,
   Settings,
   FolderKanban,
+  LogOut,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -15,14 +17,17 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState, useEffect } from 'react';
 import type { User } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { contextualMenu } = useSidebar();
 
@@ -53,6 +58,12 @@ export function AppSidebar() {
         window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('loggedInUser');
+    toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+    router.push('/login');
+  };
 
 
   return (
@@ -103,7 +114,15 @@ export function AppSidebar() {
                 <span className="text-xs text-muted-foreground">{currentUser?.role || 'Role'}</span>
             </div>
         </div>
+        <SidebarMenuItem>
+          <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
+            <LogOut />
+            <span>Logout</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
       </SidebarFooter>
     </Sidebar>
   );
 }
+
+    
