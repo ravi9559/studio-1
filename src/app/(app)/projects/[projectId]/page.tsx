@@ -417,6 +417,34 @@ export default function ProjectDetailsPage() {
                 return <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />;
             case 'acquisition-chart':
                 return <SiteAcquisitionChart acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />;
+            case 'mind-map':
+                return <MindMapView projectName={project.name} familyHeads={owners} />;
+            case 'progress-dashboard':
+                return (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Project Progress Dashboard</CardTitle>
+                            <CardDescription>A high-level overview of key acquisition milestones.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-2">
+                                <Label>Advance Payments ({progressStats.advancePaidPercent}%)</Label>
+                                <Progress value={progressStats.advancePaidPercent} />
+                                <p className="text-sm text-muted-foreground">Percentage of land parcels where an advance has been paid.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>In-Person Meetings ({progressStats.meetingsDonePercent}%)</Label>
+                                <Progress value={progressStats.meetingsDonePercent} />
+                                <p className="text-sm text-muted-foreground">Percentage of owners who have had an in-person meeting.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Document Collection ({progressStats.docsCollectedPercent}%)</Label>
+                                <Progress value={progressStats.docsCollectedPercent} />
+                                <p className="text-sm text-muted-foreground">Percentage of land parcels with fully collected documents.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                );
             case 'dashboard':
             default:
                 return (
@@ -474,36 +502,6 @@ export default function ProjectDetailsPage() {
                                 <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
                             </div>
                         </div>
-
-                        <div>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Project Progress Dashboard</CardTitle>
-                                    <CardDescription>A high-level overview of key acquisition milestones.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="space-y-2">
-                                        <Label>Advance Payments ({progressStats.advancePaidPercent}%)</Label>
-                                        <Progress value={progressStats.advancePaidPercent} />
-                                        <p className="text-sm text-muted-foreground">Percentage of land parcels where an advance has been paid.</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>In-Person Meetings ({progressStats.meetingsDonePercent}%)</Label>
-                                        <Progress value={progressStats.meetingsDonePercent} />
-                                        <p className="text-sm text-muted-foreground">Percentage of owners who have had an in-person meeting.</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Document Collection ({progressStats.docsCollectedPercent}%)</Label>
-                                        <Progress value={progressStats.docsCollectedPercent} />
-                                        <p className="text-sm text-muted-foreground">Percentage of land parcels with fully collected documents.</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        
-                        <div>
-                            <MindMapView projectName={project.name} familyHeads={owners} />
-                        </div>
                     </div>
                 );
         }
@@ -544,7 +542,7 @@ export default function ProjectDetailsPage() {
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant={['lineage', 'acquisition-chart', 'acquisition-tracker'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <Button variant={['lineage', 'acquisition-chart', 'acquisition-tracker', 'mind-map', 'progress-dashboard'].includes(activeView) ? 'secondary' : 'ghost'}>
                                 <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -552,6 +550,8 @@ export default function ProjectDetailsPage() {
                                 <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setActiveView('mind-map')}>Project Mind Map</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setActiveView('progress-dashboard')}>Project Progress Dashboard</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
