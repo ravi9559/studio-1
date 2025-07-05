@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -73,7 +72,7 @@ export function AppSidebar() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <LandPlot className="h-6 w-6 text-primary" />
             </div>
-            <span className="text-lg font-semibold text-primary group-data-[collapsible=icon]:hidden">LandLineageRecords</span>
+            <span className="text-lg font-semibold text-primary group-data-[collapsible=icon]:hidden">TitleLine</span>
         </div>
       </SidebarHeader>
       <SidebarMenu className="flex-1">
@@ -124,5 +123,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-    

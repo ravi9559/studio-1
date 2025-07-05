@@ -4,8 +4,8 @@ import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://lakshmibalajio2o.com'),
-  title: 'LandLineageRecords',
-  description: 'Manage Land, Lineage, and Transaction History',
+  title: 'TitleLine',
+  description: 'Trace the Origin',
 };
 
 export default function RootLayout({
