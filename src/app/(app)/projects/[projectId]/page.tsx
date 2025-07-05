@@ -2,13 +2,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
-import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon, BarChart3, X, FolderArchive } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon, BarChart3, X, FolderArchive, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,7 @@ import { Progress } from "@/components/ui/progress";
 import { initializeNewProjectData, createDefaultFolders } from '@/lib/project-template';
 import { SiteAcquisitionChart } from '@/components/acquisition/site-acquisition-chart';
 import { LineageSuggestion } from '@/components/lineage/lineage-suggestion';
+import { Separator } from '@/components/ui/separator';
 
 
 // --- Storage Keys ---
@@ -38,6 +40,7 @@ export default function ProjectDetailsPage() {
     const params = useParams();
     const projectId = params.projectId as string;
     const { toast } = useToast();
+    const router = useRouter();
 
     const [project, setProject] = useState<Project | null>(null);
     const [owners, setOwners] = useState<Person[]>([]);
@@ -168,6 +171,44 @@ export default function ProjectDetailsPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to update project details.' });
         }
     };
+
+    const handleDeleteProject = () => {
+        if (!project) return;
+        
+        try {
+            // 1. Remove the main project entry
+            const projects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
+            const updatedProjects = projects.filter(p => p.id !== projectId);
+            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+
+            // 2. Remove all associated project-specific data
+            localStorage.removeItem(ownersStorageKey);
+            localStorage.removeItem(folderStorageKey);
+            localStorage.removeItem(acquisitionStorageKey);
+            localStorage.removeItem(siteSketchStorageKey);
+            localStorage.removeItem(`transactions-${projectId}`);
+
+            // 3. Remove item-specific data (notes, tasks, etc.) by iterating through survey numbers
+            acquisitionStatuses.forEach(status => {
+                localStorage.removeItem(`notes-${projectId}-${status.surveyNumber}`);
+                localStorage.removeItem(`tasks-${projectId}-${status.surveyNumber}`);
+                localStorage.removeItem(`legal-notes-${projectId}-${status.surveyNumber}`);
+            });
+
+            toast({
+                title: "Project Deleted",
+                description: `The project "${project.name}" and all its data have been removed.`,
+            });
+
+            // 4. Redirect to dashboard
+            router.push('/dashboard');
+
+        } catch (error) {
+            console.error("Failed to delete project", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete project.' });
+        }
+    };
+
 
     const handleAddFamilyHead = useCallback((personData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
         const newFamilyHead: Person = {
@@ -518,7 +559,7 @@ export default function ProjectDetailsPage() {
                         <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
                         <DialogContent className="sm:max-w-xl">
                             <DialogHeader><DialogTitle>Edit Project Details</DialogTitle><DialogDescription>Make changes to your project here. Click save when you're done.</DialogDescription></DialogHeader>
-                            <form onSubmit={handleUpdateProject}>
+                            <form onSubmit={handleUpdateProject} className="space-y-4">
                                 <div className="grid gap-4 py-4">
                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right">Name</Label><Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required /></div>
                                     <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-siteId" className="text-right">Site ID</Label><Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required /></div>
@@ -527,6 +568,37 @@ export default function ProjectDetailsPage() {
                                 </div>
                                 <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
                             </form>
+                            <Separator />
+                            <div className="space-y-2">
+                                <Label className="font-semibold text-destructive">Danger Zone</Label>
+                                <p className="text-xs text-muted-foreground">Deleting a project is a permanent action and cannot be undone. This will remove all associated lineage, acquisition, and document data.</p>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" className="w-full">
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete Project
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the project
+                                                "{project.name}" and all of its associated data.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                className="bg-destructive hover:bg-destructive/90"
+                                                onClick={handleDeleteProject}
+                                            >
+                                                Yes, delete this project
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                         </DialogContent>
                     </Dialog>
                 </header>
@@ -563,5 +635,7 @@ export default function ProjectDetailsPage() {
         </div>
     );
 }
+
+    
 
     
