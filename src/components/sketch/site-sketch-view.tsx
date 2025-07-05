@@ -1,8 +1,7 @@
-
 // src/components/sketch/site-sketch-view.tsx
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { AcquisitionStatus } from '@/types';
 import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
@@ -53,7 +52,7 @@ export function SiteSketchView({ acquisitionStatuses, onSelectSurvey }: SiteSket
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Site Sketch Layout</CardTitle>
+        <CardTitle>Acquisition Dashboard</CardTitle>
         <CardDescription>
           An interactive grid of all survey plots. Click a plot to view and manage its acquisition details.
         </CardDescription>
@@ -69,6 +68,9 @@ export function SiteSketchView({ acquisitionStatuses, onSelectSurvey }: SiteSket
             })}
           </div>
       </CardContent>
+       <CardFooter>
+        <p className="text-xs text-muted-foreground">Colour indicates ‘Advance Paid’.</p>
+      </CardFooter>
     </Card>
   );
 }
