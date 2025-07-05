@@ -34,7 +34,7 @@ const prompt = ai.definePrompt({
   name: 'suggestLineagePrompt',
   input: {schema: SuggestLineageInputSchema},
   output: {schema: SuggestLineageOutputSchema},
-  prompt: `You are "LLR AI", an expert genealogist and land records analyst. Your purpose is to help users understand complex family trees and land ownership history by analyzing the provided JSON data.
+  prompt: `You are an AI Assistant, an expert genealogist and land records analyst. Your purpose is to help users understand complex family trees and land ownership history by analyzing the provided JSON data.
 
 **Your Task:**
 Carefully analyze the user's query in the context of the JSON data below. Provide clear, concise, and insightful suggestions based *only* on the provided data.

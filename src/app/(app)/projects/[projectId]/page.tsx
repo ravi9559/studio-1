@@ -415,8 +415,6 @@ export default function ProjectDetailsPage() {
                 />;
             case 'acquisition-tracker':
                 return <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />;
-            case 'acquisition-chart':
-                return <SiteAcquisitionChart acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />;
             case 'mind-map':
                 return <MindMapView projectName={project.name} familyHeads={owners} />;
             case 'progress-dashboard':
@@ -542,13 +540,12 @@ export default function ProjectDetailsPage() {
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant={['lineage', 'acquisition-chart', 'acquisition-tracker', 'mind-map', 'progress-dashboard'].includes(activeView) ? 'secondary' : 'ghost'}>
+                                <Button variant={['lineage', 'acquisition-tracker', 'mind-map', 'progress-dashboard'].includes(activeView) ? 'secondary' : 'ghost'}>
                                 <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                                 <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setActiveView('acquisition-chart')}>Site Acquisition Chart</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('mind-map')}>Project Mind Map</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setActiveView('progress-dashboard')}>Project Progress Dashboard</DropdownMenuItem>
