@@ -16,25 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { User, Role, Project } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-// Initial mock data
-const initialUsers: User[] = [
-    { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
-    { id: 'user-1682600000002', name: 'SK Associates', email: 'lawyer@sk.com', password: 'password', role: 'Lawyer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
-    { id: 'user-1682600000003', name: 'Greenfield Corp', email: 'client@greenfield.com', password: 'password', role: 'Client', status: 'Active' },
-    { id: 'user-1682600000004', name: 'Land Investors Inc.', email: 'investor@land.com', password: 'password', role: 'Investor', status: 'Inactive'},
-    { id: 'user-1682600000005', name: 'Property Aggregators', email: 'aggregator@prop.com', password: 'password', role: 'Aggregator', status: 'Active' },
-];
-
-const initialRoles: Role[] = [
-    { id: 'role-super-admin', name: 'Super Admin' },
-    { id: 'role-tx-partner', name: 'Transaction Partner' },
-    { id: 'role-investor', name: 'Investor' },
-    { id: 'role-aggregator', name: 'Aggregator' },
-    { id: 'role-co-aggregator', name: 'Co-Aggregator' },
-    { id: 'role-client', name: 'Client' },
-    { id: 'role-lawyer', name: 'Lawyer' },
-];
+import { initialUsers, initialRoles } from '@/lib/initial-data';
 
 const USERS_STORAGE_KEY = 'users';
 const ROLES_STORAGE_KEY = 'user-roles';
@@ -53,18 +35,10 @@ export default function UsersPage() {
     useEffect(() => {
         try {
             const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-            if (savedUsers) {
-                setUsers(JSON.parse(savedUsers));
-            } else {
-                setUsers(initialUsers);
-            }
+            setUsers(savedUsers ? JSON.parse(savedUsers) : initialUsers);
 
             const savedRoles = localStorage.getItem(ROLES_STORAGE_KEY);
-            if(savedRoles) {
-                setRoles(JSON.parse(savedRoles));
-            } else {
-                setRoles(initialRoles);
-            }
+            setRoles(savedRoles ? JSON.parse(savedRoles) : initialRoles);
 
             const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
             if(savedProjects) {

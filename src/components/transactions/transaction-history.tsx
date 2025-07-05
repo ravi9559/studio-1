@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { initialTransactions } from '@/lib/initial-data';
 
 // Define the type for a transaction
 type Transaction = {
@@ -28,9 +29,6 @@ type Transaction = {
   year: number;
   doc: string;
 };
-
-// Initial mock data for new projects is now handled by the project template
-const initialTransactions: Transaction[] = [];
 
 interface TransactionHistoryProps {
     projectId: string;
@@ -52,11 +50,13 @@ export function TransactionHistory({ projectId }: TransactionHistoryProps) {
             if (savedTransactions) {
                 setTransactions(JSON.parse(savedTransactions));
             } else {
-                setTransactions(initialTransactions);
+                 const transactionsWithIds: Transaction[] = initialTransactions.map((tx, i) => ({ ...tx, id: `tx-${Date.now()}-${i}`}));
+                setTransactions(transactionsWithIds);
             }
         } catch (e) {
             console.error("Could not load transactions", e);
-            setTransactions(initialTransactions);
+            const transactionsWithIds: Transaction[] = initialTransactions.map((tx, i) => ({ ...tx, id: `tx-${Date.now()}-${i}`}));
+            setTransactions(transactionsWithIds);
         }
         setIsLoaded(true);
     }, [projectId, storageKey]);

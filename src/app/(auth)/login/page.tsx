@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { LandPlot, Loader2 } from 'lucide-react';
 import type { User } from '@/types';
+import { initialUsers, initialRoles } from '@/lib/initial-data';
 
 const USERS_STORAGE_KEY = 'users';
+const ROLES_STORAGE_KEY = 'user-roles';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -34,8 +36,21 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
+            // This is the key change: ensure users exist before trying to log in.
+            let users: User[];
             const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-            const users: User[] = savedUsers ? JSON.parse(savedUsers) : [];
+            
+            if (savedUsers) {
+                users = JSON.parse(savedUsers);
+            } else {
+                // If no users exist, create the initial set and save them.
+                users = initialUsers;
+                localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+                // Also initialize roles if they're missing, as they are related.
+                if (!localStorage.getItem(ROLES_STORAGE_KEY)) {
+                     localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(initialRoles));
+                }
+            }
 
             const matchingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 

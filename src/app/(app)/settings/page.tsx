@@ -14,16 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { User, Role } from '@/types';
-
-const initialRoles: Role[] = [
-    { id: 'role-super-admin', name: 'Super Admin' },
-    { id: 'role-tx-partner', name: 'Transaction Partner' },
-    { id: 'role-investor', name: 'Investor' },
-    { id: 'role-aggregator', name: 'Aggregator' },
-    { id: 'role-co-aggregator', name: 'Co-Aggregator' },
-    { id: 'role-client', name: 'Client' },
-    { id: 'role-lawyer', name: 'Lawyer' },
-];
+import { initialRoles } from '@/lib/initial-data';
 
 const ROLES_STORAGE_KEY = 'user-roles';
 const USERS_STORAGE_KEY = 'users';

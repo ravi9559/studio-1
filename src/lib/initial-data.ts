@@ -1,5 +1,23 @@
 // src/lib/initial-data.ts
-import type { Transaction } from './types';
+import type { Transaction, User, Role } from './types';
+
+export const initialUsers: User[] = [
+    { id: 'user-1682600000001', name: 'O2O Technologies', email: 'admin@o2o.com', password: 'password', role: 'Super Admin', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
+    { id: 'user-1682600000002', name: 'SK Associates', email: 'lawyer@sk.com', password: 'password', role: 'Lawyer', status: 'Active', avatarUrl: 'https://placehold.co/40x40.png' },
+    { id: 'user-1682600000003', name: 'Greenfield Corp', email: 'client@greenfield.com', password: 'password', role: 'Client', status: 'Active' },
+    { id: 'user-1682600000004', name: 'Land Investors Inc.', email: 'investor@land.com', password: 'password', role: 'Investor', status: 'Inactive'},
+    { id: 'user-1682600000005', name: 'Property Aggregators', email: 'aggregator@prop.com', password: 'password', role: 'Aggregator', status: 'Active' },
+];
+
+export const initialRoles: Role[] = [
+    { id: 'role-super-admin', name: 'Super Admin' },
+    { id: 'role-tx-partner', name: 'Transaction Partner' },
+    { id: 'role-investor', name: 'Investor' },
+    { id: 'role-aggregator', name: 'Aggregator' },
+    { id: 'role-co-aggregator', name: 'Co-Aggregator' },
+    { id: 'role-client', name: 'Client' },
+    { id: 'role-lawyer', name: 'Lawyer' },
+];
 
 export const initialTransactions: Omit<Transaction, 'id'>[] = [
     // Transactions for Marimuthu Pillai
