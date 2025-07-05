@@ -39,12 +39,8 @@ export default function ProjectsPage() {
   useEffect(() => {
     try {
       // Load current user
-      let users: User[] = [];
-      const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      if (savedUsers) {
-        users = JSON.parse(savedUsers);
-      }
-      const user = users.length > 0 ? users[0] : null;
+      const savedUser = localStorage.getItem('loggedInUser');
+      const user: User | null = savedUser ? JSON.parse(savedUser) : null;
       setCurrentUser(user);
 
       // Load projects, creating initial if none exist

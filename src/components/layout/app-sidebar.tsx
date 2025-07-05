@@ -29,12 +29,9 @@ export function AppSidebar() {
   useEffect(() => {
     const loadUser = () => {
         try {
-            const savedUsers = localStorage.getItem('users');
-            if (savedUsers) {
-                const users: User[] = JSON.parse(savedUsers);
-                if (users.length > 0) {
-                    setCurrentUser(users[0]); // Assume first user is the logged-in user
-                }
+            const savedUser = localStorage.getItem('loggedInUser');
+            if (savedUser) {
+                setCurrentUser(JSON.parse(savedUser));
             }
         } catch (e) {
             console.error("Could not load user for sidebar", e);
@@ -43,9 +40,9 @@ export function AppSidebar() {
     
     loadUser();
 
-    // Listen for changes from other tabs
+    // Listen for changes from other tabs (e.g. login/logout)
     const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === 'users') {
+        if (e.key === 'loggedInUser') {
             loadUser();
         }
     };

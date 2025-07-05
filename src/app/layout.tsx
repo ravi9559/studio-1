@@ -1,8 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { AppSidebar } from "@/components/layout/app-sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://lakshmibalajio2o.com'),
@@ -23,12 +21,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></link>
       </head>
       <body className="font-body antialiased">
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset>
-            {children}
-          </SidebarInset>
-        </SidebarProvider>
+        {children}
         <Toaster />
       </body>
     </html>

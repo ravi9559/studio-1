@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Moon, Sun, Trash2, User as UserIcon, Edit } from 'lucide-react';
+import { Moon, Sun, Trash2, User as UserIcon, Edit, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,9 +30,11 @@ const USERS_STORAGE_KEY = 'users';
 
 export default function SettingsPage() {
     const { toast } = useToast();
+    const router = useRouter();
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+    const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
     
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -60,14 +63,11 @@ export default function SettingsPage() {
                 setIsDarkMode(savedTheme === 'dark');
             }
 
-            // Load current user (assuming the first user is the logged-in user)
+            // Load current user
             try {
-                const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-                if (savedUsers) {
-                    const users: User[] = JSON.parse(savedUsers);
-                    if (users.length > 0) {
-                        setCurrentUser(users[0]);
-                    }
+                const savedLoggedInUser = localStorage.getItem('loggedInUser');
+                if (savedLoggedInUser) {
+                    setCurrentUser(JSON.parse(savedLoggedInUser));
                 }
             } catch (e) {
                 console.error("Failed to load user data", e);
@@ -77,7 +77,7 @@ export default function SettingsPage() {
         loadData();
 
         const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === USERS_STORAGE_KEY || e.key === 'theme') {
+            if (e.key === USERS_STORAGE_KEY || e.key === 'theme' || e.key === 'loggedInUser') {
                 loadData();
             }
         };
@@ -132,7 +132,7 @@ export default function SettingsPage() {
                 title: "Success",
                 description: "All local application data has been cleared.",
             });
-            window.location.reload();
+            window.location.href = '/login'; // Redirect to login after clearing
         } catch (e) {
             toast({
                 variant: "destructive",
@@ -159,6 +159,7 @@ export default function SettingsPage() {
                 const updatedCurrentUser = updatedUsers.find(u => u.id === currentUser.id);
                 if (updatedCurrentUser) {
                     setCurrentUser(updatedCurrentUser);
+                    localStorage.setItem('loggedInUser', JSON.stringify(updatedCurrentUser));
                 }
                 
                 toast({
@@ -175,6 +176,35 @@ export default function SettingsPage() {
             });
             console.error("Failed to update profile", error);
         }
+    };
+
+    const handlePasswordChange = (newPassword: string) => {
+        if (!currentUser) return;
+        try {
+            const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+            let users: User[] = savedUsers ? JSON.parse(savedUsers) : [];
+            
+            const updatedUsers = users.map(user => 
+                user.id === currentUser.id ? { ...user, password: newPassword } : user
+            );
+            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+
+            const updatedCurrentUser = { ...currentUser, password: newPassword };
+            setCurrentUser(updatedCurrentUser);
+            localStorage.setItem('loggedInUser', JSON.stringify(updatedCurrentUser));
+
+            toast({ title: "Success", description: "Your password has been updated." });
+
+        } catch (e) {
+            toast({ variant: "destructive", title: "Error", description: "Could not update your password." });
+            console.error(e);
+        }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('loggedInUser');
+        toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+        router.push('/login');
     };
 
     const handleAddRole = () => {
@@ -280,7 +310,7 @@ export default function SettingsPage() {
                         </div>
                     </div>
                 </CardContent>
-                 <CardFooter>
+                 <CardFooter className="flex gap-2">
                     <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                         <DialogTrigger asChild>
                            <Button variant="outline">Edit Profile</Button>
@@ -313,6 +343,8 @@ export default function SettingsPage() {
                             </form>
                         </DialogContent>
                     </Dialog>
+                    <Button variant="outline" onClick={() => setIsPasswordDialogOpen(true)}>Change Password</Button>
+                    <Button variant="destructive" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" /> Logout</Button>
                  </CardFooter>
             </Card>
 
@@ -425,6 +457,12 @@ export default function SettingsPage() {
                 onSave={handleSaveRole}
                 role={roleToEdit}
             />
+            <ChangePasswordDialog
+                isOpen={isPasswordDialogOpen}
+                onOpenChange={setIsPasswordDialogOpen}
+                currentUser={currentUser}
+                onPasswordChanged={handlePasswordChange}
+            />
         </div>
     );
 }
@@ -472,4 +510,79 @@ function RoleFormDialog({ isOpen, onOpenChange, onSave, role }: RoleFormDialogPr
             </DialogContent>
         </Dialog>
     );
+}
+
+interface ChangePasswordDialogProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  currentUser: User | null;
+  onPasswordChanged: (newPassword: string) => void;
+}
+
+function ChangePasswordDialog({ isOpen, onOpenChange, currentUser, onPasswordChanged }: ChangePasswordDialogProps) {
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const { toast } = useToast();
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentUser) return;
+
+        if (currentUser.password !== currentPassword) {
+            toast({ variant: "destructive", title: "Error", description: "Current password is not correct." });
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            toast({ variant: "destructive", title: "Error", description: "New passwords do not match." });
+            return;
+        }
+        
+        if (newPassword.length < 6) {
+             toast({ variant: "destructive", title: "Error", description: "Password must be at least 6 characters long." });
+            return;
+        }
+
+        onPasswordChanged(newPassword);
+        onOpenChange(false);
+    };
+
+    useEffect(() => {
+        if (!isOpen) {
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        }
+    }, [isOpen]);
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-md">
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>Change Password</DialogTitle>
+                        <DialogDescription>Update your password. Please choose a strong password.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="current-password">Current Password</Label>
+                            <Input id="current-password" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="new-password">New Password</Label>
+                            <Input id="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="confirm-password">Confirm New Password</Label>
+                            <Input id="confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit">Update Password</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
 }
