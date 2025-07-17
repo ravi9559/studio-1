@@ -1,3 +1,4 @@
+
 'use client';
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
@@ -35,7 +36,16 @@ export default function AppLayout({
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        {children}
+        <div className="flex flex-col min-h-screen">
+          <main className="flex-grow">
+            {children}
+          </main>
+          <footer className="text-center p-4 text-xs text-muted-foreground border-t">
+            <p>
+              <span className="font-bold">O2O</span> | Simplifying Real Estate Transactions. All rights reserved.
+            </p>
+          </footer>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
