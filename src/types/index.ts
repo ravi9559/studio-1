@@ -109,8 +109,7 @@ export type AggregationDocumentStatus = 'Available' | 'Un-Available' | 'Applied'
 export type AggregationCollectionStatus = 'Collected' | 'Pending';
 
 export type AggregationProgress = {
-    id: string;
-    surveyNumber: string;
+    id: string; // surveyNumber
     titleDeed: { status: AggregationDocumentStatus, collection: AggregationCollectionStatus };
     parentDocument: { status: AggregationDocumentStatus, collection: AggregationCollectionStatus };
     deathCertificate: { status: AggregationDocumentStatus, collection: AggregationCollectionStatus };

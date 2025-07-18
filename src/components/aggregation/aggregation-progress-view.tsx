@@ -1,0 +1,183 @@
+
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import type { AggregationProgress, User, AggregationDocumentStatus, AggregationCollectionStatus } from '@/types';
+import { useToast } from '@/hooks/use-toast';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Save } from 'lucide-react';
+
+interface AggregationProgressProps {
+    projectId: string;
+    surveyNumbers: string[];
+    currentUser: User | null;
+}
+
+const defaultProgress: Omit<AggregationProgress, 'id'> = {
+    titleDeed: { status: 'Un-Available', collection: 'Pending' },
+    parentDocument: { status: 'Un-Available', collection: 'Pending' },
+    deathCertificate: { status: 'Un-Available', collection: 'Pending' },
+    legalHeirCertificate: { status: 'Un-Available', collection: 'Pending' },
+    patta: { status: 'Un-Available', collection: 'Pending' },
+    saleAgreement: { status: 'Pending' },
+};
+
+function ProgressEditor({ surveyNumber, projectId, onProgressUpdated }: { surveyNumber: string, projectId: string, onProgressUpdated: () => void }) {
+    const [progress, setProgress] = useState<AggregationProgress>({ id: surveyNumber, ...defaultProgress });
+    const { toast } = useToast();
+    const storageKey = `aggregation-${projectId}-${surveyNumber}`;
+
+    useEffect(() => {
+        try {
+            const savedData = localStorage.getItem(storageKey);
+            if (savedData) {
+                setProgress(JSON.parse(savedData));
+            } else {
+                setProgress({ id: surveyNumber, ...defaultProgress });
+            }
+        } catch (e) {
+            console.error("Could not load aggregation progress", e);
+            setProgress({ id: surveyNumber, ...defaultProgress });
+        }
+    }, [storageKey, surveyNumber]);
+
+    const handleFieldChange = (
+        docType: keyof Omit<AggregationProgress, 'id' | 'saleAgreement'>,
+        field: 'status' | 'collection',
+        value: AggregationDocumentStatus | AggregationCollectionStatus
+    ) => {
+        setProgress(prev => ({
+            ...prev,
+            [docType]: { ...prev[docType], [field]: value },
+        }));
+    };
+
+    const handleSaleAgreementChange = (value: 'Signed' | 'Pending') => {
+        setProgress(prev => ({
+            ...prev,
+            saleAgreement: { status: value },
+        }));
+    };
+
+    const handleSave = () => {
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(progress));
+            toast({ title: 'Progress Saved', description: `Data for S.No. ${surveyNumber} has been updated.` });
+            onProgressUpdated();
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save progress.' });
+            console.error(e);
+        }
+    };
+    
+    const documentFields: { key: keyof Omit<AggregationProgress, 'id' | 'saleAgreement'>, label: string }[] = [
+        { key: 'titleDeed', label: 'Title Deed' },
+        { key: 'parentDocument', label: 'Parent Document' },
+        { key: 'deathCertificate', label: 'Death Certificate' },
+        { key: 'legalHeirCertificate', label: 'Legal-Heir Certificate' },
+        { key: 'patta', label: 'Patta' },
+    ];
+
+    return (
+        <Card className="mt-4 bg-background/50">
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {documentFields.map(({ key, label }) => (
+                    <div key={key} className="p-4 border rounded-lg space-y-4">
+                        <h4 className="font-semibold">{label}</h4>
+                        <div className="space-y-2">
+                            <Label>Status</Label>
+                            <Select
+                                value={progress[key].status}
+                                onValueChange={(v: AggregationDocumentStatus) => handleFieldChange(key, 'status', v)}
+                            >
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Available">Available</SelectItem>
+                                    <SelectItem value="Un-Available">Un-Available</SelectItem>
+                                    <SelectItem value="Applied">Applied</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Collection by Aggregator</Label>
+                            <Select
+                                value={progress[key].collection}
+                                onValueChange={(v: AggregationCollectionStatus) => handleFieldChange(key, 'collection', v)}
+                            >
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Collected">Collected</SelectItem>
+                                    <SelectItem value="Pending">Pending</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                ))}
+                <div className="p-4 border rounded-lg space-y-4">
+                    <h4 className="font-semibold">Sale Agreement</h4>
+                    <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select
+                            value={progress.saleAgreement.status}
+                            onValueChange={handleSaleAgreementChange}
+                        >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Signed">Signed</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter>
+                <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" />Save Progress for S.No. {surveyNumber}</Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
+
+export function AggregationProgressView({ projectId, surveyNumbers, currentUser }: AggregationProgressProps) {
+    const [version, setVersion] = useState(0);
+    const refreshData = useCallback(() => setVersion(v => v + 1), []);
+
+    if (!currentUser) return null;
+
+    if (surveyNumbers.length === 0) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Aggregation Progress</CardTitle>
+                    <CardDescription>Track document collection for each survey number.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center text-muted-foreground p-8">
+                    No survey records found. Add land records in "Family Lineage" to track progress.
+                </CardContent>
+            </Card>
+        );
+    }
+    
+    return (
+        <Accordion type="multiple" className="w-full space-y-4">
+            {surveyNumbers.map(sn => (
+                <AccordionItem value={sn} key={sn} className="border rounded-lg">
+                    <AccordionTrigger className="p-4 text-lg font-medium hover:no-underline">
+                        Progress for Survey No: {sn}
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 border-t">
+                        <ProgressEditor
+                            surveyNumber={sn}
+                            projectId={projectId}
+                            onProgressUpdated={refreshData}
+                        />
+                    </AccordionContent>
+                </AccordionItem>
+            ))}
+        </Accordion>
+    );
+}

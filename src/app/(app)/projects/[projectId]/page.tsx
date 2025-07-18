@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
-import type { User, Project, Person, Folder, AcquisitionStatus, DocumentFile, LandClassification } from '@/types';
+import type { User, Project, Person, Folder, AcquisitionStatus, DocumentFile, LandClassification, AggregationProgress } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { initializeNewProjectData, createDefaultFolders } from '@/lib/project-template';
@@ -25,6 +25,7 @@ import { TransactionHistory } from '@/components/transactions/transaction-histor
 import { Notes } from '@/components/project/notes';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { Tasks } from '@/components/project/tasks';
+import { AggregationProgressView } from '@/components/aggregation/aggregation-progress-view';
 
 
 // --- Storage Keys ---
@@ -247,6 +248,7 @@ export default function ProjectDetailsPage() {
                 localStorage.removeItem(`notes-${projectId}-${status.surveyNumber}`);
                 localStorage.removeItem(`tasks-${projectId}-${status.surveyNumber}`);
                 localStorage.removeItem(`legal-notes-${projectId}-${status.surveyNumber}`);
+                localStorage.removeItem(`aggregation-${projectId}-${status.surveyNumber}`);
             });
 
             toast({
@@ -439,7 +441,7 @@ export default function ProjectDetailsPage() {
                         <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
                         <p className="text-muted-foreground">Site ID: {project.siteId} &middot; {project.location}</p>
                     </div>
-                    {currentUserRole === 'Admin' && (
+                    {currentUserRole === 'Super Admin' && (
                         <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
                             <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
                             <DialogContent className="sm:max-w-xl">
@@ -495,9 +497,10 @@ export default function ProjectDetailsPage() {
                         <TabsTrigger value="documents">Title Documents</TabsTrigger>
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                         {currentUserRole !== 'Lawyer' && <TabsTrigger value="acquisition">Acquisition Dashboard</TabsTrigger>}
+                        {currentUserRole !== 'Lawyer' && <TabsTrigger value="aggregation">Aggregation Progress</TabsTrigger>}
                         <TabsTrigger value="notes">Notes</TabsTrigger>
-                         {currentUserRole !== 'Aggregator' && <TabsTrigger value="legal">Legal Notes</TabsTrigger>}
-                         {currentUserRole === 'Admin' && <TabsTrigger value="tasks">Tasks & Schedule</TabsTrigger>}
+                        {currentUserRole !== 'Aggregator' && <TabsTrigger value="legal">Legal Notes</TabsTrigger>}
+                        {currentUserRole === 'Super Admin' && <TabsTrigger value="tasks">Tasks & Schedule</TabsTrigger>}
                     </TabsList>
                     
                     <TabsContent value="lineage" className="pt-4">
@@ -527,7 +530,7 @@ export default function ProjectDetailsPage() {
                     <TabsContent value="transactions" className="pt-4">
                         <TransactionHistory projectId={projectId} />
                     </TabsContent>
-                     {currentUserRole !== 'Lawyer' && (
+                    {currentUserRole !== 'Lawyer' && (
                         <TabsContent value="acquisition" className="pt-4">
                              <SiteSketchView 
                                 acquisitionStatuses={acquisitionStatuses} 
@@ -543,7 +546,16 @@ export default function ProjectDetailsPage() {
                                />
                             </div>
                         </TabsContent>
-                     )}
+                    )}
+                    {currentUserRole !== 'Lawyer' && (
+                        <TabsContent value="aggregation" className="pt-4">
+                            <AggregationProgressView
+                                projectId={projectId}
+                                surveyNumbers={surveyNumbers}
+                                currentUser={currentUser}
+                            />
+                        </TabsContent>
+                    )}
                     <TabsContent value="notes" className="pt-4">
                         <Notes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
                     </TabsContent>
@@ -552,7 +564,7 @@ export default function ProjectDetailsPage() {
                             <LegalNotes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
                         </TabsContent>
                     )}
-                     {currentUserRole === 'Admin' && (
+                     {currentUserRole === 'Super Admin' && (
                         <TabsContent value="tasks" className="pt-4">
                            <Tasks projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
                         </TabsContent>
