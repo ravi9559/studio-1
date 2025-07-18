@@ -5,29 +5,26 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
-import { ArrowLeft, Loader2, Edit, MapPin, AreaChart, Users2, Droplets, Sun, FileUp, ChevronDown, LayoutDashboard, Briefcase, Landmark as LandmarkIcon, BarChart3, X, FolderArchive, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
-import type { User, Project, Person, Folder, AcquisitionStatus, DocumentFile } from '@/types';
+import type { User, Project, Person, Folder, AcquisitionStatus, DocumentFile, LandClassification } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
-import { siteSketchData } from '@/lib/site-sketch-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { ProjectMap } from '@/components/project/project-map';
-import { roadData } from '@/lib/road-data';
-import { MindMapView } from '@/components/mindmap/mind-map-view';
-import { Progress } from "@/components/ui/progress";
 import { initializeNewProjectData, createDefaultFolders } from '@/lib/project-template';
-import { SiteAcquisitionChart } from '@/components/acquisition/site-acquisition-chart';
-import { LineageSuggestion } from '@/components/lineage/lineage-suggestion';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TitleDocumentsView } from '@/components/documents/title-documents-view';
+import { TransactionHistory } from '@/components/transactions/transaction-history';
+import { Notes } from '@/components/project/notes';
+import { LegalNotes } from '@/components/project/legal-notes';
+import { Tasks } from '@/components/project/tasks';
 
 
 // --- Storage Keys ---
@@ -50,10 +47,7 @@ export default function ProjectDetailsPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     
     // --- Navigation State ---
-    const [activeView, setActiveView] = useState('dashboard');
     const [activeStatusId, setActiveStatusId] = useState<string | undefined>(undefined);
-    
-    const [siteSketchPdf, setSiteSketchPdf] = useState<string | null>(null);
     
     const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
     const [editedProjectName, setEditedProjectName] = useState('');
@@ -64,7 +58,6 @@ export default function ProjectDetailsPage() {
     const ownersStorageKey = useMemo(() => `lineage-data-${projectId}`, [projectId]);
     const folderStorageKey = useMemo(() => `document-folders-${projectId}`, [projectId]);
     const acquisitionStorageKey = useMemo(() => `acquisition-status-${projectId}`, [projectId]);
-    const siteSketchStorageKey = useMemo(() => `site-sketch-pdf-${projectId}`, [projectId]);
 
     // --- Data Loading and Initialization ---
     useEffect(() => {
@@ -81,11 +74,11 @@ export default function ProjectDetailsPage() {
             }
             const allProjects: Project[] = JSON.parse(savedProjects);
             
-            const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-            if (savedUsers) {
-                const users: User[] = JSON.parse(savedUsers);
-                if (users.length > 0) setCurrentUser(users[0]);
+            const savedLoggedInUser = localStorage.getItem('loggedInUser');
+            if (savedLoggedInUser) {
+                setCurrentUser(JSON.parse(savedLoggedInUser));
             }
+
 
             // Find the current project
             const currentProject = allProjects.find(p => p.id === projectId);
@@ -103,39 +96,91 @@ export default function ProjectDetailsPage() {
 
             // --- Load or Regenerate Project-Specific Data ---
             let loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || 'null');
-            let loadedStatuses = JSON.parse(localStorage.getItem(acquisitionStorageKey) || 'null');
             let loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || 'null');
-            const savedPdf = localStorage.getItem(siteSketchStorageKey);
-            if (savedPdf) setSiteSketchPdf(savedPdf);
             
-            const isDataMissing = !loadedOwners || !loadedStatuses || !loadedFolders;
-
-            if (isDataMissing) {
-                toast({
-                    title: "Initializing Project",
-                    description: "Setting up default data for this project..."
-                });
+            if (!loadedOwners) {
                 initializeNewProjectData(projectId);
-                
-                loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || 'null');
-                loadedStatuses = JSON.parse(localStorage.getItem(acquisitionStorageKey) || 'null');
-                loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || 'null');
+                loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || '[]');
+                loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || '[]');
             }
             
             setOwners(loadedOwners);
-            setAcquisitionStatuses(loadedStatuses);
             setFolders(loadedFolders);
-            
-            if (loadedStatuses.length > 0 && (!activeStatusId || !loadedStatuses.some((s: { id: string | undefined; }) => s.id === activeStatusId))) {
-                setActiveStatusId(loadedStatuses[0].id);
-            }
 
         } catch (e) {
             console.error("Could not load project data", e);
             toast({ variant: 'destructive', title: 'Error Loading Data', description: 'There was a problem initializing project data.' });
         }
         setLoading(false);
-    }, [projectId, ownersStorageKey, folderStorageKey, acquisitionStorageKey, siteSketchStorageKey, activeStatusId, toast]);
+    }, [projectId, ownersStorageKey, folderStorageKey, toast]);
+
+    const allSurveyRecords = useMemo(() => {
+        const records: { ownerName: string, surveyNumber: string, acres: string, cents: string, landClassification: LandClassification }[] = [];
+        const collect = (person: Person) => {
+            person.landRecords.forEach(lr => {
+                records.push({
+                    ownerName: person.name,
+                    surveyNumber: lr.surveyNumber,
+                    acres: lr.acres,
+                    cents: lr.cents,
+                    landClassification: lr.landClassification,
+                });
+            });
+            person.heirs.forEach(collect);
+        };
+        owners.forEach(collect);
+        return records;
+    }, [owners]);
+    
+    useEffect(() => {
+        if (loading || !owners) return;
+
+        let existingStatuses: AcquisitionStatus[] = JSON.parse(localStorage.getItem(acquisitionStorageKey) || '[]');
+        
+        let changed = false;
+        const updatedStatuses = allSurveyRecords.map((record, index) => {
+            const id = `${projectId}-${record.surveyNumber}-${index}`;
+            const existing = existingStatuses.find(s => s.id === id);
+            if (existing) {
+                 if(existing.familyHeadName !== record.ownerName || existing.extent.acres !== record.acres || existing.extent.cents !== record.cents || existing.landClassification !== record.landClassification) {
+                    changed = true;
+                    return { ...existing, familyHeadName: record.ownerName, extent: { acres: record.acres, cents: record.cents }, landClassification: record.landClassification };
+                 }
+                 return existing;
+            } else {
+                changed = true;
+                return {
+                    id,
+                    projectId,
+                    surveyNumber: record.surveyNumber,
+                    familyHeadName: record.ownerName,
+                    extent: { acres: record.acres, cents: record.cents },
+                    landClassification: record.landClassification,
+                    financials: { advancePayment: 'Pending', agreementStatus: 'Pending' },
+                    operations: { meetingDate: null, documentCollection: 'Pending' },
+                    legal: { queryStatus: 'Not Started' },
+                };
+            }
+        });
+
+        // Remove statuses for which records no longer exist
+        const recordIds = new Set(updatedStatuses.map(s => s.id));
+        const filteredStatuses = existingStatuses.filter(s => recordIds.has(s.id));
+        if (filteredStatuses.length !== existingStatuses.length) {
+            changed = true;
+        }
+
+        if (changed) {
+            localStorage.setItem(acquisitionStorageKey, JSON.stringify(updatedStatuses));
+            setAcquisitionStatuses(updatedStatuses);
+        } else {
+            setAcquisitionStatuses(existingStatuses);
+        }
+
+        if (updatedStatuses.length > 0 && (!activeStatusId || !updatedStatuses.some(s => s.id === activeStatusId))) {
+            setActiveStatusId(updatedStatuses[0].id);
+        }
+    }, [owners, projectId, acquisitionStorageKey, allSurveyRecords, loading, activeStatusId]);
 
     const updateAndPersistOwners = useCallback((newOwners: Person[]) => {
         setOwners(newOwners);
@@ -185,8 +230,8 @@ export default function ProjectDetailsPage() {
             localStorage.removeItem(ownersStorageKey);
             localStorage.removeItem(folderStorageKey);
             localStorage.removeItem(acquisitionStorageKey);
-            localStorage.removeItem(siteSketchStorageKey);
             localStorage.removeItem(`transactions-${projectId}`);
+            localStorage.removeItem(`files-${projectId}`);
 
             // 3. Remove item-specific data (notes, tasks, etc.) by iterating through survey numbers
             acquisitionStatuses.forEach(status => {
@@ -231,7 +276,7 @@ export default function ProjectDetailsPage() {
 
         const addHeirRecursive = (person: Person): boolean => {
             if (person.id === parentId) {
-                const newHeir: Person = { ...heirData, id: `${parentId}.${person.heirs.length + 1}`, landRecords: [], heirs: [] };
+                const newHeir: Person = { ...heirData, id: `heir-${parentId}-${Date.now()}`, landRecords: [], heirs: [] };
                 person.heirs.push(newHeir);
                 return true;
             }
@@ -248,8 +293,9 @@ export default function ProjectDetailsPage() {
         
         if (parentFound) {
             updateAndPersistOwners(newOwners);
+            toast({ title: 'Heir Added', description: 'A new heir has been successfully added.' });
         }
-    }, [owners, updateAndPersistOwners]);
+    }, [owners, updateAndPersistOwners, toast]);
 
     const handleUpdatePerson = useCallback((personId: string, personData: Omit<Person, 'id' | 'heirs'>) => {
         const newOwners = JSON.parse(JSON.stringify(owners));
@@ -272,8 +318,9 @@ export default function ProjectDetailsPage() {
         }
         if(personFound) {
              updateAndPersistOwners(newOwners);
+             toast({ title: 'Record Updated', description: 'The person\'s details have been saved.' });
         }
-    }, [owners, updateAndPersistOwners]);
+    }, [owners, updateAndPersistOwners, toast]);
 
     const handleUpdateAcquisitionStatus = useCallback((updatedStatus: AcquisitionStatus) => {
         const newStatuses = acquisitionStatuses.map(status => status.id === updatedStatus.id ? updatedStatus : status);
@@ -326,7 +373,8 @@ export default function ProjectDetailsPage() {
         const updatedFolders = addFileRecursive(folders);
         setFolders(updatedFolders);
         localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
-    }, [folders, folderStorageKey]);
+        toast({ title: "File Uploaded", description: `Successfully added ${fileData.name}.` });
+    }, [folders, folderStorageKey, toast]);
 
     const handleDeleteFileFromFolder = useCallback((folderId: string, fileId: string) => {
         const deleteFileRecursive = (nodes: Folder[]): Folder[] => {
@@ -345,79 +393,12 @@ export default function ProjectDetailsPage() {
         const updatedFolders = deleteFileRecursive(folders);
         setFolders(updatedFolders);
         localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
-    }, [folders, folderStorageKey]);
+        toast({ title: "File Deleted", description: "The file record has been removed." });
+    }, [folders, folderStorageKey, toast]);
 
 
-    const handlePdfUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file && file.type === 'application/pdf') {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const dataUrl = e.target?.result as string;
-                setSiteSketchPdf(dataUrl);
-                localStorage.setItem(siteSketchStorageKey, dataUrl);
-                toast({ title: "Site sketch uploaded successfully." });
-            };
-            reader.readAsDataURL(file);
-        } else {
-            toast({ variant: 'destructive', title: "Invalid file", description: "Please upload a valid PDF file." });
-        }
-    };
-    
-    const projectStats = useMemo(() => {
-        let totalAcres = 0;
-        let totalCents = 0;
-        const ownerCount = owners.length;
-
-        owners.forEach(owner => {
-            (owner.landRecords || []).forEach(rec => {
-                totalAcres += parseFloat(rec.acres || '0');
-                totalCents += parseFloat(rec.cents || '0');
-            });
-        });
-
-        if (totalCents >= 100) {
-            totalAcres += Math.floor(totalCents / 100);
-            totalCents %= 100;
-        }
-
-        const wetPlots = siteSketchData.filter(p => p.classification === 'Wet').length;
-        const dryPlots = siteSketchData.filter(p => p.classification === 'Dry').length;
-
-        return {
-            totalAcres: totalAcres.toFixed(2),
-            totalCents: totalCents.toFixed(2),
-            ownerCount,
-            wetPlots,
-            dryPlots,
-        };
-    }, [owners]);
-    
-    const progressStats = useMemo(() => {
-        if (!acquisitionStatuses || acquisitionStatuses.length === 0) {
-            return {
-                advancePaidPercent: 0,
-                meetingsDonePercent: 0,
-                docsCollectedPercent: 0,
-            };
-        }
-
-        const total = acquisitionStatuses.length;
-        
-        const advancePaidCount = acquisitionStatuses.filter(s => s.financials.advancePayment === 'Paid').length;
-        const meetingsDoneCount = acquisitionStatuses.filter(s => !!s.operations.meetingDate).length;
-        const docsCollectedCount = acquisitionStatuses.filter(s => s.operations.documentCollection === 'Fully Collected').length;
-
-        return {
-            advancePaidPercent: Math.round((advancePaidCount / total) * 100),
-            meetingsDonePercent: Math.round((meetingsDoneCount / total) * 100),
-            docsCollectedPercent: Math.round((docsCollectedCount / total) * 100),
-        };
-    }, [acquisitionStatuses]);
-    
     const handleSelectSurvey = useCallback((statusId: string) => { 
         setActiveStatusId(statusId);
-        setActiveView('acquisition-tracker');
     }, []);
 
     const currentUserRole = currentUser?.role;
@@ -437,114 +418,8 @@ export default function ProjectDetailsPage() {
             </div>
         )
     }
-
-    const renderActiveView = () => {
-        switch(activeView) {
-            case 'lineage':
-                return <LineageView 
-                    familyHeads={owners} 
-                    onAddHeir={handleAddHeir} 
-                    onUpdatePerson={handleUpdatePerson} 
-                    onAddFamilyHead={handleAddFamilyHead}
-                    projectId={projectId} 
-                    currentUser={currentUser}
-                    folders={folders}
-                    onAddFolder={handleAddFolder}
-                    onDeleteFolder={handleDeleteFolder}
-                    onAddFile={handleAddFileToFolder}
-                    onDeleteFile={handleDeleteFileFromFolder}
-                />;
-            case 'acquisition-tracker':
-                return <AcquisitionTrackerView statuses={acquisitionStatuses} onUpdateStatus={handleUpdateAcquisitionStatus} activeStatusId={activeStatusId} onActiveStatusChange={setActiveStatusId} />;
-            case 'mind-map':
-                return <MindMapView projectName={project.name} familyHeads={owners} />;
-            case 'progress-dashboard':
-                return (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Project Progress Dashboard</CardTitle>
-                            <CardDescription>A high-level overview of key acquisition milestones.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="space-y-2">
-                                <Label>Advance Payments ({progressStats.advancePaidPercent}%)</Label>
-                                <Progress value={progressStats.advancePaidPercent} />
-                                <p className="text-sm text-muted-foreground">Percentage of land parcels where an advance has been paid.</p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>In-Person Meetings ({progressStats.meetingsDonePercent}%)</Label>
-                                <Progress value={progressStats.meetingsDonePercent} />
-                                <p className="text-sm text-muted-foreground">Percentage of owners who have had an in-person meeting.</p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Document Collection ({progressStats.docsCollectedPercent}%)</Label>
-                                <Progress value={progressStats.docsCollectedPercent} />
-                                <p className="text-sm text-muted-foreground">Percentage of land parcels with fully collected documents.</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                );
-            case 'dashboard':
-            default:
-                return (
-                    <div className="space-y-8">
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Extent</CardTitle><AreaChart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.totalAcres} Acres</div><p className="text-xs text-muted-foreground">{projectStats.totalCents} Cents</p></CardContent></Card>
-                            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Number of Owners</CardTitle><Users2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.ownerCount}</div><p className="text-xs text-muted-foreground">Unique family heads</p></CardContent></Card>
-                            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Wet Land Plots</CardTitle><Droplets className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.wetPlots}</div><p className="text-xs text-muted-foreground">Count of wet land parcels</p></CardContent></Card>
-                            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Dry Land Plots</CardTitle><Sun className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{projectStats.dryPlots}</div><p className="text-xs text-muted-foreground">Count of dry land parcels</p></CardContent></Card>
-                        </div>
-                        
-                        <div className="space-y-8">
-                            <Card className="overflow-hidden">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><MapPin /> Site Location &amp; Major Roads</CardTitle>
-                                        <CardDescription>
-                                        Showing project context with key transportation corridors.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="aspect-video w-full rounded-md overflow-hidden border animate-in fade-in duration-500">
-                                        <ProjectMap />
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
-                                        {roadData.map(road => (
-                                            <div key={road.name} className="flex items-center gap-2">
-                                                <span className="h-4 w-4 rounded" style={{ backgroundColor: road.color }} />
-                                                <span>{road.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader><CardTitle>Site Sketch</CardTitle><CardDescription>Upload and view the official site sketch PDF.</CardDescription></CardHeader>
-                                <CardContent>
-                                    {siteSketchPdf ? (
-                                        <div className="w-full h-[80vh]">
-                                            <iframe src={siteSketchPdf} title="Site Sketch" width="100%" height="100%" className="rounded-md border"/>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full h-[80vh] flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg text-center">
-                                            <FileUp className="h-10 w-10 text-muted-foreground mb-4" />
-                                            <p className="mb-4 font-semibold">No Site Sketch Uploaded</p>
-                                            <Button asChild size="sm">
-                                                <label htmlFor="pdf-upload" className="cursor-pointer">Upload PDF</label>
-                                            </Button>
-                                            <Input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} />
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                            
-                            <div>
-                                <SiteSketchView acquisitionStatuses={acquisitionStatuses} onSelectSurvey={handleSelectSurvey} />
-                            </div>
-                        </div>
-                    </div>
-                );
-        }
-    };
+    
+    const surveyNumbers = allSurveyRecords.map(r => r.surveyNumber);
 
     return (
         <div className="relative">
@@ -553,89 +428,128 @@ export default function ProjectDetailsPage() {
                     <div>
                         <Button variant="ghost" asChild className="mb-2 -ml-4"><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link></Button>
                         <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-                        <p className="text-muted-foreground">Project ID: {project.siteId} &middot; {project.location}</p>
+                        <p className="text-muted-foreground">Site ID: {project.siteId} &middot; {project.location}</p>
                     </div>
-                    <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
-                        <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
-                        <DialogContent className="sm:max-w-xl">
-                            <DialogHeader><DialogTitle>Edit Project Details</DialogTitle><DialogDescription>Make changes to your project here. Click save when you're done.</DialogDescription></DialogHeader>
-                            <form onSubmit={handleUpdateProject} className="space-y-4">
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right">Name</Label><Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required /></div>
-                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-siteId" className="text-right">Site ID</Label><Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required /></div>
-                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-location" className="text-right">Location</Label><Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required /></div>
-                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label><Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" placeholder="Google Maps URL..."/></div>
+                    {currentUserRole === 'Admin' && (
+                        <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
+                            <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
+                            <DialogContent className="sm:max-w-xl">
+                                <DialogHeader><DialogTitle>Edit Project Details</DialogTitle><DialogDescription>Make changes to your project here. Click save when you're done.</DialogDescription></DialogHeader>
+                                <form onSubmit={handleUpdateProject} className="space-y-4">
+                                    <div className="grid gap-4 py-4">
+                                        <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right">Name</Label><Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required /></div>
+                                        <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-siteId" className="text-right">Site ID</Label><Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required /></div>
+                                        <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-location" className="text-right">Location</Label><Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required /></div>
+                                        <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label><Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" placeholder="Google Maps URL..."/></div>
+                                    </div>
+                                    <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
+                                </form>
+                                <Separator />
+                                <div className="space-y-2">
+                                    <Label className="font-semibold text-destructive">Danger Zone</Label>
+                                    <p className="text-xs text-muted-foreground">Deleting a project is a permanent action and cannot be undone. This will remove all associated lineage, acquisition, and document data.</p>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" className="w-full">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete Project
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete the project
+                                                    "{project.name}" and all of its associated data.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    className="bg-destructive hover:bg-destructive/90"
+                                                    onClick={handleDeleteProject}
+                                                >
+                                                    Yes, delete this project
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </div>
-                                <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
-                            </form>
-                            <Separator />
-                            <div className="space-y-2">
-                                <Label className="font-semibold text-destructive">Danger Zone</Label>
-                                <p className="text-xs text-muted-foreground">Deleting a project is a permanent action and cannot be undone. This will remove all associated lineage, acquisition, and document data.</p>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" className="w-full">
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete Project
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This action cannot be undone. This will permanently delete the project
-                                                "{project.name}" and all of its associated data.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                className="bg-destructive hover:bg-destructive/90"
-                                                onClick={handleDeleteProject}
-                                            >
-                                                Yes, delete this project
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+                            </DialogContent>
+                        </Dialog>
+                    )}
                 </header>
 
-                {/* --- Main Navigation Bar --- */}
-                <nav className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center gap-2">
-                        <Button variant={activeView === 'dashboard' ? 'secondary' : 'ghost'} onClick={() => setActiveView('dashboard')}>
-                            <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
-                        </Button>
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant={['lineage', 'acquisition-tracker', 'mind-map', 'progress-dashboard'].includes(activeView) ? 'secondary' : 'ghost'}>
-                                <Briefcase className="mr-2 h-4 w-4" /> Workspace <ChevronDown className="ml-2 h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
-                                <DropdownMenuItem onClick={() => setActiveView('lineage')}>Family Lineage</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setActiveView('acquisition-tracker')}>Acquisition Tracker</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setActiveView('mind-map')}>Project Mind Map</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setActiveView('progress-dashboard')}>Project Progress Dashboard</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </nav>
-
-                <div className="pt-6">
-                    {renderActiveView()}
-                </div>
+                <Tabs defaultValue="lineage" className="w-full">
+                    <TabsList>
+                        <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
+                        <TabsTrigger value="documents">Title Documents</TabsTrigger>
+                        <TabsTrigger value="transactions">Transaction History</TabsTrigger>
+                        {currentUserRole !== 'Lawyer' && <TabsTrigger value="acquisition">Acquisition Dashboard</TabsTrigger>}
+                        <TabsTrigger value="notes">Notes</TabsTrigger>
+                         {currentUserRole !== 'Aggregator' && <TabsTrigger value="legal">Legal Notes</TabsTrigger>}
+                         {currentUserRole === 'Admin' && <TabsTrigger value="tasks">Tasks & Schedule</TabsTrigger>}
+                    </TabsList>
+                    
+                    <TabsContent value="lineage" className="pt-4">
+                        <LineageView 
+                            familyHeads={owners} 
+                            onAddHeir={handleAddHeir} 
+                            onUpdatePerson={handleUpdatePerson} 
+                            onAddFamilyHead={handleAddFamilyHead}
+                            projectId={projectId} 
+                            currentUser={currentUser}
+                            folders={folders}
+                            onAddFolder={handleAddFolder}
+                            onDeleteFolder={handleDeleteFolder}
+                            onAddFile={handleAddFileToFolder}
+                            onDeleteFile={handleDeleteFileFromFolder}
+                        />
+                    </TabsContent>
+                    <TabsContent value="documents" className="pt-4">
+                        <TitleDocumentsView 
+                            folders={folders}
+                            onAddFolder={handleAddFolder}
+                            onDeleteFolder={handleDeleteFolder}
+                            onAddFile={handleAddFileToFolder}
+                            onDeleteFile={handleDeleteFileFromFolder}
+                        />
+                    </TabsContent>
+                    <TabsContent value="transactions" className="pt-4">
+                        <TransactionHistory projectId={projectId} />
+                    </TabsContent>
+                     {currentUserRole !== 'Lawyer' && (
+                        <TabsContent value="acquisition" className="pt-4">
+                             <SiteSketchView 
+                                acquisitionStatuses={acquisitionStatuses} 
+                                onSelectSurvey={handleSelectSurvey} 
+                            />
+                            <div className="mt-6">
+                               <AcquisitionTrackerView 
+                                statuses={acquisitionStatuses} 
+                                onUpdateStatus={handleUpdateAcquisitionStatus} 
+                                activeStatusId={activeStatusId} 
+                                onActiveStatusChange={setActiveStatusId}
+                                currentUser={currentUser} 
+                               />
+                            </div>
+                        </TabsContent>
+                     )}
+                    <TabsContent value="notes" className="pt-4">
+                        <Notes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
+                    </TabsContent>
+                    {currentUserRole !== 'Aggregator' && (
+                        <TabsContent value="legal" className="pt-4">
+                            <LegalNotes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
+                        </TabsContent>
+                    )}
+                     {currentUserRole === 'Admin' && (
+                        <TabsContent value="tasks" className="pt-4">
+                           <Tasks projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
+                        </TabsContent>
+                     )}
+                </Tabs>
             </div>
-            
-            <LineageSuggestion existingData={JSON.stringify(owners, null, 2)} />
         </div>
     );
 }
-
-    
-
-    
