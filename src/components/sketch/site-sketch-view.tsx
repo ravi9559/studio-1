@@ -1,9 +1,11 @@
 // src/components/sketch/site-sketch-view.tsx
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { AcquisitionStatus, FinancialTransaction } from '@/types';
+import { siteSketchData, type SiteSketchPlot } from '@/lib/site-sketch-data';
 
 interface SiteSketchViewProps {
   acquisitionStatuses: AcquisitionStatus[];
@@ -19,7 +21,7 @@ const getStatusVariant = (status: AcquisitionStatus | undefined, isAdvancePaid: 
     return 'pending';
 }
 
-const PlotCard = ({ status, isAdvancePaid, onSelectSurvey }: { status: AcquisitionStatus, isAdvancePaid: boolean, onSelectSurvey: (statusId: string) => void; }) => {
+const PlotCard = ({ status, isAdvancePaid, onSelectSurvey, plot }: { status?: AcquisitionStatus, isAdvancePaid: boolean, onSelectSurvey: (statusId: string) => void; plot: SiteSketchPlot }) => {
   const statusVariant = getStatusVariant(status, isAdvancePaid);
 
   const colorClasses = {
@@ -29,9 +31,28 @@ const PlotCard = ({ status, isAdvancePaid, onSelectSurvey }: { status: Acquisiti
     pending: 'bg-slate-100 text-slate-800 border-slate-400 hover:bg-slate-200 dark:bg-slate-900/50 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800/50',
   };
 
+  const isEmpty = !status;
+
+  const style: React.CSSProperties = {
+    gridColumn: plot.colSpan ? `span ${plot.colSpan}` : 'span 1',
+    gridRow: plot.rowSpan ? `span ${plot.rowSpan}` : 'span 1',
+  };
+
+  if (isEmpty) {
+    return (
+      <div
+        style={style}
+        className="w-full aspect-square flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 dark:border-slate-800"
+      >
+        <span className="text-xs text-muted-foreground">{plot.surveyNumber}</span>
+      </div>
+    );
+  }
+
   return (
     <button
-      onClick={() => onSelectSurvey(status.id)}
+      onClick={() => status && onSelectSurvey(status.id)}
+      style={style}
       className={cn(
         'w-full aspect-square flex flex-col items-center justify-center rounded-lg border p-1 text-xs font-semibold shadow-sm transition-all hover:shadow-md hover:scale-105',
         colorClasses[statusVariant]
@@ -74,7 +95,13 @@ export function SiteSketchView({ acquisitionStatuses, financialTransactions, onS
       familyHeadsWithAdvance.add(tx.familyHeadId);
     }
   });
-
+  
+  const acquisitionStatusMap = useMemo(() => {
+    return acquisitionStatuses.reduce((acc, status) => {
+        acc[status.surveyNumber] = status;
+        return acc;
+    }, {} as Record<string, AcquisitionStatus>);
+  }, [acquisitionStatuses]);
 
   return (
     <Card>
@@ -85,12 +112,14 @@ export function SiteSketchView({ acquisitionStatuses, financialTransactions, onS
         </CardDescription>
       </CardHeader>
       <CardContent>
-         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3 p-2 border rounded-lg bg-background/50">
-            {acquisitionStatuses.map((status) => {
-              const isAdvancePaid = familyHeadsWithAdvance.has(status.familyHeadId);
+         <div className="grid grid-cols-20 gap-2 p-2 border rounded-lg bg-background/50">
+            {siteSketchData.map((plot, index) => {
+              const status = acquisitionStatusMap[plot.surveyNumber];
+              const isAdvancePaid = status ? familyHeadsWithAdvance.has(status.familyHeadId) : false;
               return (
                  <PlotCard 
-                    key={status.id} 
+                    key={`${plot.surveyNumber}-${index}`} 
+                    plot={plot}
                     status={status} 
                     isAdvancePaid={isAdvancePaid}
                     onSelectSurvey={onSelectSurvey} 
