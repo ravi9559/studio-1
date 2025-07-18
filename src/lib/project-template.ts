@@ -69,4 +69,7 @@ export function initializeNewProjectData(projectId: string) {
 
     // Files - Start with an empty array
     localStorage.setItem(`files-${projectId}`, JSON.stringify([]));
+
+    // Site Sketch - Start with null/empty
+    localStorage.removeItem(`site-sketch-${projectId}`);
 }

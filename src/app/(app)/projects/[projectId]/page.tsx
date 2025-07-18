@@ -25,6 +25,7 @@ import { TransactionHistory } from '@/components/transactions/transaction-histor
 import { Notes } from '@/components/project/notes';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { AggregationProgressView } from '@/components/aggregation/aggregation-progress-view';
+import { SiteSketchManager } from '@/components/project/site-sketch-manager';
 
 
 // --- Storage Keys ---
@@ -240,6 +241,7 @@ export default function ProjectDetailsPage() {
             localStorage.removeItem(`transactions-${projectId}`);
             localStorage.removeItem(`financial-transactions-${projectId}`);
             localStorage.removeItem(`files-${projectId}`);
+            localStorage.removeItem(`site-sketch-${projectId}`); // Remove site sketch
 
             // 3. Remove item-specific data (notes, tasks, etc.) by iterating through survey numbers
             acquisitionStatuses.forEach(status => {
@@ -493,6 +495,7 @@ export default function ProjectDetailsPage() {
                         <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
                         <TabsTrigger value="documents">Title Documents</TabsTrigger>
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
+                        <TabsTrigger value="sketch">Site Sketch</TabsTrigger>
                         {currentUserRole !== 'Lawyer' && <TabsTrigger value="acquisition">Acquisition Dashboard</TabsTrigger>}
                         {currentUserRole !== 'Lawyer' && <TabsTrigger value="aggregation">Aggregation Progress</TabsTrigger>}
                         <TabsTrigger value="notes">Notes</TabsTrigger>
@@ -525,6 +528,9 @@ export default function ProjectDetailsPage() {
                     </TabsContent>
                     <TabsContent value="transactions" className="pt-4">
                         <TransactionHistory projectId={projectId} />
+                    </TabsContent>
+                    <TabsContent value="sketch" className="pt-4">
+                        <SiteSketchManager projectId={projectId} />
                     </TabsContent>
                     {currentUserRole !== 'Lawyer' && (
                         <TabsContent value="acquisition" className="pt-4">
