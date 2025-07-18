@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Circle, CircleDashed, FileCheck, FileClock, FileQuestion, FileX, Landmark, LandPlot, Scale, SquareUserRound, Users, Calendar as CalendarIcon, Wallet, FilePen, Microscope, Gavel, Plus, MessageSquare } from 'lucide-react';
