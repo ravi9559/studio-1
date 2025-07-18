@@ -26,6 +26,7 @@ import { Notes } from '@/components/project/notes';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { Tasks } from '@/components/project/tasks';
 import { AggregationProgressView } from '@/components/aggregation/aggregation-progress-view';
+import { FinancialTransactions } from '@/components/transactions/financial-transactions';
 
 
 // --- Storage Keys ---
@@ -241,6 +242,7 @@ export default function ProjectDetailsPage() {
             localStorage.removeItem(folderStorageKey);
             localStorage.removeItem(acquisitionStorageKey);
             localStorage.removeItem(`transactions-${projectId}`);
+            localStorage.removeItem(`financial-transactions-${projectId}`);
             localStorage.removeItem(`files-${projectId}`);
 
             // 3. Remove item-specific data (notes, tasks, etc.) by iterating through survey numbers
@@ -496,6 +498,7 @@ export default function ProjectDetailsPage() {
                         <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
                         <TabsTrigger value="documents">Title Documents</TabsTrigger>
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
+                        {currentUserRole !== 'Lawyer' && <TabsTrigger value="financials">Financials</TabsTrigger>}
                         {currentUserRole !== 'Lawyer' && <TabsTrigger value="acquisition">Acquisition Dashboard</TabsTrigger>}
                         {currentUserRole !== 'Lawyer' && <TabsTrigger value="aggregation">Aggregation Progress</TabsTrigger>}
                         <TabsTrigger value="notes">Notes</TabsTrigger>
@@ -530,6 +533,11 @@ export default function ProjectDetailsPage() {
                     <TabsContent value="transactions" className="pt-4">
                         <TransactionHistory projectId={projectId} />
                     </TabsContent>
+                    {currentUserRole !== 'Lawyer' && (
+                        <TabsContent value="financials" className="pt-4">
+                            <FinancialTransactions projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
+                        </TabsContent>
+                    )}
                     {currentUserRole !== 'Lawyer' && (
                         <TabsContent value="acquisition" className="pt-4">
                              <SiteSketchView 

@@ -87,7 +87,7 @@ export type Task = {
 };
 
 export type LegalNote = {
-  id: string;
+  id:string;
   date: string;
   content: string;
   author: {

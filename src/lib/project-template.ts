@@ -64,6 +64,9 @@ export function initializeNewProjectData(projectId: string) {
     // Initial Transactions - Start with an empty array
     localStorage.setItem(`transactions-${projectId}`, JSON.stringify([]));
     
+    // Financial Transactions - Start with an empty array
+    localStorage.setItem(`financial-transactions-${projectId}`, JSON.stringify([]));
+
     // Files - Start with an empty array
     localStorage.setItem(`files-${projectId}`, JSON.stringify([]));
 }
