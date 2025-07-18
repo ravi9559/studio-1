@@ -159,11 +159,12 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
 
     const refreshNotes = () => setVersion(v => v + 1);
 
-    const canAddOrEdit = currentUser?.role === 'Super Admin' || currentUser?.role === 'Lawyer';
+    const canAddNotes = currentUser?.role === 'Lawyer';
+    const canEditNotes = currentUser?.role === 'Super Admin' || currentUser?.role === 'Lawyer';
     const canDelete = currentUser?.role === 'Super Admin';
 
     const handleEditNote = (note: LegalNote) => {
-        if (!canAddOrEdit) return;
+        if (!canEditNotes) return;
         setNoteToEdit(note);
         setIsEditDialogOpen(true);
     };
@@ -199,7 +200,7 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
                             Notes for Survey No: {sn}
                         </AccordionTrigger>
                         <AccordionContent className="p-4 border-t">
-                            {canAddOrEdit && (
+                            {canAddNotes && (
                                 <NoteEditor
                                     surveyNumber={sn}
                                     projectId={projectId}
@@ -221,7 +222,7 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
                                                     </CardDescription>
                                                 </div>
                                                  <div className="flex gap-1">
-                                                    {canAddOrEdit && (
+                                                    {canEditNotes && (
                                                         <Button variant="ghost" size="icon" onClick={() => handleEditNote(note)}>
                                                             <Edit className="h-4 w-4" />
                                                         </Button>
