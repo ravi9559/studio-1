@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, User as UserIcon } from 'lucide-react';
 
-interface AggregationProgressProps {
+interface DocumentCollectionStatusProps {
     projectId: string;
     familyHeads: Person[];
     currentUser: User | null;
@@ -26,7 +26,7 @@ const defaultProgress: Omit<AggregationProgress, 'id'> = {
     saleAgreement: { status: 'Pending' },
 };
 
-function ProgressEditor({ surveyNumber, projectId, onProgressUpdated }: { surveyNumber: string, projectId: string, onProgressUpdated: () => void }) {
+function ProgressEditor({ surveyNumber, projectId, onProgressUpdated, isReadOnly }: { surveyNumber: string, projectId: string, onProgressUpdated: () => void, isReadOnly: boolean }) {
     const [progress, setProgress] = useState<AggregationProgress>({ id: surveyNumber, ...defaultProgress });
     const { toast } = useToast();
     const storageKey = `aggregation-${projectId}-${surveyNumber}`;
@@ -93,6 +93,7 @@ function ProgressEditor({ surveyNumber, projectId, onProgressUpdated }: { survey
                             <Select
                                 value={progress[key].status}
                                 onValueChange={(v: AggregationDocumentStatus) => handleFieldChange(key, 'status', v)}
+                                disabled={isReadOnly}
                             >
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
@@ -107,6 +108,7 @@ function ProgressEditor({ surveyNumber, projectId, onProgressUpdated }: { survey
                             <Select
                                 value={progress[key].collection}
                                 onValueChange={(v: AggregationCollectionStatus) => handleFieldChange(key, 'collection', v)}
+                                disabled={isReadOnly}
                             >
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
@@ -124,6 +126,7 @@ function ProgressEditor({ surveyNumber, projectId, onProgressUpdated }: { survey
                         <Select
                             value={progress.saleAgreement.status}
                             onValueChange={handleSaleAgreementChange}
+                            disabled={isReadOnly}
                         >
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
@@ -134,25 +137,29 @@ function ProgressEditor({ surveyNumber, projectId, onProgressUpdated }: { survey
                     </div>
                 </div>
             </CardContent>
-            <CardFooter>
-                <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" />Save Progress for S.No. {surveyNumber}</Button>
-            </CardFooter>
+            {!isReadOnly && (
+                <CardFooter>
+                    <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" />Save Progress for S.No. {surveyNumber}</Button>
+                </CardFooter>
+            )}
         </Card>
     );
 }
 
 
-export function AggregationProgressView({ projectId, familyHeads, currentUser }: AggregationProgressProps) {
+export function DocumentCollectionStatusView({ projectId, familyHeads, currentUser }: DocumentCollectionStatusProps) {
     const [version, setVersion] = useState(0);
     const refreshData = useCallback(() => setVersion(v => v + 1), []);
 
     if (!currentUser) return null;
 
+    const isReadOnly = currentUser.role === 'Lawyer';
+
     if (familyHeads.length === 0) {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Aggregation Progress</CardTitle>
+                    <CardTitle>Document Collection Status</CardTitle>
                     <CardDescription>Track document collection for each survey number, grouped by family head.</CardDescription>
                 </CardHeader>
                 <CardContent className="text-center text-muted-foreground p-8">
@@ -185,6 +192,7 @@ export function AggregationProgressView({ projectId, familyHeads, currentUser }:
                                                 surveyNumber={record.surveyNumber}
                                                 projectId={projectId}
                                                 onProgressUpdated={refreshData}
+                                                isReadOnly={isReadOnly}
                                             />
                                         </AccordionContent>
                                     </AccordionItem>

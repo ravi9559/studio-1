@@ -24,7 +24,7 @@ import { TitleDocumentsView } from '@/components/documents/title-documents-view'
 import { TransactionHistory } from '@/components/transactions/transaction-history';
 import { Notes } from '@/components/project/notes';
 import { LegalNotes } from '@/components/project/legal-notes';
-import { AggregationProgressView } from '@/components/aggregation/aggregation-progress-view';
+import { DocumentCollectionStatusView } from '@/components/aggregation/document-collection-status-view';
 import { SiteSketchManager } from '@/components/project/site-sketch-manager';
 
 
@@ -497,7 +497,7 @@ export default function ProjectDetailsPage() {
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                         <TabsTrigger value="sketch">Site Sketch</TabsTrigger>
                         {currentUserRole !== 'Lawyer' && <TabsTrigger value="acquisition">Acquisition Dashboard</TabsTrigger>}
-                        {currentUserRole !== 'Lawyer' && <TabsTrigger value="aggregation">Aggregation Progress</TabsTrigger>}
+                        {(currentUserRole === 'Super Admin' || currentUserRole === 'Aggregator' || currentUserRole === 'Lawyer') && <TabsTrigger value="collection">Document Collection Status</TabsTrigger>}
                         <TabsTrigger value="notes">Notes</TabsTrigger>
                         {currentUserRole !== 'Aggregator' && <TabsTrigger value="legal">Legal Notes</TabsTrigger>}
                     </TabsList>
@@ -550,9 +550,9 @@ export default function ProjectDetailsPage() {
                             </div>
                         </TabsContent>
                     )}
-                    {currentUserRole !== 'Lawyer' && (
-                        <TabsContent value="aggregation" className="pt-4">
-                            <AggregationProgressView
+                     {(currentUserRole === 'Super Admin' || currentUserRole === 'Aggregator' || currentUserRole === 'Lawyer') && (
+                        <TabsContent value="collection" className="pt-4">
+                            <DocumentCollectionStatusView
                                 projectId={projectId}
                                 familyHeads={owners}
                                 currentUser={currentUser}
