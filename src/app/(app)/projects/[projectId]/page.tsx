@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
-import { ArrowLeft, Loader2, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, Trash2, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { AcquisitionTrackerView } from '@/components/acquisition/acquisition-tracker-view';
-import type { User, Project, Person, Folder, AcquisitionStatus, DocumentFile, LandClassification, AggregationProgress } from '@/types';
+import type { User, Project, Person, Folder, AcquisitionStatus, DocumentFile, LandClassification, AggregationProgress, FinancialTransaction } from '@/types';
 import { SiteSketchView } from '@/components/sketch/site-sketch-view';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { initializeNewProjectData, createDefaultFolders } from '@/lib/project-template';
@@ -58,6 +58,8 @@ export default function ProjectDetailsPage() {
     const ownersStorageKey = useMemo(() => `lineage-data-${projectId}`, [projectId]);
     const folderStorageKey = useMemo(() => `document-folders-${projectId}`, [projectId]);
     const acquisitionStorageKey = useMemo(() => `acquisition-status-${projectId}`, [projectId]);
+    const financialTransactionsStorageKey = useMemo(() => `financial-transactions-${projectId}`, [projectId]);
+
 
     // --- Data Loading and Initialization ---
     useEffect(() => {
@@ -239,7 +241,7 @@ export default function ProjectDetailsPage() {
             localStorage.removeItem(folderStorageKey);
             localStorage.removeItem(acquisitionStorageKey);
             localStorage.removeItem(`transactions-${projectId}`);
-            localStorage.removeItem(`financial-transactions-${projectId}`);
+            localStorage.removeItem(financialTransactionsStorageKey);
             localStorage.removeItem(`files-${projectId}`);
             localStorage.removeItem(`site-sketch-${projectId}`); // Remove site sketch
 
@@ -414,6 +416,40 @@ export default function ProjectDetailsPage() {
 
     const currentUserRole = currentUser?.role;
 
+    const advancePaymentPercentage = useMemo(() => {
+        if (acquisitionStatuses.length === 0 || owners.length === 0) {
+            return 0;
+        }
+
+        const allTransactions: FinancialTransaction[] = JSON.parse(localStorage.getItem(financialTransactionsStorageKey) || '[]');
+        const familyHeadsWithAdvance = new Set<string>();
+
+        allTransactions.forEach(tx => {
+            if (tx.purpose === 'Token Advance') {
+                familyHeadsWithAdvance.add(tx.familyHeadId);
+            }
+        });
+        
+        if (familyHeadsWithAdvance.size === 0) {
+            return 0;
+        }
+
+        const familyHeadIdMap = new Map<string, string>();
+        owners.forEach(owner => familyHeadIdMap.set(owner.name, owner.id));
+
+        let parcelsWithAdvancePaid = 0;
+        acquisitionStatuses.forEach(status => {
+            const headId = familyHeadIdMap.get(status.familyHeadName);
+            if (headId && familyHeadsWithAdvance.has(headId)) {
+                parcelsWithAdvancePaid++;
+            }
+        });
+        
+        return (parcelsWithAdvancePaid / acquisitionStatuses.length) * 100;
+
+    }, [acquisitionStatuses, owners, financialTransactionsStorageKey]);
+
+
     if (loading) {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>
     }
@@ -534,6 +570,24 @@ export default function ProjectDetailsPage() {
                     </TabsContent>
                     {currentUserRole !== 'Lawyer' && (
                         <TabsContent value="acquisition" className="pt-4">
+                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">
+                                            Advance Payments (%)
+                                        </CardTitle>
+                                        <Wallet className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">
+                                            {advancePaymentPercentage.toFixed(1)}%
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Percentage of land parcels where an advance has been paid
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                             </div>
                              <SiteSketchView 
                                 acquisitionStatuses={acquisitionStatuses} 
                                 onSelectSurvey={handleSelectSurvey} 

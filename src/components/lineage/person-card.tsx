@@ -780,6 +780,7 @@ export const PersonCard: FC<PersonCardProps> = ({
   const [finTxToEdit, setFinTxToEdit] = useState<FinancialTransaction | null>(null);
 
   const canDeleteLegalNote = currentUser?.role !== 'Lawyer';
+  const canEditFinancials = currentUser?.role === 'Super Admin' || currentUser?.role === 'Aggregator';
 
 
   const surveyNumbers = useMemo(() => {
@@ -1145,9 +1146,11 @@ export const PersonCard: FC<PersonCardProps> = ({
                         <div className="flex items-center gap-2"><Wallet /> Financial Transactions</div>
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t">
-                        <div className="flex justify-end mb-4">
-                           <Button size="sm" onClick={() => { setFinTxToEdit(null); setIsFinTxDialogOpen(true); }}><Plus className="mr-2 h-4 w-4" />Add Payment</Button>
-                        </div>
+                        {canEditFinancials && (
+                            <div className="flex justify-end mb-4">
+                                <Button size="sm" onClick={() => { setFinTxToEdit(null); setIsFinTxDialogOpen(true); }}><Plus className="mr-2 h-4 w-4" />Add Payment</Button>
+                            </div>
+                        )}
                         <div className="rounded-md border">
                             <Table>
                               <TableHeader>
@@ -1156,7 +1159,7 @@ export const PersonCard: FC<PersonCardProps> = ({
                                       <TableHead>Purpose</TableHead>
                                       <TableHead>Date of Payment</TableHead>
                                       <TableHead>Recorded At</TableHead>
-                                      <TableHead className="text-right">Actions</TableHead>
+                                      {canEditFinancials && <TableHead className="text-right">Actions</TableHead>}
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1166,17 +1169,19 @@ export const PersonCard: FC<PersonCardProps> = ({
                                           <TableCell><Badge variant={tx.purpose === 'Token Advance' ? 'secondary' : 'default'}>{tx.purpose}</Badge></TableCell>
                                           <TableCell>{format(new Date(tx.date), 'PPP')}</TableCell>
                                           <TableCell>{format(new Date(tx.timestamp), 'PP pp')}</TableCell>
-                                           <TableCell className="text-right space-x-1">
-                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(tx, 'financial-transaction')}><Edit className="h-4 w-4" /></Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                    <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this financial record.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteFinancialTx(tx.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                                                </AlertDialog>
-                                            </TableCell>
+                                           {canEditFinancials && (
+                                                <TableCell className="text-right space-x-1">
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(tx, 'financial-transaction')}><Edit className="h-4 w-4" /></Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this financial record.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteFinancialTx(tx.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                                    </AlertDialog>
+                                                </TableCell>
+                                           )}
                                       </TableRow>
                                   )) : (
                                       <TableRow>
-                                          <TableCell colSpan={5} className="h-24 text-center">
+                                          <TableCell colSpan={canEditFinancials ? 5 : 4} className="h-24 text-center">
                                               No financial transactions recorded for this family.
                                           </TableCell>
                                       </TableRow>
