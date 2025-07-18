@@ -36,7 +36,7 @@ const AddHeirForm: FC<{
             id: `heir-${parentId}-${Date.now()}`,
             name,
             relation,
-            age: parseInt(age, 10),
+            age: parseInt(age, 10) || 0,
             gender,
             maritalStatus: 'Single',
             status: 'Alive',
@@ -151,7 +151,7 @@ export default function CreateProjectPage() {
             owner: newTxOwner,
             sourceName: newTxSourceName,
             mode: newTxMode,
-            year: parseInt(newTxYear, 10),
+            year: parseInt(newTxYear, 10) || 0,
             doc: newTxDoc,
         }]);
         // Reset fields
@@ -243,7 +243,7 @@ export default function CreateProjectPage() {
                             <h3 className="text-lg font-semibold mb-4">Family Head</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div className="space-y-2"><Label>Name</Label><Input value={familyHead.name} onChange={e => handleFamilyHeadChange('name', e.target.value)} required /></div>
-                                <div className="space-y-2"><Label>Age</Label><Input type="number" value={familyHead.age} onChange={e => handleFamilyHeadChange('age', parseInt(e.target.value, 10))} required /></div>
+                                <div className="space-y-2"><Label>Age</Label><Input type="number" value={familyHead.age || ''} onChange={e => handleFamilyHeadChange('age', parseInt(e.target.value, 10))} required /></div>
                                 <div className="space-y-2"><Label>Gender</Label><Select value={familyHead.gender} onValueChange={(v: Person['gender']) => handleFamilyHeadChange('gender', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent></Select></div>
                                 <div className="space-y-2"><Label>Marital Status</Label><Select value={familyHead.maritalStatus} onValueChange={(v: Person['maritalStatus']) => handleFamilyHeadChange('maritalStatus', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Single">Single</SelectItem><SelectItem value="Married">Married</SelectItem><SelectItem value="Divorced">Divorced</SelectItem><SelectItem value="Widowed">Widowed</SelectItem></SelectContent></Select></div>
                                 <div className="space-y-2"><Label>Status</Label><Select value={familyHead.status} onValueChange={(v: Person['status']) => handleFamilyHeadChange('status', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Alive">Alive</SelectItem><SelectItem value="Died">Died</SelectItem><SelectItem value="Missing">Missing</SelectItem><SelectItem value="Unknown">Unknown</SelectItem></SelectContent></Select></div>
