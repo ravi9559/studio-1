@@ -12,7 +12,7 @@ import { PlusCircle, Trash2, ArrowLeft, UserPlus, Milestone } from "lucide-react
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import type { Project, Person, SurveyRecord, LandClassification, Transaction } from '@/types';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { createDefaultFolders } from '@/lib/project-template';
 import { Badge } from '@/components/ui/badge';
 
@@ -48,20 +48,24 @@ const AddHeirForm: FC<{
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 p-4">
-             <h3 className="text-lg font-semibold">Add Heir to {parentName}</h3>
-             <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+             <DialogHeader>
+                <DialogTitle>Add Heir to {parentName}</DialogTitle>
+                <DialogDescription>Enter the details for the new heir.</DialogDescription>
+             </DialogHeader>
+             <div className="grid grid-cols-2 gap-4 pt-4">
                 <div className="space-y-2"><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} required /></div>
                 <div className="space-y-2"><Label>Relation</Label><Input value={relation} onChange={e => setRelation(e.target.value)} required /></div>
                 <div className="space-y-2"><Label>Age</Label><Input type="number" value={age} onChange={e => setAge(e.target.value)} required /></div>
                 <div className="space-y-2"><Label>Gender</Label><Select value={gender} onValueChange={(v: Person['gender']) => setGender(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent></Select></div>
              </div>
-             <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit">Add Heir</Button></div>
+             <div className="flex justify-end gap-2 pt-4"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit">Add Heir</Button></div>
         </form>
     )
 }
 
 const HeirCard: FC<{ person: Person; onAddHeir: (parentId: string, heir: Person) => void; level?: number }> = ({ person, onAddHeir, level = 0 }) => {
+    const [isAddHeirOpen, setIsAddHeirOpen] = useState(false);
     return (
         <div style={{ marginLeft: `${level * 20}px` }} className="mt-2 p-3 border rounded-md bg-muted/30">
             <div className="flex items-center justify-between">
@@ -69,10 +73,10 @@ const HeirCard: FC<{ person: Person; onAddHeir: (parentId: string, heir: Person)
                     <p className="font-semibold">{person.name} <span className="text-sm font-normal text-muted-foreground">({person.relation})</span></p>
                     <p className="text-xs text-muted-foreground">Age: {person.age}, Gender: {person.gender}</p>
                 </div>
-                 <Dialog>
+                 <Dialog open={isAddHeirOpen} onOpenChange={setIsAddHeirOpen}>
                     <DialogTrigger asChild><Button variant="ghost" size="sm"><UserPlus className="mr-2 h-4 w-4" />Add Heir</Button></DialogTrigger>
                     <DialogContent>
-                        <AddHeirForm parentId={person.id} parentName={person.name} onAddHeir={onAddHeir} onClose={() => {}} />
+                        <AddHeirForm parentId={person.id} parentName={person.name} onAddHeir={onAddHeir} onClose={() => setIsAddHeirOpen(false)} />
                     </DialogContent>
                 </Dialog>
             </div>
@@ -85,6 +89,7 @@ const HeirCard: FC<{ person: Person; onAddHeir: (parentId: string, heir: Person)
 export default function CreateProjectPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const [isAddHeirOpen, setIsAddHeirOpen] = useState(false);
 
     // Project Details
     const [projectName, setProjectName] = useState('');
@@ -255,10 +260,10 @@ export default function CreateProjectPage() {
                         <div className="p-4 border rounded-lg">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-semibold flex items-center gap-2"><Milestone /> Heirs</h3>
-                                <Dialog>
+                                <Dialog open={isAddHeirOpen} onOpenChange={setIsAddHeirOpen}>
                                     <DialogTrigger asChild><Button type="button" disabled={!familyHead.name}><UserPlus className="mr-2 h-4 w-4"/>Add Heir to Family Head</Button></DialogTrigger>
                                     <DialogContent>
-                                        <AddHeirForm parentId={familyHead.id} parentName={familyHead.name} onAddHeir={addHeirToFamily} onClose={() => {}} />
+                                        <AddHeirForm parentId={familyHead.id} parentName={familyHead.name} onAddHeir={addHeirToFamily} onClose={() => setIsAddHeirOpen(false)} />
                                     </DialogContent>
                                 </Dialog>
                             </div>
