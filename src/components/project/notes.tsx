@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -225,7 +226,11 @@ export function Notes({ projectId, surveyNumbers, currentUser }: NotesProps) {
 
     const refreshNotes = () => setVersion(v => v + 1);
 
+    const canEdit = currentUser?.role === 'Super Admin';
+    const canView = currentUser?.role === 'Super Admin' || currentUser?.role === 'Aggregator';
+
     const handleEditNote = (note: Note, surveyNumber: string) => {
+        if (!canEdit) return;
         setNoteToEdit({ note, surveyNumber });
         setIsEditDialogOpen(true);
     };
@@ -252,7 +257,7 @@ export function Notes({ projectId, surveyNumbers, currentUser }: NotesProps) {
         toast({ title: 'Note Deleted' });
     };
 
-    if (!currentUser) return null;
+    if (!currentUser || !canView) return null;
 
     if (surveyNumbers.length === 0) {
         return (
@@ -274,31 +279,33 @@ export function Notes({ projectId, surveyNumbers, currentUser }: NotesProps) {
                             Notes for Survey No: {sn}
                         </AccordionTrigger>
                         <AccordionContent className="p-4 border-t">
-                            <NoteEditor surveyNumber={sn} projectId={projectId} onNoteAdded={refreshNotes} />
+                            {canEdit && <NoteEditor surveyNumber={sn} projectId={projectId} onNoteAdded={refreshNotes} />}
                             <div className="mt-6 space-y-4">
                                 {notesBySurvey[sn]?.map(note => (
                                     <Card key={note.id}>
                                         <CardHeader>
                                             <div className="flex justify-between items-start">
                                                 <CardTitle className="text-base">Note from {format(new Date(note.date), 'PPP p')}</CardTitle>
-                                                <div className="flex gap-1">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleEditNote(note, sn)}><Edit className="h-4 w-4" /></Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                <AlertDialogDescription>This will permanently delete this note.</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteNote(sn, note.id)}>Delete</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </div>
+                                                {canEdit && (
+                                                    <div className="flex gap-1">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditNote(note, sn)}><Edit className="h-4 w-4" /></Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>This will permanently delete this note.</AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteNote(sn, note.id)}>Delete</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </div>
+                                                )}
                                             </div>
                                         </CardHeader>
                                         <CardContent>

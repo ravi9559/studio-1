@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -158,9 +159,11 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
 
     const refreshNotes = () => setVersion(v => v + 1);
 
-    const canDelete = currentUser?.role !== 'Lawyer';
+    const canAddOrEdit = currentUser?.role === 'Super Admin' || currentUser?.role === 'Lawyer';
+    const canDelete = currentUser?.role === 'Super Admin';
 
     const handleEditNote = (note: LegalNote) => {
+        if (!canAddOrEdit) return;
         setNoteToEdit(note);
         setIsEditDialogOpen(true);
     };
@@ -185,7 +188,7 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
         toast({ title: 'Note Deleted' });
     };
 
-    if (!currentUser) return null;
+    if (!currentUser || currentUser.role === 'Aggregator') return null;
 
     return (
         <>
@@ -196,12 +199,14 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
                             Notes for Survey No: {sn}
                         </AccordionTrigger>
                         <AccordionContent className="p-4 border-t">
-                            <NoteEditor
-                                surveyNumber={sn}
-                                projectId={projectId}
-                                currentUser={currentUser}
-                                onNoteAdded={refreshNotes}
-                            />
+                            {canAddOrEdit && (
+                                <NoteEditor
+                                    surveyNumber={sn}
+                                    projectId={projectId}
+                                    currentUser={currentUser}
+                                    onNoteAdded={refreshNotes}
+                                />
+                            )}
                             <div className="mt-6 space-y-4">
                                 {notesBySurvey[sn]?.map(note => (
                                     <Card key={note.id}>
@@ -216,9 +221,11 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
                                                     </CardDescription>
                                                 </div>
                                                  <div className="flex gap-1">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleEditNote(note)}>
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
+                                                    {canAddOrEdit && (
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditNote(note)}>
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                     {canDelete && (
                                                          <AlertDialog>
                                                             <AlertDialogTrigger asChild>

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { PersonCard } from './person-card';
 import { LineageSuggestion } from './lineage-suggestion';
 import { Card, CardContent } from '../ui/card';
-import { Loader2, Search, PlusCircle } from 'lucide-react';
+import { Loader2, Search, PlusCircle, FileUp } from 'lucide-react';
 import type { Person, User, Folder, DocumentFile } from '@/types';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { ImportSheetDialog } from './import-sheet-dialog';
 
 const AddFamilyHeadForm: FC<{ onAddFamilyHead: (data: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => void, closeDialog: () => void }> = ({ onAddFamilyHead, closeDialog }) => {
     const [name, setName] = useState('');
@@ -121,6 +123,7 @@ interface LineageViewProps {
     onAddHeir: (parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => void;
     onUpdatePerson: (personId: string, personData: Omit<Person, 'id' | 'heirs'>) => void;
     onAddFamilyHead: (personData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => void;
+    onImportSuccess: (newOwners: Person[]) => void;
     projectId: string;
     currentUser: User | null;
     folders: Folder[];
@@ -156,6 +159,7 @@ export function LineageView({
     onAddHeir, 
     onUpdatePerson, 
     onAddFamilyHead,
+    onImportSuccess,
     projectId, 
     currentUser,
     folders,
@@ -166,6 +170,11 @@ export function LineageView({
 }: LineageViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddFamilyHeadOpen, setIsAddFamilyHeadOpen] = useState(false);
+  const [isImportSheetOpen, setIsImportSheetOpen] = useState(false);
+  const { toast } = useToast();
+
+  const userRole = currentUser?.role;
+  const canEditLineage = userRole === 'Super Admin';
 
   if (!Array.isArray(familyHeads)) {
     return (
@@ -203,20 +212,27 @@ export function LineageView({
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-                <Dialog open={isAddFamilyHeadOpen} onOpenChange={setIsAddFamilyHeadOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add Family Head
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                        <AddFamilyHeadForm 
-                            onAddFamilyHead={onAddFamilyHead} 
-                            closeDialog={() => setIsAddFamilyHeadOpen(false)} 
-                        />
-                    </DialogContent>
-                </Dialog>
+              {canEditLineage && (
+                <>
+                  <Button variant="outline" onClick={() => setIsImportSheetOpen(true)}>
+                    <FileUp className="mr-2 h-4 w-4" /> Import
+                  </Button>
+                  <Dialog open={isAddFamilyHeadOpen} onOpenChange={setIsAddFamilyHeadOpen}>
+                      <DialogTrigger asChild>
+                          <Button>
+                              <PlusCircle className="mr-2 h-4 w-4" />
+                              Add Family Head
+                          </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                          <AddFamilyHeadForm 
+                              onAddFamilyHead={onAddFamilyHead} 
+                              closeDialog={() => setIsAddFamilyHeadOpen(false)} 
+                          />
+                      </DialogContent>
+                  </Dialog>
+                </>
+              )}
           </div>
         </div>
         
@@ -250,6 +266,11 @@ export function LineageView({
       </div>
       
       <LineageSuggestion existingData={allOwnersDataString} />
+      <ImportSheetDialog 
+        isOpen={isImportSheetOpen}
+        onOpenChange={setIsImportSheetOpen}
+        onImportSuccess={onImportSuccess}
+      />
     </>
   );
 }
