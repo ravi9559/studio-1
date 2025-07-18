@@ -26,7 +26,6 @@ import { Notes } from '@/components/project/notes';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { Tasks } from '@/components/project/tasks';
 import { AggregationProgressView } from '@/components/aggregation/aggregation-progress-view';
-import { FinancialTransactions } from '@/components/transactions/financial-transactions';
 
 
 // --- Storage Keys ---
@@ -498,7 +497,6 @@ export default function ProjectDetailsPage() {
                         <TabsTrigger value="documents">Title Documents</TabsTrigger>
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                         {currentUserRole !== 'Lawyer' && <TabsTrigger value="acquisition">Acquisition Dashboard</TabsTrigger>}
-                        {['Super Admin', 'Aggregator'].includes(currentUserRole || '') && <TabsTrigger value="financials">Financial Transactions</TabsTrigger>}
                         {currentUserRole !== 'Lawyer' && <TabsTrigger value="aggregation">Aggregation Progress</TabsTrigger>}
                         <TabsTrigger value="notes">Notes</TabsTrigger>
                         {currentUserRole !== 'Aggregator' && <TabsTrigger value="legal">Legal Notes</TabsTrigger>}
@@ -549,15 +547,6 @@ export default function ProjectDetailsPage() {
                             </div>
                         </TabsContent>
                     )}
-                     {['Super Admin', 'Aggregator'].includes(currentUserRole || '') && (
-                        <TabsContent value="financials" className="pt-4">
-                            <FinancialTransactions
-                                projectId={projectId}
-                                surveyNumbers={surveyNumbers}
-                                currentUser={currentUser}
-                            />
-                        </TabsContent>
-                     )}
                     {currentUserRole !== 'Lawyer' && (
                         <TabsContent value="aggregation" className="pt-4">
                             <AggregationProgressView
