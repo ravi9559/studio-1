@@ -419,11 +419,11 @@ export default function ProjectDetailsPage() {
     if (!project) {
         return (
             <div className="p-4 sm:p-6 lg:p-8 text-center">
-                <Button variant="ghost" asChild className="mb-4">
+                <h1 className="text-2xl font-bold mb-4">Project not found</h1>
+                <p className="text-muted-foreground">The project you are looking for does not exist.</p>
+                 <Button variant="outline" asChild className="mt-4">
                     <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link>
                 </Button>
-                <h1 className="text-2xl font-bold">Project not found</h1>
-                <p className="text-muted-foreground">The project you are looking for does not exist.</p>
             </div>
         )
     }
@@ -435,7 +435,6 @@ export default function ProjectDetailsPage() {
             <div className="p-4 sm:p-6 lg:p-8 space-y-4">
                 <header className="flex items-center justify-between">
                     <div>
-                        <Button variant="ghost" asChild className="mb-2 -ml-4"><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link></Button>
                         <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
                         <p className="text-muted-foreground">Site ID: {project.siteId} &middot; {project.location}</p>
                     </div>
