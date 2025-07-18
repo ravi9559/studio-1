@@ -541,6 +541,7 @@ export default function ProjectDetailsPage() {
                             <div className="mt-6">
                                <AcquisitionTrackerView 
                                 statuses={acquisitionStatuses} 
+                                familyHeads={owners}
                                 onUpdateStatus={handleUpdateAcquisitionStatus} 
                                 activeStatusId={activeStatusId} 
                                 onActiveStatusChange={setActiveStatusId}

@@ -112,7 +112,7 @@ export type AggregationProgress = {
 
 export type FinancialTransaction = {
     id: string;
-    surveyNumber: string;
+    familyHeadId: string;
     amount: number;
     date: string; // ISO date string
     purpose: 'Token Advance' | 'Part Payment';

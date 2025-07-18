@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Circle, CircleDashed, FileCheck, FileClock, FileQuestion, FileX, Landmark, LandPlot, Scale, SquareUserRound, Users, Calendar as CalendarIcon, Wallet, FilePen, Microscope, Gavel, Plus, MessageSquare } from 'lucide-react';
-import type { AcquisitionStatus, User, LegalQuery, LegalQueryStatus, FinancialTransaction } from '@/types';
+import type { AcquisitionStatus, User, LegalQuery, LegalQueryStatus, FinancialTransaction, Person } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ import {
 
 interface AcquisitionCardProps {
   status: AcquisitionStatus;
+  familyHeads: Person[];
   onEdit: (status: AcquisitionStatus) => void;
   currentUser: User | null;
 }
@@ -77,88 +78,14 @@ const StatusBadge = ({ status }: { status: keyof typeof statusMap }) => {
     );
 };
 
-// --- Financial Transaction Form Dialog ---
-
-interface TransactionFormDialogProps {
-    isOpen: boolean;
-    onOpenChange: (isOpen: boolean) => void;
-    onSave: (transactionData: Omit<FinancialTransaction, 'id' | 'timestamp' | 'surveyNumber'>) => void;
-    surveyNumber: string;
-}
-
-function TransactionFormDialog({ isOpen, onOpenChange, onSave, surveyNumber }: TransactionFormDialogProps) {
-    const [amount, setAmount] = useState('');
-    const [date, setDate] = useState('');
-    const [purpose, setPurpose] = useState<FinancialTransaction['purpose']>('Token Advance');
-    const { toast } = useToast();
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!amount || !date || !purpose) {
-            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.'});
-            return;
-        }
-
-        onSave({
-            amount: parseFloat(amount),
-            date,
-            purpose,
-        });
-        
-        // Reset form
-        setAmount('');
-        setDate('');
-        setPurpose('Token Advance');
-        onOpenChange(false);
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
-                <form onSubmit={handleSubmit}>
-                    <CardHeader>
-                        <CardTitle>Record a Payment for S.No: {surveyNumber}</CardTitle>
-                        <CardDescription>
-                            Enter the details for the financial transaction. This record is immutable.
-                        </CardDescription>
-                    </CardHeader>
-                    <div className="grid gap-4 p-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="amount">Amount</Label>
-                            <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} required />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="date">Date of Payment</Label>
-                            <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="purpose">Payment Purpose</Label>
-                            <Select onValueChange={(v: FinancialTransaction['purpose']) => setPurpose(v)} value={purpose}>
-                                <SelectTrigger id="purpose"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Token Advance">Token Advance</SelectItem>
-                                    <SelectItem value="Part Payment">Part Payment</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <CardFooter>
-                        <Button type="submit">Save Transaction</Button>
-                    </CardFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
-}
 
 // --- Main Acquisition Card Component ---
 
-export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCardProps) {
+export function AcquisitionCard({ status, familyHeads, onEdit, currentUser }: AcquisitionCardProps) {
   const [queries, setQueries] = useState<LegalQuery[]>([]);
   const [newQueryText, setNewQueryText] = useState('');
   const [isAddingQuery, setIsAddingQuery] = useState(false);
   const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>([]);
-  const [isFinTxDialogOpen, setIsFinTxDialogOpen] = useState(false);
   const [version, setVersion] = useState(0); // To force re-render
   const { toast } = useToast();
   
@@ -173,16 +100,20 @@ export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCard
         const savedQueries = localStorage.getItem(queryStorageKey);
         setQueries(savedQueries ? JSON.parse(savedQueries) : []);
         
-        // Load and Filter Financial Transactions
-        const allFinTxs = JSON.parse(localStorage.getItem(finTxStorageKey) || '[]');
-        setFinancialTransactions(allFinTxs.filter((tx: FinancialTransaction) => tx.surveyNumber === status.surveyNumber));
+        const familyHead = familyHeads.find(fh => fh.name === status.familyHeadName);
+        if (familyHead) {
+            const allFinTxs: FinancialTransaction[] = JSON.parse(localStorage.getItem(finTxStorageKey) || '[]');
+            setFinancialTransactions(allFinTxs.filter(tx => tx.familyHeadId === familyHead.id));
+        } else {
+             setFinancialTransactions([]);
+        }
 
     } catch (e) {
         console.error("Could not load data for acquisition card", e);
         setQueries([]);
         setFinancialTransactions([]);
     }
-  }, [queryStorageKey, finTxStorageKey, status.surveyNumber, version]);
+  }, [queryStorageKey, finTxStorageKey, status.familyHeadName, familyHeads, version]);
 
   const saveQueries = (updatedQueries: LegalQuery[]) => {
       setQueries(updatedQueries);
@@ -212,19 +143,6 @@ export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCard
     saveQueries(updatedQueries);
   };
   
-  const handleSaveFinancialTx = (txData: Omit<FinancialTransaction, 'id' | 'timestamp' | 'surveyNumber'>) => {
-        const newTransaction: FinancialTransaction = {
-            id: `fin-tx-${Date.now()}`,
-            timestamp: new Date().toISOString(),
-            surveyNumber: status.surveyNumber,
-            ...txData,
-        };
-        const allTxs = JSON.parse(localStorage.getItem(finTxStorageKey) || '[]');
-        localStorage.setItem(finTxStorageKey, JSON.stringify([newTransaction, ...allTxs]));
-        toast({ title: 'Payment Recorded', description: 'The financial transaction has been added.'});
-        refreshData();
-    };
-
   const getStageStatus = (stage: 'legal') => {
       if (stage === 'legal') {
            return status.legal.overallStatus === 'Cleared' ? 'completed' : 'active';
@@ -235,7 +153,6 @@ export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCard
   const overallStatus = getStageStatus('legal') === 'completed' ? 'completed' : 'pending';
 
   const canAddQuery = currentUser?.role === 'Lawyer';
-  const canAddPayment = ['Super Admin', 'Aggregator'].includes(currentUser?.role || '');
 
   return (
     <>
@@ -277,47 +194,42 @@ export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCard
               </Card>
 
               {/* Financial Transactions Section */}
-              {canAddPayment && (
-                  <Card>
-                      <CardHeader>
-                          <div className="flex justify-between items-center">
-                              <CardTitle className="text-xl flex items-center gap-2"><Wallet /> Financial Transactions</CardTitle>
-                              <Button size="sm" onClick={() => setIsFinTxDialogOpen(true)}>
-                                  <Plus className="mr-2 h-4 w-4" /> Add Payment
-                              </Button>
-                          </div>
-                          <CardDescription>Record all payments like token advances and part payments.</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                          <Table>
-                              <TableHeader>
-                                  <TableRow>
-                                      <TableHead>Amount</TableHead>
-                                      <TableHead>Purpose</TableHead>
-                                      <TableHead>Date of Payment</TableHead>
-                                      <TableHead>Recorded At</TableHead>
+              <Card>
+                  <CardHeader>
+                      <CardTitle className="text-xl flex items-center gap-2"><Wallet /> Financial Transactions for {status.familyHeadName}</CardTitle>
+                      <CardDescription>
+                          Payments for this family are managed in the "Family Lineage" tab. All payments made to the family head are reflected here.
+                      </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <Table>
+                          <TableHeader>
+                              <TableRow>
+                                  <TableHead>Amount</TableHead>
+                                  <TableHead>Purpose</TableHead>
+                                  <TableHead>Date of Payment</TableHead>
+                                  <TableHead>Recorded At</TableHead>
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              {financialTransactions.length > 0 ? financialTransactions.map((tx) => (
+                                  <TableRow key={tx.id}>
+                                      <TableCell>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount)}</TableCell>
+                                      <TableCell><Badge variant={tx.purpose === 'Token Advance' ? 'secondary' : 'default'}>{tx.purpose}</Badge></TableCell>
+                                      <TableCell>{format(new Date(tx.date), 'PPP')}</TableCell>
+                                      <TableCell>{format(new Date(tx.timestamp), 'PP pp')}</TableCell>
                                   </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                  {financialTransactions.length > 0 ? financialTransactions.map((tx) => (
-                                      <TableRow key={tx.id}>
-                                          <TableCell>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount)}</TableCell>
-                                          <TableCell><Badge variant={tx.purpose === 'Token Advance' ? 'secondary' : 'default'}>{tx.purpose}</Badge></TableCell>
-                                          <TableCell>{format(new Date(tx.date), 'PPP')}</TableCell>
-                                          <TableCell>{format(new Date(tx.timestamp), 'PP pp')}</TableCell>
-                                      </TableRow>
-                                  )) : (
-                                      <TableRow>
-                                          <TableCell colSpan={4} className="h-24 text-center">
-                                              No financial transactions recorded for this parcel.
-                                          </TableCell>
-                                      </TableRow>
-                                  )}
-                              </TableBody>
-                          </Table>
-                      </CardContent>
-                  </Card>
-              )}
+                              )) : (
+                                  <TableRow>
+                                      <TableCell colSpan={4} className="h-24 text-center">
+                                          No financial transactions recorded for this family.
+                                      </TableCell>
+                                  </TableRow>
+                              )}
+                          </TableBody>
+                      </Table>
+                  </CardContent>
+              </Card>
 
               {/* Legal Queries Section */}
               <Card>
@@ -376,13 +288,6 @@ export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCard
           </div>
         </CardContent>
       </Card>
-      
-      <TransactionFormDialog
-          isOpen={isFinTxDialogOpen}
-          onOpenChange={setIsFinTxDialogOpen}
-          onSave={handleSaveFinancialTx}
-          surveyNumber={status.surveyNumber}
-      />
     </>
   );
 }
