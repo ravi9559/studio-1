@@ -44,7 +44,7 @@ export function EditAcquisitionStatusDialog({ isOpen, onOpenChange, status, onSa
         setCalendarOpen(false);
     };
 
-    const handleLegalChange = (field: 'queryStatus', value: string) => {
+    const handleLegalChange = (field: 'overallStatus', value: string) => {
         setFormData(prev => ({
             ...prev,
             legal: { ...prev.legal, [field]: value },
@@ -119,13 +119,13 @@ export function EditAcquisitionStatusDialog({ isOpen, onOpenChange, status, onSa
 
                         {/* Legal Section */}
                         <div className="space-y-4">
-                             <h4 className="font-semibold text-lg">Legal Queries</h4>
+                             <h4 className="font-semibold text-lg">Legal Status</h4>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div className="space-y-2">
-                                    <Label>Reply to Legal Queries</Label>
+                                    <Label>Overall Legal Status</Label>
                                     <Select 
-                                        value={formData.legal.queryStatus}
-                                        onValueChange={(value) => handleLegalChange('queryStatus', value)}
+                                        value={formData.legal.overallStatus}
+                                        onValueChange={(value) => handleLegalChange('overallStatus', value)}
                                     >
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
@@ -137,6 +137,7 @@ export function EditAcquisitionStatusDialog({ isOpen, onOpenChange, status, onSa
                                     </Select>
                                  </div>
                              </div>
+                             <p className="text-xs text-muted-foreground">Note: Detailed legal queries are managed within the Acquisition Card itself.</p>
                         </div>
 
                     </div>

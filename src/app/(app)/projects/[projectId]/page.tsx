@@ -164,7 +164,7 @@ export default function ProjectDetailsPage() {
                     extent: { acres: record.acres, cents: record.cents },
                     landClassification: record.landClassification,
                     operations: { meetingDate: null, documentCollection: 'Pending' },
-                    legal: { queryStatus: 'Not Started' },
+                    legal: { overallStatus: 'Not Started' },
                 };
             }
         });
@@ -249,6 +249,7 @@ export default function ProjectDetailsPage() {
                 localStorage.removeItem(`notes-${projectId}-${status.surveyNumber}`);
                 localStorage.removeItem(`tasks-${projectId}-${status.surveyNumber}`);
                 localStorage.removeItem(`legal-notes-${projectId}-${status.surveyNumber}`);
+                localStorage.removeItem(`legal-queries-${projectId}-${status.surveyNumber}`);
                 localStorage.removeItem(`aggregation-${projectId}-${status.surveyNumber}`);
             });
 
@@ -544,6 +545,7 @@ export default function ProjectDetailsPage() {
                                 onUpdateStatus={handleUpdateAcquisitionStatus} 
                                 activeStatusId={activeStatusId} 
                                 onActiveStatusChange={setActiveStatusId}
+                                currentUser={currentUser}
                                />
                             </div>
                         </TabsContent>

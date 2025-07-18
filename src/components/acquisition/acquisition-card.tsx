@@ -1,17 +1,23 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Circle, CircleDashed, FileCheck, FileClock, FileQuestion, FileX, Landmark, LandPlot, Scale, SquareUserRound, Users, Calendar as CalendarIcon, Wallet, FilePen, Microscope } from 'lucide-react';
-import type { AcquisitionStatus } from '@/types';
+import { CheckCircle2, Circle, CircleDashed, FileCheck, FileClock, FileQuestion, FileX, Landmark, LandPlot, Scale, SquareUserRound, Users, Calendar as CalendarIcon, Wallet, FilePen, Microscope, Gavel, Plus, MessageSquare } from 'lucide-react';
+import type { AcquisitionStatus, User, LegalQuery, LegalQueryStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '../ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Separator } from '../ui/separator';
 
 interface AcquisitionCardProps {
   status: AcquisitionStatus;
   onEdit: (status: AcquisitionStatus) => void;
+  currentUser: User | null;
 }
 
 const statusMap = {
@@ -64,7 +70,50 @@ const StatusBadge = ({ status }: { status: keyof typeof statusMap }) => {
 };
 
 
-export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
+export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCardProps) {
+  const [queries, setQueries] = useState<LegalQuery[]>([]);
+  const [newQueryText, setNewQueryText] = useState('');
+  const [isAddingQuery, setIsAddingQuery] = useState(false);
+  const { toast } = useToast();
+  const queryStorageKey = `legal-queries-${status.projectId}-${status.surveyNumber}`;
+
+  useEffect(() => {
+    try {
+        const savedQueries = localStorage.getItem(queryStorageKey);
+        setQueries(savedQueries ? JSON.parse(savedQueries) : []);
+    } catch (e) {
+        console.error("Could not load legal queries", e);
+        setQueries([]);
+    }
+  }, [queryStorageKey]);
+
+  const saveQueries = (updatedQueries: LegalQuery[]) => {
+      setQueries(updatedQueries);
+      localStorage.setItem(queryStorageKey, JSON.stringify(updatedQueries));
+  };
+  
+  const handleAddQuery = () => {
+    if (!newQueryText.trim() || !currentUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Query text cannot be empty.' });
+        return;
+    }
+    const newQuery: LegalQuery = {
+        id: `query-${Date.now()}`,
+        query: newQueryText.trim(),
+        raisedBy: { id: currentUser.id, name: currentUser.name },
+        date: new Date().toISOString(),
+        status: 'Not Started',
+    };
+    saveQueries([newQuery, ...queries]);
+    setNewQueryText('');
+    setIsAddingQuery(false);
+    toast({ title: 'Query Raised', description: 'The new legal query has been added.' });
+  };
+
+  const handleStatusChange = (queryId: string, newStatus: LegalQueryStatus) => {
+    const updatedQueries = queries.map(q => q.id === queryId ? { ...q, status: newStatus } : q);
+    saveQueries(updatedQueries);
+  };
 
   const getStageStatus = (stage: 'operations' | 'legal') => {
       if (stage === 'operations') {
@@ -73,12 +122,14 @@ export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
       if (stage === 'legal') {
            const opsCompleted = getStageStatus('operations') === 'completed';
            if (!opsCompleted) return 'pending';
-           return status.legal.queryStatus === 'Cleared' ? 'completed' : 'active';
+           return status.legal.overallStatus === 'Cleared' ? 'completed' : 'active';
       }
       return 'pending';
   }
 
   const overallStatus = getStageStatus('legal');
+
+  const canAddQuery = currentUser?.role === 'Lawyer';
 
   return (
     <Card className="w-full">
@@ -109,57 +160,78 @@ export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
 
         {/* Details Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
             {/* Land Details */}
             <Card>
-                <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2"><LandPlot /> Land Details</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-xl flex items-center gap-2"><LandPlot /> Land Details</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                     <InfoRow icon={Users} label="Family Head" value={status.familyHeadName} />
                     <InfoRow icon={Scale} label="Total Extent" value={`${status.extent.acres} Acres, ${status.extent.cents} Cents`} />
                     <InfoRow icon={Microscope} label="Classification" value={status.landClassification} />
                 </CardContent>
             </Card>
-
-            
             {/* Operational Information */}
              <Card>
-                <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2"><SquareUserRound /> Operational Information</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-xl flex items-center gap-2"><SquareUserRound /> Operational Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                     <InfoRow
-                        icon={CalendarIcon}
-                        label="In-person meeting"
-                        value={status.operations.meetingDate && isValid(new Date(status.operations.meetingDate))
-                            ? format(new Date(status.operations.meetingDate), 'PPP')
-                            : 'Pending'}
-                    />
-                     <InfoRow
-                        icon={FileCheck}
-                        label="Document Collection"
-                        value=""
-                        valueComponent={<StatusBadge status={status.operations.documentCollection} />}
-                    />
-                </CardContent>
-            </Card>
-
-            {/* Legal Queries */}
-             <Card>
-                <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2"><Landmark /> Legal Queries</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <InfoRow
-                        icon={FileQuestion}
-                        label="Reply to Legal Queries"
-                        value=""
-                        valueComponent={<StatusBadge status={status.legal.queryStatus} />}
-                    />
+                     <InfoRow icon={CalendarIcon} label="In-person meeting" value={status.operations.meetingDate && isValid(new Date(status.operations.meetingDate)) ? format(new Date(status.operations.meetingDate), 'PPP') : 'Pending'} />
+                     <InfoRow icon={FileCheck} label="Document Collection" value="" valueComponent={<StatusBadge status={status.operations.documentCollection} />} />
                 </CardContent>
             </Card>
         </div>
+        {/* Legal Queries Section */}
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-xl flex items-center gap-2"><Gavel /> Legal Queries</CardTitle>
+                    {canAddQuery && (
+                        <Button size="sm" onClick={() => setIsAddingQuery(!isAddingQuery)}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {isAddingQuery ? 'Cancel' : 'Raise Query'}
+                        </Button>
+                    )}
+                </div>
+                <CardDescription>Track and manage legal queries for this parcel.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <InfoRow icon={MessageSquare} label="Overall Legal Status" value="" valueComponent={<StatusBadge status={status.legal.overallStatus} />} />
+                 <Separator />
+
+                {isAddingQuery && (
+                    <div className="p-4 border rounded-md bg-muted/50 space-y-3">
+                        <h4 className="font-semibold">New Legal Query</h4>
+                        <Textarea placeholder="Type your query here..." value={newQueryText} onChange={(e) => setNewQueryText(e.target.value)} />
+                        <Button onClick={handleAddQuery}>Submit Query</Button>
+                    </div>
+                )}
+                
+                <div className="space-y-3">
+                    {queries.map(query => (
+                        <div key={query.id} className="p-3 border rounded-lg">
+                            <p className="text-sm font-medium whitespace-pre-wrap">{query.query}</p>
+                            <div className="flex items-center justify-between mt-2">
+                                <p className="text-xs text-muted-foreground">
+                                    Raised by {query.raisedBy.name} on {format(new Date(query.date), 'PP')}
+                                </p>
+                                <div className="w-40">
+                                    <Select value={query.status} onValueChange={(value: LegalQueryStatus) => handleStatusChange(query.id, value)}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Not Started">Not Started</SelectItem>
+                                            <SelectItem value="In-Progress">In-Progress</SelectItem>
+                                            <SelectItem value="Awaiting">Awaiting</SelectItem>
+                                            <SelectItem value="Resolved">Resolved</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {queries.length === 0 && !isAddingQuery && (
+                        <p className="text-sm text-muted-foreground text-center p-4">No legal queries raised for this parcel yet.</p>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
       </CardContent>
     </Card>
   );

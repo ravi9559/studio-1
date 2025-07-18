@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AcquisitionCard } from './acquisition-card';
 import { EditAcquisitionStatusDialog } from './edit-acquisition-status-dialog';
-import type { AcquisitionStatus } from '@/types';
+import type { AcquisitionStatus, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface AcquisitionTrackerViewProps {
@@ -14,9 +14,10 @@ interface AcquisitionTrackerViewProps {
   onUpdateStatus: (updatedStatus: AcquisitionStatus) => void;
   activeStatusId?: string;
   onActiveStatusChange: (statusId: string) => void;
+  currentUser: User | null;
 }
 
-export function AcquisitionTrackerView({ statuses, onUpdateStatus, activeStatusId, onActiveStatusChange }: AcquisitionTrackerViewProps) {
+export function AcquisitionTrackerView({ statuses, onUpdateStatus, activeStatusId, onActiveStatusChange, currentUser }: AcquisitionTrackerViewProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [statusToEdit, setStatusToEdit] = useState<AcquisitionStatus | null>(null);
   const { toast } = useToast();
@@ -85,7 +86,7 @@ export function AcquisitionTrackerView({ statuses, onUpdateStatus, activeStatusI
         </Card>
         
         {selectedStatus ? (
-          <AcquisitionCard status={selectedStatus} onEdit={handleEditClick} />
+          <AcquisitionCard status={selectedStatus} onEdit={handleEditClick} currentUser={currentUser} />
         ) : (
           <Card>
               <CardContent className="p-8 text-center text-muted-foreground">

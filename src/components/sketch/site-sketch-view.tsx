@@ -1,3 +1,4 @@
+
 // src/components/sketch/site-sketch-view.tsx
 'use client';
 
@@ -12,8 +13,8 @@ interface SiteSketchViewProps {
 
 const getStatusVariant = (status?: AcquisitionStatus): 'completed' | 'inProgress' | 'pending' => {
     if (!status) return 'pending';
-    if (status.legal.queryStatus === 'Cleared') return 'completed';
-    if (status.financials.advancePayment === 'Paid' || status.financials.agreementStatus === 'Signed' || status.legal.queryStatus === 'On-Progress') return 'inProgress';
+    if (status.legal.overallStatus === 'Cleared') return 'completed';
+    if (status.legal.overallStatus === 'On-Progress' || status.operations.documentCollection !== 'Pending') return 'inProgress';
     return 'pending';
 }
 
@@ -30,12 +31,12 @@ const PlotCard = ({ status, onSelectSurvey }: { status: AcquisitionStatus, onSel
     <button
       onClick={() => onSelectSurvey(status.id)}
       className={cn(
-        'w-full aspect-square flex flex-col items-center justify-center rounded-lg border p-1 text-xs font-semibold shadow-sm transition-all hover:shadow-md hover:scale-105 break-words',
+        'w-full aspect-square flex flex-col items-center justify-center rounded-lg border p-1 text-xs font-semibold shadow-sm transition-all hover:shadow-md hover:scale-105',
         colorClasses[statusVariant]
       )}
     >
-      <span className="text-center">{status.surveyNumber}</span>
-      <span className="text-xs font-normal text-center">{status.familyHeadName}</span>
+      <span className="text-center break-words">{status.surveyNumber}</span>
+      <span className="text-xs font-normal text-center break-words">{status.familyHeadName}</span>
       <span className="text-xs font-normal text-muted-foreground text-center">
         {status.extent.acres || '0'}ac, {status.extent.cents || '0'}c
       </span>

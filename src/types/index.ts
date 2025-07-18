@@ -63,7 +63,7 @@ export type Project = {
 
 export type Role = {
     id: string;
-    name: 'Super Admin' | 'Aggregator' | 'Lawyer';
+    name: 'Super Admin' | 'Aggregator' | 'Lawyer' | 'Client' | 'Investor' | 'Transaction Partner' | 'Co-Aggregator';
 };
 
 export type User = {
@@ -127,13 +127,14 @@ export type FinancialTransaction = {
     timestamp: string; // ISO datetime string
 };
 
+export type LegalQueryStatus = 'Resolved' | 'In-Progress' | 'Not Started' | 'Awaiting';
+
 export type LegalQuery = {
     id: string;
-    surveyNumber: string;
     query: string;
     raisedBy: { id: string, name: string };
     date: string; // ISO date string
-    status: 'Resolved' | 'In-Progress' | 'Not Started' | 'Awaiting';
+    status: LegalQueryStatus;
 };
 
 
@@ -149,6 +150,6 @@ export type AcquisitionStatus = {
     documentCollection: 'Fully Collected' | 'Partially Collected' | 'Pending';
   };
   legal: {
-    queryStatus: 'Cleared' | 'Awaiting' | 'On-Progress' | 'Not Started';
+    overallStatus: 'Cleared' | 'Awaiting' | 'On-Progress' | 'Not Started';
   };
 };
