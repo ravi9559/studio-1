@@ -3,9 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PlusCircle, ArrowRight } from "lucide-react";
 import Link from 'next/link';
 import type { Project, User } from '@/types';
@@ -28,11 +25,6 @@ const initialProjects: Project[] = [
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectSiteId, setNewProjectSiteId] = useState('');
-  const [newProjectLocation, setNewProjectLocation] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -67,35 +59,6 @@ export default function ProjectsPage() {
     }
     setIsLoaded(true);
   }, []);
-
-  const handleAddProject = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newProjectName || !newProjectSiteId || !newProjectLocation) return;
-    const newProject: Project = {
-      id: `proj-${Date.now()}`,
-      name: newProjectName,
-      siteId: newProjectSiteId,
-      location: newProjectLocation,
-      googleMapsLink: ''
-    };
-    
-    // Always add to the master list of projects in storage
-    const allProjectsFromStorage: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
-    const updatedProjects = [...allProjectsFromStorage, newProject];
-    
-    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
-
-    // Initialize all default data for the new project
-    initializeNewProjectData(newProject.id);
-
-    // Update the viewable projects state
-    setProjects(prevProjects => [...prevProjects, newProject]);
-    
-    setNewProjectName('');
-    setNewProjectSiteId('');
-    setNewProjectLocation('');
-    setIsDialogOpen(false);
-  };
   
   if (!isLoaded) {
     return (
@@ -113,41 +76,12 @@ export default function ProjectsPage() {
           <p className="text-muted-foreground">Manage your projects and sites.</p>
         </div>
         {currentUser?.role === 'Super Admin' && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-                <Button>
+            <Button asChild>
+              <Link href="/projects/new">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add New Project
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                <DialogTitle>Add New Project</DialogTitle>
-                <DialogDescription>
-                    Enter the details for your new project. Click save when you're done.
-                </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleAddProject}>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">Name</Label>
-                    <Input id="name" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} className="col-span-3" placeholder="e.g., Greenfield Valley" required />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="siteId" className="text-right">Site ID</Label>
-                    <Input id="siteId" value={newProjectSiteId} onChange={(e) => setNewProjectSiteId(e.target.value)} className="col-span-3" placeholder="e.g., GV-001" required />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="location" className="text-right">Location</Label>
-                    <Input id="location" value={newProjectLocation} onChange={(e) => setNewProjectLocation(e.target.value)} className="col-span-3" placeholder="e.g., Coimbatore" required />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button type="submit">Save Project</Button>
-                </DialogFooter>
-                </form>
-            </DialogContent>
-            </Dialog>
+              </Link>
+            </Button>
         )}
       </header>
       
