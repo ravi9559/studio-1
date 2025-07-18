@@ -16,7 +16,7 @@ import { Separator } from '../ui/separator';
 import type { Person, SurveyRecord, LandClassification, Note, LegalNote, User, Transaction, Folder, DocumentFile, FinancialTransaction } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { Textarea } from '../ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -171,10 +171,16 @@ const FolderView: FC<{
   onAddFile: (folderId: string, fileData: Omit<DocumentFile, 'id'>) => void;
   onDeleteFile: (folderId: string, fileId: string) => void;
   level: number;
-}> = ({ folder, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile, level }) => {
+  currentUser: User | null;
+}> = ({ folder, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile, level, currentUser }) => {
   const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
   const { toast } = useToast();
+
+  const userRole = currentUser?.role;
+  const canEdit = userRole === 'Super Admin' || userRole === 'Aggregator' || userRole === 'Lawyer';
+  const canDelete = userRole === 'Super Admin';
+  const canDownload = userRole === 'Lawyer' || userRole === 'Super Admin';
 
   const handleDownload = (file: DocumentFile) => {
     if (!file.url) {
@@ -199,27 +205,31 @@ const FolderView: FC<{
         <FolderIcon className="h-5 w-5 text-primary" />
         <span className="flex-grow font-medium">{folder.name}</span>
         
-        {/* Add File Dialog */}
-        <Dialog open={isAddFileOpen} onOpenChange={setIsAddFileOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7" title="Add File">
-              <FilePlus className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <AddFileDialog folderName={folder.name} onSave={(data) => onAddFile(folder.id, data)} onOpenChange={setIsAddFileOpen} />
-        </Dialog>
+        {canEdit && (
+          <>
+            {/* Add File Dialog */}
+            <Dialog open={isAddFileOpen} onOpenChange={setIsAddFileOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Add File">
+                  <FilePlus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <AddFileDialog folderName={folder.name} onSave={(data) => onAddFile(folder.id, data)} onOpenChange={setIsAddFileOpen} />
+            </Dialog>
 
-        {/* Add Folder Dialog */}
-        <Dialog open={isAddFolderOpen} onOpenChange={setIsAddFolderOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7" title="Add Sub-folder">
-              <FolderPlus className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <AddFolderDialog folderName={folder.name} onSave={(name) => onAddFolder(folder.id, name)} onOpenChange={setIsAddFolderOpen} />
-        </Dialog>
+            {/* Add Folder Dialog */}
+            <Dialog open={isAddFolderOpen} onOpenChange={setIsAddFolderOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Add Sub-folder">
+                  <FolderPlus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <AddFolderDialog folderName={folder.name} onSave={(name) => onAddFolder(folder.id, name)} onOpenChange={setIsAddFolderOpen} />
+            </Dialog>
+          </>
+        )}
         
-        {level > 2 && ( // Only allow deleting folders deeper than the main categories
+        {canDelete && level > 2 && ( // Only allow deleting folders deeper than the main categories
             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDeleteFolder(folder.id)} title="Delete Folder">
                 <Trash2 className="h-4 w-4" />
             </Button>
@@ -228,25 +238,32 @@ const FolderView: FC<{
 
       {/* Render Files */}
       <div className="pl-6 mt-1 space-y-1">
-        {(folder.files || []).map(file => (
+        {(folder.files || []).map(file => {
+           const date = new Date(file.uploaded);
+           const formattedDate = isValid(date) ? format(date, 'PP') : 'Invalid Date';
+          return (
           <div key={file.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/50 text-sm">
             <FileIcon className="h-4 w-4 text-muted-foreground" />
             <span className="flex-grow">{file.name}</span>
             <span className="text-xs text-muted-foreground">{file.size}</span>
-            <span className="text-xs text-muted-foreground">{format(new Date(file.uploaded), 'PP')}</span>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(file)} title="Download File" disabled={!file.url}>
-                <Download className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDeleteFile(folder.id, file.id)} title="Delete File">
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            <span className="text-xs text-muted-foreground">{formattedDate}</span>
+            {canDownload && (
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(file)} title="Download File" disabled={!file.url}>
+                  <Download className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {canEdit && (
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDeleteFile(folder.id, file.id)} title="Delete File">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
-        ))}
+        )})}
       </div>
 
       {/* Render Sub-folders */}
       {folder.children.map((child) => (
-        <FolderView key={child.id} folder={child} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} onAddFile={onAddFile} onDeleteFile={onDeleteFile} level={level + 1} />
+        <FolderView key={child.id} folder={child} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} onAddFile={onAddFile} onDeleteFile={onDeleteFile} level={level + 1} currentUser={currentUser} />
       ))}
     </div>
   );
@@ -1163,12 +1180,18 @@ export const PersonCard: FC<PersonCardProps> = ({
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
-                                  {financialTransactions.length > 0 ? financialTransactions.map((tx) => (
+                                  {financialTransactions.length > 0 ? financialTransactions.map((tx) => {
+                                    const paymentDate = new Date(tx.date);
+                                    const recordedDate = new Date(tx.timestamp);
+                                    const formattedPaymentDate = isValid(paymentDate) ? format(paymentDate, 'PPP') : 'Invalid Date';
+                                    const formattedRecordedDate = isValid(recordedDate) ? format(recordedDate, 'PP pp') : 'Invalid Date';
+
+                                    return (
                                       <TableRow key={tx.id}>
                                           <TableCell>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount)}</TableCell>
                                           <TableCell><Badge variant={tx.purpose === 'Token Advance' ? 'secondary' : 'default'}>{tx.purpose}</Badge></TableCell>
-                                          <TableCell>{format(new Date(tx.date), 'PPP')}</TableCell>
-                                          <TableCell>{format(new Date(tx.timestamp), 'PP pp')}</TableCell>
+                                          <TableCell>{formattedPaymentDate}</TableCell>
+                                          <TableCell>{formattedRecordedDate}</TableCell>
                                            {canEditFinancials && (
                                                 <TableCell className="text-right space-x-1">
                                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(tx, 'financial-transaction')}><Edit className="h-4 w-4" /></Button>
@@ -1179,7 +1202,7 @@ export const PersonCard: FC<PersonCardProps> = ({
                                                 </TableCell>
                                            )}
                                       </TableRow>
-                                  )) : (
+                                  )}) : (
                                       <TableRow>
                                           <TableCell colSpan={canEditFinancials ? 5 : 4} className="h-24 text-center">
                                               No financial transactions recorded for this family.
@@ -1208,6 +1231,7 @@ export const PersonCard: FC<PersonCardProps> = ({
                                     onAddFile={onAddFile} 
                                     onDeleteFile={onDeleteFile} 
                                     level={0} 
+                                    currentUser={currentUser}
                                 />
                             ))
                             ) : (
@@ -1227,12 +1251,15 @@ export const PersonCard: FC<PersonCardProps> = ({
                            <Button size="sm" onClick={() => openAddDialog('note')}><Plus className="mr-2 h-4 w-4" />Add Note</Button>
                         </div>
                         <div className="space-y-2">
-                           {aggregatedNotes.length > 0 ? aggregatedNotes.map(note => (
+                           {aggregatedNotes.length > 0 ? aggregatedNotes.map(note => {
+                            const noteDate = new Date(note.date);
+                            const formattedNoteDate = isValid(noteDate) ? format(noteDate, 'PPP p') : 'Invalid Date';
+                            return (
                                 <Card key={note.id} className="bg-background/70">
                                     <CardHeader className="flex flex-row justify-between items-start p-3">
                                         <div className="space-y-1">
                                             <CardTitle className="text-sm">Note for S.No: {note.surveyNumber}</CardTitle>
-                                            <CardDescription className="text-xs">{format(new Date(note.date), 'PPP p')}</CardDescription>
+                                            <CardDescription className="text-xs">{formattedNoteDate}</CardDescription>
                                         </div>
                                         <div>
                                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(note, 'note')}><Edit className="h-4 w-4" /></Button>
@@ -1246,7 +1273,7 @@ export const PersonCard: FC<PersonCardProps> = ({
                                     {note.urls.length > 0 && (<div className="flex flex-wrap gap-2 pt-2">{note.urls.map((url, i) => (<a key={i} href={url} target="_blank" rel="noopener noreferrer"><Badge><LinkIcon className="mr-1.5 h-3 w-3" />{url}</Badge></a>))}</div>)}
                                     </CardContent>
                                 </Card>
-                           )) : <p className="text-sm text-muted-foreground text-center p-4">No notes for this family.</p>}
+                           )}) : <p className="text-sm text-muted-foreground text-center p-4">No notes for this family.</p>}
                         </div>
                     </AccordionContent>
                 </AccordionItem>
@@ -1260,12 +1287,15 @@ export const PersonCard: FC<PersonCardProps> = ({
                            <Button size="sm" onClick={() => openAddDialog('legal-note')}><Plus className="mr-2 h-4 w-4" />Add Legal Note</Button>
                         </div>
                         <div className="space-y-2">
-                           {aggregatedLegalNotes.length > 0 ? aggregatedLegalNotes.map(note => (
+                           {aggregatedLegalNotes.length > 0 ? aggregatedLegalNotes.map(note => {
+                            const noteDate = new Date(note.date);
+                            const formattedNoteDate = isValid(noteDate) ? format(noteDate, 'PPP p') : 'Invalid Date';
+                            return (
                                 <Card key={note.id} className="bg-background/70">
                                     <CardHeader className="flex flex-row justify-between items-start p-3">
                                         <div className="space-y-1">
                                             <CardTitle className="text-sm">Note by {note.author.name} for S.No: {note.surveyNumber}</CardTitle>
-                                            <CardDescription className="text-xs">{format(new Date(note.date), 'PPP p')}</CardDescription>
+                                            <CardDescription className="text-xs">{formattedNoteDate}</CardDescription>
                                         </div>
                                         <div>
                                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(note, 'legal-note')}><Edit className="h-4 w-4" /></Button>
@@ -1279,7 +1309,7 @@ export const PersonCard: FC<PersonCardProps> = ({
                                     </CardHeader>
                                     <CardContent className="p-3 pt-0"><p className="text-sm whitespace-pre-wrap">{note.content}</p></CardContent>
                                 </Card>
-                           )) : <p className="text-sm text-muted-foreground text-center p-4">No legal notes for this family.</p>}
+                           )}) : <p className="text-sm text-muted-foreground text-center p-4">No legal notes for this family.</p>}
                         </div>
                     </AccordionContent>
                 </AccordionItem>

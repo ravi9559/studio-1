@@ -14,7 +14,7 @@ interface SiteSketchViewProps {
 const getStatusVariant = (status?: AcquisitionStatus): 'completed' | 'inProgress' | 'pending' => {
     if (!status) return 'pending';
     if (status.legal.overallStatus === 'Cleared') return 'completed';
-    if (status.legal.overallStatus === 'On-Progress' || status.operations.documentCollection !== 'Pending') return 'inProgress';
+    if (status.legal.overallStatus === 'On-Progress' || status.legal.overallStatus === 'Awaiting') return 'inProgress';
     return 'pending';
 }
 
