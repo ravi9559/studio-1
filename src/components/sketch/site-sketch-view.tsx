@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import type { AcquisitionStatus, FinancialTransaction } from '@/types';
 
 interface SiteSketchViewProps {
-  acquisitionStatuses: Acquisition-status[];
+  acquisitionStatuses: AcquisitionStatus[];
   financialTransactions: FinancialTransaction[];
   onSelectSurvey: (statusId: string) => void;
 }
