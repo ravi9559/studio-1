@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -84,14 +85,16 @@ export function AppSidebar() {
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={pathname.startsWith('/users')} tooltip="User Management">
-            <Link href="/users">
-              <Users />
-              <span>User Management</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
+        {currentUser?.role === 'Super Admin' && (
+            <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname.startsWith('/users')} tooltip="User Management">
+                <Link href="/users">
+                <Users />
+                <span>User Management</span>
+                </Link>
+            </SidebarMenuButton>
+            </SidebarMenuItem>
+        )}
         <SidebarMenuItem>
           <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')} tooltip="Settings">
             <Link href="/settings">
