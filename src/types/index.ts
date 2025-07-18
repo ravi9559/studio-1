@@ -144,10 +144,6 @@ export type AcquisitionStatus = {
   familyHeadName: string;
   extent: { acres: string; cents: string };
   landClassification: LandClassification;
-  financials: {
-    advancePayment: 'Paid' | 'Pending';
-    agreementStatus: 'Signed' | 'Pending';
-  };
   operations: {
     meetingDate: string | null; // ISO date string or null
     documentCollection: 'Fully Collected' | 'Partially Collected' | 'Pending';

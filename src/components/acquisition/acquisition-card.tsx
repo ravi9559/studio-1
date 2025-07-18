@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Circle, CircleDashed, FileCheck, FileClock, FileQuestion, FileX, HandCoins, Landmark, LandPlot, Scale, SquareUserRound, Users, Calendar as CalendarIcon, Wallet, FilePen, Microscope } from 'lucide-react';
+import { CheckCircle2, Circle, CircleDashed, FileCheck, FileClock, FileQuestion, FileX, Landmark, LandPlot, Scale, SquareUserRound, Users, Calendar as CalendarIcon, Wallet, FilePen, Microscope } from 'lucide-react';
 import type { AcquisitionStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
@@ -15,9 +15,6 @@ interface AcquisitionCardProps {
 }
 
 const statusMap = {
-  // Financials
-  Paid: { icon: CheckCircle2, color: 'text-green-500' },
-  Signed: { icon: FileCheck, color: 'text-green-500' },
   // Operations
   'Fully Collected': { icon: FileCheck, color: 'text-green-500' },
   'Partially Collected': { icon: FileClock, color: 'text-yellow-500' },
@@ -69,13 +66,8 @@ const StatusBadge = ({ status }: { status: keyof typeof statusMap }) => {
 
 export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
 
-  const getStageStatus = (stage: 'financials' | 'operations' | 'legal') => {
-      if (stage === 'financials') {
-          return status.financials.advancePayment === 'Paid' && status.financials.agreementStatus === 'Signed' ? 'completed' : 'active';
-      }
+  const getStageStatus = (stage: 'operations' | 'legal') => {
       if (stage === 'operations') {
-          const finCompleted = getStageStatus('financials') === 'completed';
-          if (!finCompleted) return 'pending';
           return status.operations.documentCollection === 'Fully Collected' && status.operations.meetingDate ? 'completed' : 'active';
       }
       if (stage === 'legal') {
@@ -109,7 +101,6 @@ export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
         {/* Stepper */}
         <div className="p-4 border rounded-lg bg-background/50">
             <div className="flex items-start">
-                <StepperNode stage="Financials" status={getStageStatus('financials')} />
                 <StepperNode stage="Operations" status={getStageStatus('operations')} />
                 <StepperNode stage="Legal" status={getStageStatus('legal')} />
                 <StepperNode stage="Completed" status={overallStatus} isLast />
@@ -131,26 +122,6 @@ export function AcquisitionCard({ status, onEdit }: AcquisitionCardProps) {
                 </CardContent>
             </Card>
 
-            {/* Financial Transaction */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2"><Wallet /> Financial Transaction</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <InfoRow
-                        icon={HandCoins}
-                        label="Advance Payment"
-                        value=""
-                        valueComponent={<StatusBadge status={status.financials.advancePayment} />}
-                    />
-                    <InfoRow
-                        icon={FilePen}
-                        label="Agreement Status"
-                        value=""
-                        valueComponent={<StatusBadge status={status.financials.agreementStatus} />}
-                     />
-                </CardContent>
-            </Card>
             
             {/* Operational Information */}
              <Card>

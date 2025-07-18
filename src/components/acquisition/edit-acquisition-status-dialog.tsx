@@ -29,13 +29,6 @@ export function EditAcquisitionStatusDialog({ isOpen, onOpenChange, status, onSa
         setFormData(status);
     }, [status, isOpen]);
 
-    const handleFinancialsChange = (field: 'advancePayment' | 'agreementStatus', value: string) => {
-        setFormData(prev => ({
-            ...prev,
-            financials: { ...prev.financials, [field]: value },
-        }));
-    };
-
     const handleOperationsChange = (field: 'documentCollection', value: string) => {
          setFormData(prev => ({
             ...prev,
@@ -75,41 +68,7 @@ export function EditAcquisitionStatusDialog({ isOpen, onOpenChange, status, onSa
                     </DialogHeader>
 
                     <div className="py-4 space-y-6 max-h-[70vh] overflow-y-auto pr-2">
-                        {/* Financials Section */}
-                        <div className="space-y-4">
-                             <h4 className="font-semibold text-lg">Financial Transaction</h4>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 <div className="space-y-2">
-                                    <Label>Advance Payment Status</Label>
-                                    <Select 
-                                        value={formData.financials.advancePayment}
-                                        onValueChange={(value) => handleFinancialsChange('advancePayment', value)}
-                                    >
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Pending">Pending</SelectItem>
-                                            <SelectItem value="Paid">Paid</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                 </div>
-                                 <div className="space-y-2">
-                                    <Label>Agreement Status</Label>
-                                     <Select 
-                                        value={formData.financials.agreementStatus}
-                                        onValueChange={(value) => handleFinancialsChange('agreementStatus', value)}
-                                    >
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Pending">Pending</SelectItem>
-                                            <SelectItem value="Signed">Signed</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                 </div>
-                             </div>
-                        </div>
-
-                        <Separator />
-
+                        
                         {/* Operations Section */}
                         <div className="space-y-4">
                              <h4 className="font-semibold text-lg">Operational Information</h4>
