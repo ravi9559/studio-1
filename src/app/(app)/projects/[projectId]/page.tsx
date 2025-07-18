@@ -29,7 +29,6 @@ import { Tasks } from '@/components/project/tasks';
 
 // --- Storage Keys ---
 const PROJECTS_STORAGE_KEY = 'projects';
-const USERS_STORAGE_KEY = 'users';
 
 // --- Main Page Component ---
 
@@ -138,9 +137,15 @@ export default function ProjectDetailsPage() {
         let existingStatuses: AcquisitionStatus[] = JSON.parse(localStorage.getItem(acquisitionStorageKey) || '[]');
         
         let changed = false;
-        const updatedStatuses = allSurveyRecords.map((record, index) => {
-            const id = `${projectId}-${record.surveyNumber}-${index}`;
-            const existing = existingStatuses.find(s => s.id === id);
+        // Use a Set to track survey numbers that have been processed to create unique IDs.
+        const surveyCounts: { [key: string]: number } = {};
+
+        const updatedStatuses = allSurveyRecords.map((record) => {
+            surveyCounts[record.surveyNumber] = (surveyCounts[record.surveyNumber] || 0) + 1;
+            const id = `${projectId}-${record.surveyNumber}-${surveyCounts[record.surveyNumber] - 1}`;
+            
+            const existing = existingStatuses.find(s => s.surveyNumber === record.surveyNumber && s.familyHeadName === record.ownerName); // Match more robustly
+
             if (existing) {
                  if(existing.familyHeadName !== record.ownerName || existing.extent.acres !== record.acres || existing.extent.cents !== record.cents || existing.landClassification !== record.landClassification) {
                     changed = true;
@@ -163,12 +168,16 @@ export default function ProjectDetailsPage() {
             }
         });
 
-        // Remove statuses for which records no longer exist
-        const recordIds = new Set(updatedStatuses.map(s => s.id));
-        const filteredStatuses = existingStatuses.filter(s => recordIds.has(s.id));
-        if (filteredStatuses.length !== existingStatuses.length) {
+        // Create a set of IDs from the current, valid survey records
+        const validRecordIds = new Set(updatedStatuses.map(s => s.id));
+        
+        // Filter existing statuses to remove any that are no longer linked to a valid land record
+        const filteredStatuses = existingStatuses.filter(s => validRecordIds.has(s.id));
+        
+        if (updatedStatuses.length !== existingStatuses.length || JSON.stringify(updatedStatuses) !== JSON.stringify(existingStatuses)) {
             changed = true;
         }
+
 
         if (changed) {
             localStorage.setItem(acquisitionStorageKey, JSON.stringify(updatedStatuses));

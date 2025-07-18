@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,7 +10,6 @@ import type { Project, User } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { initializeNewProjectData } from '@/lib/project-template';
 
-const USERS_STORAGE_KEY = 'users';
 const PROJECTS_STORAGE_KEY = 'projects';
 
 const initialProjects: Project[] = [
