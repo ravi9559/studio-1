@@ -551,7 +551,7 @@ export default function ProjectDetailsPage() {
                         <TabsContent value="aggregation" className="pt-4">
                             <AggregationProgressView
                                 projectId={projectId}
-                                surveyNumbers={surveyNumbers}
+                                familyHeads={owners}
                                 currentUser={currentUser}
                             />
                         </TabsContent>

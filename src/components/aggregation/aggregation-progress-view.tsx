@@ -2,18 +2,18 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { AggregationProgress, User, AggregationDocumentStatus, AggregationCollectionStatus } from '@/types';
+import type { AggregationProgress, User, AggregationDocumentStatus, AggregationCollectionStatus, Person } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save } from 'lucide-react';
+import { Save, User as UserIcon } from 'lucide-react';
 
 interface AggregationProgressProps {
     projectId: string;
-    surveyNumbers: string[];
+    familyHeads: Person[];
     currentUser: User | null;
 }
 
@@ -142,21 +142,21 @@ function ProgressEditor({ surveyNumber, projectId, onProgressUpdated }: { survey
 }
 
 
-export function AggregationProgressView({ projectId, surveyNumbers, currentUser }: AggregationProgressProps) {
+export function AggregationProgressView({ projectId, familyHeads, currentUser }: AggregationProgressProps) {
     const [version, setVersion] = useState(0);
     const refreshData = useCallback(() => setVersion(v => v + 1), []);
 
     if (!currentUser) return null;
 
-    if (surveyNumbers.length === 0) {
+    if (familyHeads.length === 0) {
         return (
             <Card>
                 <CardHeader>
                     <CardTitle>Aggregation Progress</CardTitle>
-                    <CardDescription>Track document collection for each survey number.</CardDescription>
+                    <CardDescription>Track document collection for each survey number, grouped by family head.</CardDescription>
                 </CardHeader>
                 <CardContent className="text-center text-muted-foreground p-8">
-                    No survey records found. Add land records in "Family Lineage" to track progress.
+                    No family heads found. Add families and land records in "Family Lineage" to track progress.
                 </CardContent>
             </Card>
         );
@@ -164,17 +164,37 @@ export function AggregationProgressView({ projectId, surveyNumbers, currentUser 
     
     return (
         <Accordion type="multiple" className="w-full space-y-4">
-            {surveyNumbers.map(sn => (
-                <AccordionItem value={sn} key={sn} className="border rounded-lg">
+            {familyHeads.map(head => (
+                <AccordionItem value={head.id} key={head.id} className="border rounded-lg">
                     <AccordionTrigger className="p-4 text-lg font-medium hover:no-underline">
-                        Progress for Survey No: {sn}
+                        <div className="flex items-center gap-2">
+                           <UserIcon className="h-5 w-5 text-primary" />
+                           {head.name}
+                        </div>
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t">
-                        <ProgressEditor
-                            surveyNumber={sn}
-                            projectId={projectId}
-                            onProgressUpdated={refreshData}
-                        />
+                        {head.landRecords.length > 0 ? (
+                             <Accordion type="multiple" className="w-full space-y-2">
+                                {head.landRecords.map(record => (
+                                     <AccordionItem value={record.id} key={record.id} className="border rounded-md">
+                                        <AccordionTrigger className="px-4 py-3 text-base font-medium hover:no-underline">
+                                           Progress for Survey No: {record.surveyNumber}
+                                        </AccordionTrigger>
+                                        <AccordionContent className="p-4 border-t">
+                                            <ProgressEditor
+                                                surveyNumber={record.surveyNumber}
+                                                projectId={projectId}
+                                                onProgressUpdated={refreshData}
+                                            />
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                             </Accordion>
+                        ): (
+                            <p className="text-center text-muted-foreground p-4">
+                                This family head has no land records assigned.
+                            </p>
+                        )}
                     </AccordionContent>
                 </AccordionItem>
             ))}
