@@ -665,13 +665,26 @@ interface FinTxFormDialogProps {
     onOpenChange: (isOpen: boolean) => void;
     onSave: (transactionData: Omit<FinancialTransaction, 'id' | 'timestamp' | 'familyHeadId'>) => void;
     familyName: string;
+    transaction: FinancialTransaction | null;
 }
 
-function FinTxFormDialog({ isOpen, onOpenChange, onSave, familyName }: FinTxFormDialogProps) {
+function FinTxFormDialog({ isOpen, onOpenChange, onSave, familyName, transaction }: FinTxFormDialogProps) {
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState('');
     const [purpose, setPurpose] = useState<FinancialTransaction['purpose']>('Token Advance');
     const { toast } = useToast();
+
+    useEffect(() => {
+        if (transaction) {
+            setAmount(String(transaction.amount));
+            setDate(transaction.date);
+            setPurpose(transaction.purpose);
+        } else {
+            setAmount('');
+            setDate('');
+            setPurpose('Token Advance');
+        }
+    }, [transaction, isOpen]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -686,10 +699,6 @@ function FinTxFormDialog({ isOpen, onOpenChange, onSave, familyName }: FinTxForm
             purpose,
         });
         
-        // Reset form
-        setAmount('');
-        setDate('');
-        setPurpose('Token Advance');
         onOpenChange(false);
     };
 
@@ -698,9 +707,9 @@ function FinTxFormDialog({ isOpen, onOpenChange, onSave, familyName }: FinTxForm
             <DialogContent className="sm:max-w-md">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
-                        <DialogTitle>Record a Payment for {familyName}</DialogTitle>
+                        <DialogTitle>{transaction ? 'Edit Payment' : 'Record a Payment'} for {familyName}</DialogTitle>
                         <DialogDescription>
-                            Enter the details for the financial transaction. This record is immutable.
+                            Enter the details for the financial transaction.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 p-4">
@@ -723,9 +732,9 @@ function FinTxFormDialog({ isOpen, onOpenChange, onSave, familyName }: FinTxForm
                             </Select>
                         </div>
                     </div>
-                    <CardFooter>
+                    <DialogFooter>
                         <Button type="submit">Save Transaction</Button>
-                    </CardFooter>
+                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
@@ -768,6 +777,7 @@ export const PersonCard: FC<PersonCardProps> = ({
   const [editingNote, setEditingNote] = useState<AggregatedNote | null>(null);
   const [editingLegalNote, setEditingLegalNote] = useState<AggregatedLegalNote | null>(null);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
+  const [finTxToEdit, setFinTxToEdit] = useState<FinancialTransaction | null>(null);
 
   const canDeleteLegalNote = currentUser?.role !== 'Lawyer';
 
@@ -873,17 +883,34 @@ export const PersonCard: FC<PersonCardProps> = ({
   }, [txStorageKey, refreshData, toast]);
   
   const handleSaveFinancialTx = useCallback((txData: Omit<FinancialTransaction, 'id' | 'timestamp' | 'familyHeadId'>) => {
-        const newTransaction: FinancialTransaction = {
-            id: `fin-tx-${Date.now()}`,
-            timestamp: new Date().toISOString(),
-            familyHeadId: person.id,
-            ...txData,
-        };
-        const allTxs = JSON.parse(localStorage.getItem(finTxStorageKey) || '[]');
-        localStorage.setItem(finTxStorageKey, JSON.stringify([newTransaction, ...allTxs]));
-        toast({ title: 'Payment Recorded', description: 'The financial transaction has been added.'});
+        const allTxs: FinancialTransaction[] = JSON.parse(localStorage.getItem(finTxStorageKey) || '[]');
+
+        if (finTxToEdit) {
+            const updatedTxs = allTxs.map(tx => tx.id === finTxToEdit.id ? { ...finTxToEdit, ...txData, timestamp: new Date().toISOString() } : tx);
+            localStorage.setItem(finTxStorageKey, JSON.stringify(updatedTxs));
+            toast({ title: 'Payment Updated', description: 'The financial transaction has been updated.' });
+        } else {
+            const newTransaction: FinancialTransaction = {
+                id: `fin-tx-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                familyHeadId: person.id,
+                ...txData,
+            };
+            localStorage.setItem(finTxStorageKey, JSON.stringify([newTransaction, ...allTxs]));
+            toast({ title: 'Payment Recorded', description: 'The financial transaction has been added.'});
+        }
+        
+        setFinTxToEdit(null);
         refreshData();
-    }, [finTxStorageKey, person.id, refreshData, toast]);
+    }, [finTxStorageKey, person.id, finTxToEdit, refreshData, toast]);
+
+    const handleDeleteFinancialTx = useCallback((txId: string) => {
+        const allTxs: FinancialTransaction[] = JSON.parse(localStorage.getItem(finTxStorageKey) || '[]');
+        const updatedTxs = allTxs.filter(tx => tx.id !== txId);
+        localStorage.setItem(finTxStorageKey, JSON.stringify(updatedTxs));
+        toast({ title: 'Payment Deleted', description: 'The financial transaction has been removed.' });
+        refreshData();
+    }, [finTxStorageKey, refreshData, toast]);
 
   const handleSaveNote = useCallback((surveyNumber: string, data: Omit<Note, 'id'>) => {
     const storageKey = `notes-${projectId}-${surveyNumber}`;
@@ -950,11 +977,12 @@ export const PersonCard: FC<PersonCardProps> = ({
     }
   };
 
-  const openEditDialog = (item: any, type: 'note' | 'legal-note' | 'transaction') => {
+  const openEditDialog = (item: any, type: 'note' | 'legal-note' | 'transaction' | 'financial-transaction') => {
     switch(type) {
         case 'note': setEditingNote(item); setNoteDialogOpen(true); break;
         case 'legal-note': setEditingLegalNote(item); setLegalNoteDialogOpen(true); break;
         case 'transaction': setTransactionToEdit(item); setIsTxDialogOpen(true); break;
+        case 'financial-transaction': setFinTxToEdit(item); setIsFinTxDialogOpen(true); break;
     }
   }
 
@@ -1118,7 +1146,7 @@ export const PersonCard: FC<PersonCardProps> = ({
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t">
                         <div className="flex justify-end mb-4">
-                           <Button size="sm" onClick={() => setIsFinTxDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Add Payment</Button>
+                           <Button size="sm" onClick={() => { setFinTxToEdit(null); setIsFinTxDialogOpen(true); }}><Plus className="mr-2 h-4 w-4" />Add Payment</Button>
                         </div>
                         <div className="rounded-md border">
                             <Table>
@@ -1128,6 +1156,7 @@ export const PersonCard: FC<PersonCardProps> = ({
                                       <TableHead>Purpose</TableHead>
                                       <TableHead>Date of Payment</TableHead>
                                       <TableHead>Recorded At</TableHead>
+                                      <TableHead className="text-right">Actions</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1137,10 +1166,17 @@ export const PersonCard: FC<PersonCardProps> = ({
                                           <TableCell><Badge variant={tx.purpose === 'Token Advance' ? 'secondary' : 'default'}>{tx.purpose}</Badge></TableCell>
                                           <TableCell>{format(new Date(tx.date), 'PPP')}</TableCell>
                                           <TableCell>{format(new Date(tx.timestamp), 'PP pp')}</TableCell>
+                                           <TableCell className="text-right space-x-1">
+                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(tx, 'financial-transaction')}><Edit className="h-4 w-4" /></Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                    <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this financial record.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteFinancialTx(tx.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
                                       </TableRow>
                                   )) : (
                                       <TableRow>
-                                          <TableCell colSpan={4} className="h-24 text-center">
+                                          <TableCell colSpan={5} className="h-24 text-center">
                                               No financial transactions recorded for this family.
                                           </TableCell>
                                       </TableRow>
@@ -1260,6 +1296,7 @@ export const PersonCard: FC<PersonCardProps> = ({
         onOpenChange={setIsFinTxDialogOpen}
         onSave={handleSaveFinancialTx}
         familyName={person.name}
+        transaction={finTxToEdit}
     />
 
     {/* Note Dialog */}
@@ -1388,3 +1425,4 @@ function FormDialog<T>(
         </Dialog>
     );
 }
+
