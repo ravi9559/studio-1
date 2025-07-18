@@ -1,4 +1,3 @@
-
 // src/types/index.ts
 
 export type LandClassification = 'Wet' | 'Dry' | 'Unclassified';
@@ -134,6 +133,7 @@ export type AcquisitionStatus = {
   id: string; // e.g., `${projectId}-${surveyNumber}-${index}`
   projectId: string;
   surveyNumber: string;
+  familyHeadId: string; // Added to easily link back to the family head
   familyHeadName: string;
   extent: { acres: string; cents: string };
   landClassification: LandClassification;

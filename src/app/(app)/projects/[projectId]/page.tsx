@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { LineageView } from "@/components/lineage/lineage-view";
@@ -38,11 +38,13 @@ export default function ProjectDetailsPage() {
     const projectId = params.projectId as string;
     const { toast } = useToast();
     const router = useRouter();
+    const acquisitionTrackerRef = useRef<HTMLDivElement>(null);
 
     const [project, setProject] = useState<Project | null>(null);
     const [owners, setOwners] = useState<Person[]>([]);
     const [folders, setFolders] = useState<Folder[]>([]);
     const [acquisitionStatuses, setAcquisitionStatuses] = useState<AcquisitionStatus[]>([]);
+    const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     
@@ -99,29 +101,33 @@ export default function ProjectDetailsPage() {
             // --- Load or Regenerate Project-Specific Data ---
             let loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || 'null');
             let loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || 'null');
+            let loadedFinancials = JSON.parse(localStorage.getItem(financialTransactionsStorageKey) || '[]');
             
             if (!loadedOwners) {
                 initializeNewProjectData(projectId);
                 loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || '[]');
                 loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || '[]');
+                loadedFinancials = JSON.parse(localStorage.getItem(financialTransactionsStorageKey) || '[]');
             }
             
             setOwners(loadedOwners);
             setFolders(loadedFolders);
+            setFinancialTransactions(loadedFinancials);
 
         } catch (e) {
             console.error("Could not load project data", e);
             toast({ variant: 'destructive', title: 'Error Loading Data', description: 'There was a problem initializing project data.' });
         }
         setLoading(false);
-    }, [projectId, ownersStorageKey, folderStorageKey, toast]);
+    }, [projectId, ownersStorageKey, folderStorageKey, financialTransactionsStorageKey, toast]);
 
     const allSurveyRecords = useMemo(() => {
-        const records: { ownerName: string, surveyNumber: string, acres: string, cents: string, landClassification: LandClassification }[] = [];
+        const records: { ownerName: string, ownerId: string, surveyNumber: string, acres: string, cents: string, landClassification: LandClassification }[] = [];
         const collect = (person: Person) => {
             person.landRecords.forEach(lr => {
                 records.push({
                     ownerName: person.name,
+                    ownerId: person.id,
                     surveyNumber: lr.surveyNumber,
                     acres: lr.acres,
                     cents: lr.cents,
@@ -140,19 +146,18 @@ export default function ProjectDetailsPage() {
         let existingStatuses: AcquisitionStatus[] = JSON.parse(localStorage.getItem(acquisitionStorageKey) || '[]');
         
         let changed = false;
-        // Use a Set to track survey numbers that have been processed to create unique IDs.
         const surveyCounts: { [key: string]: number } = {};
 
         const updatedStatuses = allSurveyRecords.map((record) => {
             surveyCounts[record.surveyNumber] = (surveyCounts[record.surveyNumber] || 0) + 1;
             const id = `${projectId}-${record.surveyNumber}-${surveyCounts[record.surveyNumber] - 1}`;
             
-            const existing = existingStatuses.find(s => s.surveyNumber === record.surveyNumber && s.familyHeadName === record.ownerName); // Match more robustly
+            const existing = existingStatuses.find(s => s.surveyNumber === record.surveyNumber && s.familyHeadName === record.ownerName);
 
             if (existing) {
-                 if(existing.familyHeadName !== record.ownerName || existing.extent.acres !== record.acres || existing.extent.cents !== record.cents || existing.landClassification !== record.landClassification) {
+                 if(existing.familyHeadName !== record.ownerName || existing.extent.acres !== record.acres || existing.extent.cents !== record.cents || existing.landClassification !== record.landClassification || existing.familyHeadId !== record.ownerId) {
                     changed = true;
-                    return { ...existing, familyHeadName: record.ownerName, extent: { acres: record.acres, cents: record.cents }, landClassification: record.landClassification };
+                    return { ...existing, familyHeadName: record.ownerName, familyHeadId: record.ownerId, extent: { acres: record.acres, cents: record.cents }, landClassification: record.landClassification };
                  }
                  return existing;
             } else {
@@ -162,6 +167,7 @@ export default function ProjectDetailsPage() {
                     projectId,
                     surveyNumber: record.surveyNumber,
                     familyHeadName: record.ownerName,
+                    familyHeadId: record.ownerId,
                     extent: { acres: record.acres, cents: record.cents },
                     landClassification: record.landClassification,
                     legal: { overallStatus: 'Not Started' },
@@ -169,16 +175,12 @@ export default function ProjectDetailsPage() {
             }
         });
 
-        // Create a set of IDs from the current, valid survey records
         const validRecordIds = new Set(updatedStatuses.map(s => s.id));
-        
-        // Filter existing statuses to remove any that are no longer linked to a valid land record
         const filteredStatuses = existingStatuses.filter(s => validRecordIds.has(s.id));
         
-        if (updatedStatuses.length !== existingStatuses.length || JSON.stringify(updatedStatuses) !== JSON.stringify(existingStatuses)) {
+        if (updatedStatuses.length !== filteredStatuses.length || JSON.stringify(updatedStatuses) !== JSON.stringify(filteredStatuses)) {
             changed = true;
         }
-
 
         if (changed) {
             localStorage.setItem(acquisitionStorageKey, JSON.stringify(updatedStatuses));
@@ -196,6 +198,11 @@ export default function ProjectDetailsPage() {
         setOwners(newOwners);
         localStorage.setItem(ownersStorageKey, JSON.stringify(newOwners));
     }, [ownersStorageKey]);
+    
+    const updateAndPersistFinancials = useCallback((newFinancials: FinancialTransaction[]) => {
+        setFinancialTransactions(newFinancials);
+        localStorage.setItem(financialTransactionsStorageKey, JSON.stringify(newFinancials));
+    }, [financialTransactionsStorageKey]);
 
     useEffect(() => {
         if (owners && owners.length > 0) {
@@ -412,6 +419,7 @@ export default function ProjectDetailsPage() {
 
     const handleSelectSurvey = useCallback((statusId: string) => { 
         setActiveStatusId(statusId);
+        acquisitionTrackerRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, []);
 
     const currentUserRole = currentUser?.role;
@@ -421,10 +429,8 @@ export default function ProjectDetailsPage() {
             return 0;
         }
 
-        const allTransactions: FinancialTransaction[] = JSON.parse(localStorage.getItem(financialTransactionsStorageKey) || '[]');
         const familyHeadsWithAdvance = new Set<string>();
-
-        allTransactions.forEach(tx => {
+        financialTransactions.forEach(tx => {
             if (tx.purpose === 'Token Advance') {
                 familyHeadsWithAdvance.add(tx.familyHeadId);
             }
@@ -434,20 +440,16 @@ export default function ProjectDetailsPage() {
             return 0;
         }
 
-        const familyHeadIdMap = new Map<string, string>();
-        owners.forEach(owner => familyHeadIdMap.set(owner.name, owner.id));
-
         let parcelsWithAdvancePaid = 0;
         acquisitionStatuses.forEach(status => {
-            const headId = familyHeadIdMap.get(status.familyHeadName);
-            if (headId && familyHeadsWithAdvance.has(headId)) {
+            if (familyHeadsWithAdvance.has(status.familyHeadId)) {
                 parcelsWithAdvancePaid++;
             }
         });
         
         return (parcelsWithAdvancePaid / acquisitionStatuses.length) * 100;
 
-    }, [acquisitionStatuses, owners, financialTransactionsStorageKey]);
+    }, [acquisitionStatuses, owners, financialTransactions]);
 
 
     if (loading) {
@@ -527,7 +529,7 @@ export default function ProjectDetailsPage() {
                 </header>
 
                 <Tabs defaultValue="lineage" className="w-full">
-                    <TabsList>
+                    <TabsList className="flex-wrap h-auto">
                         <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
                         <TabsTrigger value="documents">Title Documents</TabsTrigger>
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
@@ -541,9 +543,12 @@ export default function ProjectDetailsPage() {
                     <TabsContent value="lineage" className="pt-4">
                         <LineageView 
                             familyHeads={owners} 
+                            financialTransactions={financialTransactions}
                             onAddHeir={handleAddHeir} 
                             onUpdatePerson={handleUpdatePerson} 
                             onAddFamilyHead={handleAddFamilyHead}
+                            onImportSuccess={(newOwners) => updateAndPersistOwners(newOwners)}
+                            onFinancialTransactionsUpdate={updateAndPersistFinancials}
                             projectId={projectId} 
                             currentUser={currentUser}
                             folders={folders}
@@ -560,10 +565,11 @@ export default function ProjectDetailsPage() {
                             onDeleteFolder={handleDeleteFolder}
                             onAddFile={handleAddFileToFolder}
                             onDeleteFile={handleDeleteFileFromFolder}
+                            currentUser={currentUser}
                         />
                     </TabsContent>
                     <TabsContent value="transactions" className="pt-4">
-                        <TransactionHistory projectId={projectId} />
+                        <TransactionHistory projectId={projectId} currentUser={currentUser} />
                     </TabsContent>
                     <TabsContent value="sketch" className="pt-4">
                         <SiteSketchManager projectId={projectId} />
@@ -590,9 +596,10 @@ export default function ProjectDetailsPage() {
                              </div>
                              <SiteSketchView 
                                 acquisitionStatuses={acquisitionStatuses} 
+                                financialTransactions={financialTransactions}
                                 onSelectSurvey={handleSelectSurvey} 
                             />
-                            <div className="mt-6">
+                            <div className="mt-6" ref={acquisitionTrackerRef}>
                                <AcquisitionTrackerView 
                                 statuses={acquisitionStatuses} 
                                 familyHeads={owners}
