@@ -6,19 +6,18 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, UserPlus, Edit, Trash2, Milestone, Scale, Save, Plus, X, Link as LinkIcon, Bell, BellOff, StickyNote, ListTodo, Gavel, ScrollText, FolderArchive, FolderIcon, FolderPlus, File as FileIcon, FilePlus, Download, Loader2 } from 'lucide-react';
+import { User, UserPlus, Edit, Trash2, Milestone, Scale, Save, Plus, X, Link as LinkIcon, StickyNote, Gavel, ScrollText, FolderArchive, FolderIcon, FolderPlus, File as FileIcon, FilePlus, Download, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from '../ui/separator';
-import type { Person, SurveyRecord, LandClassification, Note, Task, LegalNote, User, Transaction, Folder, DocumentFile } from '@/types';
+import type { Person, SurveyRecord, LandClassification, Note, LegalNote, User, Transaction, Folder, DocumentFile } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
-import { format, isPast } from 'date-fns';
+import { format } from 'date-fns';
 import { Textarea } from '../ui/textarea';
-import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const statusColors: { [key in Person['status']]: string } = {
@@ -662,7 +661,6 @@ const TransactionFormDialog: FC<{
 
 
 type AggregatedNote = Note & { surveyNumber: string };
-type AggregatedTask = Task & { surveyNumber: string };
 type AggregatedLegalNote = LegalNote & { surveyNumber: string };
 
 export const PersonCard: FC<PersonCardProps> = ({ 
@@ -687,16 +685,13 @@ export const PersonCard: FC<PersonCardProps> = ({
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [aggregatedNotes, setAggregatedNotes] = useState<AggregatedNote[]>([]);
-  const [aggregatedTasks, setAggregatedTasks] = useState<AggregatedTask[]>([]);
   const [aggregatedLegalNotes, setAggregatedLegalNotes] = useState<AggregatedLegalNote[]>([]);
 
   const [isNoteDialogOpen, setNoteDialogOpen] = useState(false);
-  const [isTaskDialogOpen, setTaskDialogOpen] = useState(false);
   const [isLegalNoteDialogOpen, setLegalNoteDialogOpen] = useState(false);
   const [isTxDialogOpen, setIsTxDialogOpen] = useState(false);
 
   const [editingNote, setEditingNote] = useState<AggregatedNote | null>(null);
-  const [editingTask, setEditingTask] = useState<AggregatedTask | null>(null);
   const [editingLegalNote, setEditingLegalNote] = useState<AggregatedLegalNote | null>(null);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
 
@@ -738,7 +733,6 @@ export const PersonCard: FC<PersonCardProps> = ({
     if (surveyNumbers.length === 0) return;
 
     const allNotes: AggregatedNote[] = [];
-    const allTasks: AggregatedTask[] = [];
     const allLegalNotes: AggregatedLegalNote[] = [];
 
     surveyNumbers.forEach(sn => {
@@ -746,9 +740,6 @@ export const PersonCard: FC<PersonCardProps> = ({
             const notes: Note[] = JSON.parse(localStorage.getItem(`notes-${projectId}-${sn}`) || '[]');
             allNotes.push(...notes.map(n => ({ ...n, surveyNumber: sn })));
             
-            const tasks: Task[] = JSON.parse(localStorage.getItem(`tasks-${projectId}-${sn}`) || '[]');
-            allTasks.push(...tasks.map(t => ({ ...t, surveyNumber: sn })));
-
             const legalNotes: LegalNote[] = JSON.parse(localStorage.getItem(`legal-notes-${projectId}-${sn}`) || '[]');
             allLegalNotes.push(...legalNotes.map(ln => ({ ...ln, surveyNumber: sn })));
         } catch (e) {
@@ -757,7 +748,6 @@ export const PersonCard: FC<PersonCardProps> = ({
     });
 
     setAggregatedNotes(allNotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    setAggregatedTasks(allTasks.sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()));
     setAggregatedLegalNotes(allLegalNotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
   }, [projectId, person, surveyNumbers, txStorageKey, isFamilyHead, version]);
@@ -829,40 +819,6 @@ export const PersonCard: FC<PersonCardProps> = ({
     refreshData();
   }, [projectId, refreshData, toast]);
 
-  const handleSaveTask = useCallback((surveyNumber: string, data: Omit<Task, 'id' | 'completed' | 'reminder'>) => {
-    const storageKey = `tasks-${projectId}-${surveyNumber}`;
-    const items: Task[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-     if (editingTask) {
-        const updatedItems = items.map(i => i.id === editingTask.id ? { ...i, ...data } : i);
-        localStorage.setItem(storageKey, JSON.stringify(updatedItems));
-        toast({ title: 'Task Updated' });
-    } else {
-        const newItem: Task = { ...data, id: `task-${Date.now()}`, completed: false, reminder: false };
-        localStorage.setItem(storageKey, JSON.stringify([newItem, ...items]));
-        toast({ title: 'Task Added' });
-    }
-    setEditingTask(null);
-    setTaskDialogOpen(false);
-    refreshData();
-  }, [projectId, editingTask, refreshData, toast]);
-
-  const handleDeleteTask = useCallback((task: AggregatedTask) => {
-    const storageKey = `tasks-${projectId}-${task.surveyNumber}`;
-    const items: Task[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const updatedItems = items.filter(i => i.id !== task.id);
-    localStorage.setItem(storageKey, JSON.stringify(updatedItems));
-    toast({ title: 'Task Deleted' });
-    refreshData();
-  }, [projectId, refreshData, toast]);
-
-  const handleToggleTask = useCallback((task: AggregatedTask, field: 'completed' | 'reminder') => {
-    const storageKey = `tasks-${projectId}-${task.surveyNumber}`;
-    const items: Task[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const updatedItems = items.map(i => i.id === task.id ? { ...i, [field]: !i[field] } : i);
-    localStorage.setItem(storageKey, JSON.stringify(updatedItems));
-    refreshData();
-  }, [projectId, refreshData]);
-
   const handleSaveLegalNote = useCallback((surveyNumber: string, data: Omit<LegalNote, 'id' | 'date' | 'author'>) => {
     if (!currentUser) return;
     const storageKey = `legal-notes-${projectId}-${surveyNumber}`;
@@ -891,22 +847,20 @@ export const PersonCard: FC<PersonCardProps> = ({
     refreshData();
   }, [projectId, refreshData, toast]);
 
-  const openAddDialog = (type: 'note' | 'task' | 'legal-note') => {
+  const openAddDialog = (type: 'note' | 'legal-note') => {
     if (surveyNumbers.length === 0) {
       toast({ variant: 'destructive', title: 'No Survey Numbers', description: 'This family has no land records to attach items to.' });
       return;
     }
     switch (type) {
       case 'note': setEditingNote(null); setNoteDialogOpen(true); break;
-      case 'task': setEditingTask(null); setTaskDialogOpen(true); break;
       case 'legal-note': setEditingLegalNote(null); setLegalNoteDialogOpen(true); break;
     }
   };
 
-  const openEditDialog = (item: any, type: 'note' | 'task' | 'legal-note' | 'transaction') => {
+  const openEditDialog = (item: any, type: 'note' | 'legal-note' | 'transaction') => {
     switch(type) {
         case 'note': setEditingNote(item); setNoteDialogOpen(true); break;
-        case 'task': setEditingTask(item); setTaskDialogOpen(true); break;
         case 'legal-note': setEditingLegalNote(item); setLegalNoteDialogOpen(true); break;
         case 'transaction': setTransactionToEdit(item); setIsTxDialogOpen(true); break;
     }
@@ -1123,44 +1077,6 @@ export const PersonCard: FC<PersonCardProps> = ({
                         </div>
                     </AccordionContent>
                 </AccordionItem>
-                {/* Tasks Section */}
-                <AccordionItem value="tasks" className="border-b-0">
-                    <AccordionTrigger className="text-lg font-medium hover:no-underline rounded-md p-2 hover:bg-muted/50">
-                        <div className="flex items-center gap-2"><ListTodo /> Tasks &amp; Schedule</div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 border-t">
-                       <div className="flex justify-end mb-4">
-                           <Button size="sm" onClick={() => openAddDialog('task')}><Plus className="mr-2 h-4 w-4" />Add Task</Button>
-                        </div>
-                        <div className="space-y-2">
-                           {aggregatedTasks.length > 0 ? aggregatedTasks.map(task => (
-                                <Card key={task.id} className={task.completed ? 'bg-muted/50' : 'bg-background/70'}>
-                                    <CardContent className="p-3 flex items-center gap-4">
-                                        <Checkbox checked={task.completed} onCheckedChange={() => handleToggleTask(task, 'completed')} className="mt-1" />
-                                        <div className="flex-grow space-y-1">
-                                            <p className={task.completed ? 'line-through text-muted-foreground' : ''}>{task.text}</p>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                <span>S.No: {task.surveyNumber}</span>
-                                                <Separator orientation="vertical" className="h-3" />
-                                                <Badge variant={!task.completed && task.dueDate && isPast(new Date(task.dueDate)) ? 'destructive' : 'outline'}>
-                                                    Due: {task.dueDate ? format(new Date(task.dueDate), 'PPP') : 'No Date'}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center">
-                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleTask(task, 'reminder')}>{task.reminder ? <Bell className="h-4 w-4 text-primary" /> : <BellOff className="h-4 w-4" />}</Button>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(task, 'task')} disabled={task.completed}><Edit className="h-4 w-4" /></Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this task.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteTask(task)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                           )) : <p className="text-sm text-muted-foreground text-center p-4">No tasks for this family.</p>}
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
                 {/* Legal Notes Section */}
                 <AccordionItem value="legal-notes" className="border-b-0">
                     <AccordionTrigger className="text-lg font-medium hover:no-underline rounded-md p-2 hover:bg-muted/50">
@@ -1218,20 +1134,6 @@ export const PersonCard: FC<PersonCardProps> = ({
         fields={[
             { name: 'content', label: 'Note Content', type: 'textarea' },
             { name: 'urls', label: 'Related URLs', type: 'urls' },
-        ]}
-    />
-    
-    {/* Task Dialog */}
-    <FormDialog
-        isOpen={isTaskDialogOpen}
-        onOpenChange={setTaskDialogOpen}
-        title={editingTask ? 'Edit Task' : 'Add Task'}
-        surveyNumbers={surveyNumbers}
-        onSave={handleSaveTask}
-        initialData={editingTask}
-        fields={[
-            { name: 'text', label: 'Task Description', type: 'input', inputType: 'text' },
-            { name: 'dueDate', label: 'Due Date', type: 'input', inputType: 'date' },
         ]}
     />
 

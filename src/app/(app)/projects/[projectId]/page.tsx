@@ -24,7 +24,6 @@ import { TitleDocumentsView } from '@/components/documents/title-documents-view'
 import { TransactionHistory } from '@/components/transactions/transaction-history';
 import { Notes } from '@/components/project/notes';
 import { LegalNotes } from '@/components/project/legal-notes';
-import { Tasks } from '@/components/project/tasks';
 import { AggregationProgressView } from '@/components/aggregation/aggregation-progress-view';
 
 
@@ -245,7 +244,6 @@ export default function ProjectDetailsPage() {
             // 3. Remove item-specific data (notes, tasks, etc.) by iterating through survey numbers
             acquisitionStatuses.forEach(status => {
                 localStorage.removeItem(`notes-${projectId}-${status.surveyNumber}`);
-                localStorage.removeItem(`tasks-${projectId}-${status.surveyNumber}`);
                 localStorage.removeItem(`legal-notes-${projectId}-${status.surveyNumber}`);
                 localStorage.removeItem(`legal-queries-${projectId}-${status.surveyNumber}`);
                 localStorage.removeItem(`aggregation-${projectId}-${status.surveyNumber}`);
@@ -500,7 +498,6 @@ export default function ProjectDetailsPage() {
                         {currentUserRole !== 'Lawyer' && <TabsTrigger value="aggregation">Aggregation Progress</TabsTrigger>}
                         <TabsTrigger value="notes">Notes</TabsTrigger>
                         {currentUserRole !== 'Aggregator' && <TabsTrigger value="legal">Legal Notes</TabsTrigger>}
-                        {currentUserRole === 'Super Admin' && <TabsTrigger value="tasks">Tasks & Schedule</TabsTrigger>}
                     </TabsList>
                     
                     <TabsContent value="lineage" className="pt-4">
@@ -564,11 +561,6 @@ export default function ProjectDetailsPage() {
                             <LegalNotes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
                         </TabsContent>
                     )}
-                     {currentUserRole === 'Super Admin' && (
-                        <TabsContent value="tasks" className="pt-4">
-                           <Tasks projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
-                        </TabsContent>
-                     )}
                 </Tabs>
             </div>
         </div>

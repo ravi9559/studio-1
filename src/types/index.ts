@@ -78,14 +78,6 @@ export type User = {
   accountType?: 'Individual' | 'Corporate';
 };
 
-export type Task = {
-  id: string;
-  text: string;
-  dueDate: string;
-  completed: boolean;
-  reminder: boolean;
-};
-
 export type LegalNote = {
   id:string;
   date: string;
