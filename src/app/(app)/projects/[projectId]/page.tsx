@@ -542,7 +542,6 @@ export default function ProjectDetailsPage() {
                                 onUpdateStatus={handleUpdateAcquisitionStatus} 
                                 activeStatusId={activeStatusId} 
                                 onActiveStatusChange={setActiveStatusId}
-                                currentUser={currentUser} 
                                />
                             </div>
                         </TabsContent>
