@@ -21,9 +21,6 @@ interface AcquisitionCardProps {
 }
 
 const statusMap = {
-  // Operations
-  'Fully Collected': { icon: FileCheck, color: 'text-green-500' },
-  'Partially Collected': { icon: FileClock, color: 'text-yellow-500' },
   // Legal
   'Cleared': { icon: CheckCircle2, color: 'text-green-500' },
   'Awaiting': { icon: FileQuestion, color: 'text-blue-500' },
@@ -115,19 +112,14 @@ export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCard
     saveQueries(updatedQueries);
   };
 
-  const getStageStatus = (stage: 'operations' | 'legal') => {
-      if (stage === 'operations') {
-          return status.operations.documentCollection === 'Fully Collected' && status.operations.meetingDate ? 'completed' : 'active';
-      }
+  const getStageStatus = (stage: 'legal') => {
       if (stage === 'legal') {
-           const opsCompleted = getStageStatus('operations') === 'completed';
-           if (!opsCompleted) return 'pending';
            return status.legal.overallStatus === 'Cleared' ? 'completed' : 'active';
       }
       return 'pending';
   }
 
-  const overallStatus = getStageStatus('legal');
+  const overallStatus = getStageStatus('legal') === 'completed' ? 'completed' : 'pending';
 
   const canAddQuery = currentUser?.role === 'Lawyer';
 
@@ -152,14 +144,13 @@ export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCard
         {/* Stepper */}
         <div className="p-4 border rounded-lg bg-background/50">
             <div className="flex items-start">
-                <StepperNode stage="Operations" status={getStageStatus('operations')} />
                 <StepperNode stage="Legal" status={getStageStatus('legal')} />
                 <StepperNode stage="Completed" status={overallStatus} isLast />
             </div>
         </div>
 
         {/* Details Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1">
             {/* Land Details */}
             <Card>
                 <CardHeader><CardTitle className="text-xl flex items-center gap-2"><LandPlot /> Land Details</CardTitle></CardHeader>
@@ -167,14 +158,6 @@ export function AcquisitionCard({ status, onEdit, currentUser }: AcquisitionCard
                     <InfoRow icon={Users} label="Family Head" value={status.familyHeadName} />
                     <InfoRow icon={Scale} label="Total Extent" value={`${status.extent.acres} Acres, ${status.extent.cents} Cents`} />
                     <InfoRow icon={Microscope} label="Classification" value={status.landClassification} />
-                </CardContent>
-            </Card>
-            {/* Operational Information */}
-             <Card>
-                <CardHeader><CardTitle className="text-xl flex items-center gap-2"><SquareUserRound /> Operational Information</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                     <InfoRow icon={CalendarIcon} label="In-person meeting" value={status.operations.meetingDate && isValid(new Date(status.operations.meetingDate)) ? format(new Date(status.operations.meetingDate), 'PPP') : 'Pending'} />
-                     <InfoRow icon={FileCheck} label="Document Collection" value="" valueComponent={<StatusBadge status={status.operations.documentCollection} />} />
                 </CardContent>
             </Card>
         </div>

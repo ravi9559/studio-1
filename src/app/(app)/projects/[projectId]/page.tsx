@@ -163,7 +163,6 @@ export default function ProjectDetailsPage() {
                     familyHeadName: record.ownerName,
                     extent: { acres: record.acres, cents: record.cents },
                     landClassification: record.landClassification,
-                    operations: { meetingDate: null, documentCollection: 'Pending' },
                     legal: { overallStatus: 'Not Started' },
                 };
             }
