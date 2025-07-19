@@ -21,6 +21,7 @@ import { TransactionHistory } from '@/components/transactions/transaction-histor
 import { Notes } from '@/components/project/notes';
 import { LegalNotes } from '@/components/project/legal-notes';
 import { SiteSketchManager } from '@/components/project/site-sketch-manager';
+import { AdvancePaymentGrid } from '@/components/transactions/advance-payment-grid';
 
 // --- Storage Keys ---
 const PROJECTS_STORAGE_KEY = 'projects';
@@ -328,6 +329,7 @@ export default function ProjectDetailsPage() {
                 <Tabs defaultValue="lineage" className="w-full">
                     <TabsList>
                         <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
+                        <TabsTrigger value="payments">Advance Payments</TabsTrigger>
                         <TabsTrigger value="documents">Title Documents</TabsTrigger>
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                         <TabsTrigger value="sketch">Site Sketch</TabsTrigger>
@@ -347,6 +349,12 @@ export default function ProjectDetailsPage() {
                             onDeleteFolder={handleDeleteFolder}
                             onAddFile={handleAddFileToFolder}
                             onDeleteFile={handleDeleteFileFromFolder}
+                        />
+                    </TabsContent>
+                    <TabsContent value="payments" className="pt-4">
+                        <AdvancePaymentGrid
+                            familyHeads={owners}
+                            financialTransactions={financialTransactions}
                         />
                     </TabsContent>
                     <TabsContent value="documents" className="pt-4">
