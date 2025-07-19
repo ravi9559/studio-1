@@ -29,7 +29,7 @@ export default function RootLayout({
             </main>
             <footer className="text-center p-4 text-xs text-muted-foreground border-t mt-auto">
               <p>
-                <span className="font-bold">Lakshmi Balaji | O2O</span> | Simplifying Real Estate Transactions. All rights reserved.
+                Lakshmi Balaji <span className="font-bold">O2O</span> | Simplifying Real Estate Transactions. All rights reserved.
               </p>
             </footer>
           </div>
