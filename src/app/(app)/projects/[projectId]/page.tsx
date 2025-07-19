@@ -20,7 +20,6 @@ import { TitleDocumentsView } from '@/components/documents/title-documents-view'
 import { TransactionHistory } from '@/components/transactions/transaction-history';
 import { Notes } from '@/components/project/notes';
 import { LegalNotes } from '@/components/project/legal-notes';
-import { DocumentCollectionStatusView } from '@/components/aggregation/document-collection-status-view';
 import { SiteSketchManager } from '@/components/project/site-sketch-manager';
 
 // --- Storage Keys ---
@@ -335,7 +334,6 @@ export default function ProjectDetailsPage() {
                         <TabsTrigger value="documents">Title Documents</TabsTrigger>
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                         <TabsTrigger value="sketch">Site Sketch</TabsTrigger>
-                        <TabsTrigger value="collection">Document Collection Status</TabsTrigger>
                         <TabsTrigger value="notes">Notes</TabsTrigger>
                         <TabsTrigger value="legal">Legal Notes</TabsTrigger>
                     </TabsList>
@@ -371,13 +369,6 @@ export default function ProjectDetailsPage() {
                     </TabsContent>
                     <TabsContent value="sketch" className="pt-4">
                         <SiteSketchManager projectId={projectId} />
-                    </TabsContent>
-                    <TabsContent value="collection" className="pt-4">
-                        <DocumentCollectionStatusView
-                            projectId={projectId}
-                            familyHeads={owners}
-                            currentUser={currentUser}
-                        />
                     </TabsContent>
                     <TabsContent value="notes" className="pt-4">
                         <Notes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
