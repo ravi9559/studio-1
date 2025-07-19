@@ -7,7 +7,7 @@ import { PersonCard } from './person-card';
 import { LineageSuggestion } from './lineage-suggestion';
 import { Card, CardContent } from '../ui/card';
 import { Loader2, Search, PlusCircle, FileUp } from 'lucide-react';
-import type { Person, User, Folder, DocumentFile } from '@/types';
+import type { Person, User, Folder, DocumentFile, FinancialTransaction } from '@/types';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import {
@@ -120,10 +120,12 @@ const AddFamilyHeadForm: FC<{ onAddFamilyHead: (data: Omit<Person, 'id' | 'heirs
 
 interface LineageViewProps {
     familyHeads: Person[];
+    financialTransactions: FinancialTransaction[];
     onAddHeir: (parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => void;
     onUpdatePerson: (personId: string, personData: Omit<Person, 'id' | 'heirs'>) => void;
     onAddFamilyHead: (personData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => void;
     onImportSuccess: (newOwners: Person[]) => void;
+    onFinancialTransactionsUpdate: (transactions: FinancialTransaction[]) => void;
     projectId: string;
     currentUser: User | null;
     folders: Folder[];
@@ -156,10 +158,12 @@ const searchInFamily = (person: Person, query: string): boolean => {
 
 export function LineageView({ 
     familyHeads, 
+    financialTransactions,
     onAddHeir, 
     onUpdatePerson, 
     onAddFamilyHead,
     onImportSuccess,
+    onFinancialTransactionsUpdate,
     projectId, 
     currentUser,
     folders,
@@ -239,12 +243,15 @@ export function LineageView({
         {filteredHeads.length > 0 ? (
           filteredHeads.map(person => {
             const personFolders = folders.filter(f => f.name === person.name);
+            const personFinancials = financialTransactions.filter(tx => tx.familyHeadId === person.id);
             return (
                 <PersonCard 
                     key={person.id} 
-                    person={person} 
+                    person={person}
+                    financialTransactions={personFinancials}
                     onAddHeir={onAddHeir} 
                     onUpdatePerson={onUpdatePerson} 
+                    onFinancialTransactionsUpdate={onFinancialTransactionsUpdate}
                     isFamilyHead={true}
                     projectId={projectId}
                     currentUser={currentUser}
