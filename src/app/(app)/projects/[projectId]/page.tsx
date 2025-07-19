@@ -341,7 +341,6 @@ export default function ProjectDetailsPage() {
                             onAddHeir={handleAddHeir} 
                             onUpdatePerson={handleUpdatePerson} 
                             onAddFamilyHead={handleAddFamilyHead}
-                            onImportSuccess={updateAndPersistOwners}
                             projectId={projectId} 
                             folders={folders}
                             onAddFolder={handleAddFolder}
