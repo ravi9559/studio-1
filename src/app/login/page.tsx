@@ -46,7 +46,7 @@ export default function LoginPage() {
                         <LandPlot className="h-8 w-8 text-primary" />
                     </div>
                     <CardTitle className="text-2xl">TitleLine</CardTitle>
-                    <CardDescription>Enter your credentials to access the Application.</CardDescription>
+                    <CardDescription>Land Aggregation Management Platform</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
