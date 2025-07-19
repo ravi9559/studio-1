@@ -6,7 +6,7 @@ import { AuthProvider } from '@/context/auth-context';
 export const metadata: Metadata = {
   metadataBase: new URL('https://lakshmibalajio2o.com'),
   title: 'TitleLine',
-  description: 'Trace the Origin',
+  description: 'Land Aggregation Management Platform',
 };
 
 export default function RootLayout({
