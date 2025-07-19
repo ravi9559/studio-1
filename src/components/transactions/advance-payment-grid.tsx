@@ -5,8 +5,11 @@ import { useMemo } from 'react';
 import type { Person, FinancialTransaction, SurveyRecord, LandClassification } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Coins, PiggyBank, Scale, User } from 'lucide-react';
+import { Coins, PiggyBank, Scale, User, TrendingUp } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { format, parseISO, startOfMonth } from 'date-fns';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
 type PlotInfo = {
   surveyNumber: string;
@@ -44,7 +47,7 @@ interface AdvancePaymentGridProps {
 }
 
 export function AdvancePaymentGrid({ familyHeads, financialTransactions }: AdvancePaymentGridProps) {
-  const { paidPlots, duePlots } = useMemo(() => {
+  const { paidPlots, duePlots, chartData } = useMemo(() => {
     const paidFamilyHeadIds = new Set(
       financialTransactions
         .filter(tx => tx.purpose === 'Token Advance')
@@ -53,10 +56,10 @@ export function AdvancePaymentGrid({ familyHeads, financialTransactions }: Advan
 
     const paid: PlotInfo[] = [];
     const due: PlotInfo[] = [];
+    const allPlots: PlotInfo[] = [];
 
     familyHeads.forEach(head => {
       const isPaid = paidFamilyHeadIds.has(head.id);
-      
       const plotsForFamily: PlotInfo[] = [];
       
       const collectPlots = (person: Person, familyHead: Person) => {
@@ -72,6 +75,7 @@ export function AdvancePaymentGrid({ familyHeads, financialTransactions }: Advan
       };
       
       collectPlots(head, head);
+      allPlots.push(...plotsForFamily);
 
       if (isPaid) {
         paid.push(...plotsForFamily);
@@ -80,12 +84,55 @@ export function AdvancePaymentGrid({ familyHeads, financialTransactions }: Advan
       }
     });
 
-    return { paidPlots: paid, duePlots: due };
+    const totalPlotsCount = allPlots.length;
+
+    // Process data for the chart
+    const advanceTransactions = financialTransactions
+        .filter(tx => tx.purpose === 'Token Advance')
+        .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const paymentsByMonth: Record<string, number> = {};
+    const paidHeadIdsByMonth: Record<string, Set<string>> = {};
+
+    advanceTransactions.forEach(tx => {
+        const month = format(startOfMonth(parseISO(tx.date)), 'MMM yyyy');
+        if (!paidHeadIdsByMonth[month]) {
+            paidHeadIdsByMonth[month] = new Set();
+        }
+        paidHeadIdsByMonth[month].add(tx.familyHeadId);
+    });
+
+    const sortedMonths = Object.keys(paidHeadIdsByMonth).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    const cumulativePaidIds = new Set<string>();
+    const cumulativeChartData = [];
+
+    for (const month of sortedMonths) {
+        paidHeadIdsByMonth[month].forEach(id => cumulativePaidIds.add(id));
+        
+        let plotsPaidThisMonth = 0;
+        familyHeads.forEach(head => {
+            if (cumulativePaidIds.has(head.id)) {
+                plotsPaidThisMonth += head.landRecords.length;
+                head.heirs.forEach(h => plotsPaidThisMonth += h.landRecords.length);
+            }
+        });
+
+        const percentage = totalPlotsCount > 0 ? Math.round((plotsPaidThisMonth / totalPlotsCount) * 100) : 0;
+        cumulativeChartData.push({ month, percentage });
+    }
+
+    return { paidPlots: paid, duePlots: due, chartData: cumulativeChartData };
   }, [familyHeads, financialTransactions]);
 
   const totalPlots = paidPlots.length + duePlots.length;
   const advancePaidPercentage = totalPlots > 0 ? Math.round((paidPlots.length / totalPlots) * 100) : 0;
-
+  
+  const chartConfig = {
+    percentage: {
+      label: "Progress (%)",
+      color: "hsl(var(--primary))",
+    },
+  };
 
   if (familyHeads.length === 0) {
      return (
@@ -109,15 +156,39 @@ export function AdvancePaymentGrid({ familyHeads, financialTransactions }: Advan
         <CardHeader>
           <CardTitle>Advance Payment Summary</CardTitle>
           <CardDescription>
-            An overview of the advance payment status for this project.
+            An overview of the advance payment status for this project, including progress over time.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center p-6">
-          <div className="text-center">
+        <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <div className="flex flex-col items-center justify-center p-6 text-center">
              <p className="text-6xl font-bold text-primary">{advancePaidPercentage}%</p>
              <p className="text-muted-foreground mt-2">of advances have been paid for {totalPlots} total plots.</p>
+             <Progress value={advancePaidPercentage} className="mt-4 w-full max-w-sm" />
           </div>
-          <Progress value={advancePaidPercentage} className="mt-4 w-full max-w-sm" />
+
+          <div className="h-64">
+             <ChartContainer config={chartConfig}>
+              <LineChart
+                data={chartData}
+                margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+              >
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                <YAxis unit="%" tickLine={false} axisLine={false} tickMargin={8} domain={[0, 100]} />
+                <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="dot" />}
+                />
+                <Line
+                  dataKey="percentage"
+                  type="monotone"
+                  stroke="var(--color-percentage)"
+                  strokeWidth={2}
+                  dot={true}
+                />
+              </LineChart>
+            </ChartContainer>
+          </div>
         </CardContent>
       </Card>
 
