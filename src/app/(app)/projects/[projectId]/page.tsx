@@ -49,16 +49,8 @@ export default function ProjectDetailsPage() {
     const folderStorageKey = useMemo(() => `document-folders-${projectId}`, [projectId]);
     const financialTransactionsStorageKey = useMemo(() => `financial-transactions-${projectId}`, [projectId]);
 
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-    
-    useEffect(() => {
-        const user = localStorage.getItem('currentUser');
-        if (user) {
-            setCurrentUser(JSON.parse(user));
-        } else {
-            router.push('/login');
-        }
-    }, [router]);
+    // Simplified for single-user app, we can assume a default user or remove checks
+    const currentUser: User = {};
 
     // --- Data Loading and Initialization ---
     useEffect(() => {
@@ -286,9 +278,7 @@ export default function ProjectDetailsPage() {
         toast({ title: "File Deleted" });
     }, [folders, folderStorageKey, toast]);
 
-    const canEditProject = currentUser?.role === 'Super Admin';
-
-    if (loading || !currentUser) return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    if (loading) return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
     if (!project) {
         return (
@@ -309,34 +299,34 @@ export default function ProjectDetailsPage() {
                         <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
                         <p className="text-muted-foreground">Site ID: {project.siteId} &middot; {project.location}</p>
                     </div>
-                    {canEditProject && (
-                        <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
-                            <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
-                            <DialogContent className="sm:max-w-xl">
-                                <DialogHeader><DialogTitle>Edit Project Details</DialogTitle></DialogHeader>
-                                <form onSubmit={handleUpdateProject} className="space-y-4">
-                                    <div className="grid gap-4 py-4">
-                                        <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right">Name</Label><Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required /></div>
-                                        <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-siteId" className="text-right">Site ID</Label><Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required /></div>
-                                        <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-location" className="text-right">Location</Label><Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required /></div>
-                                        <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label><Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" /></div>
-                                    </div>
-                                    <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
-                                </form>
-                                <Separator />
-                                <div className="space-y-2">
-                                    <Label className="font-semibold text-destructive">Danger Zone</Label>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild><Button variant="destructive" className="w-full"><Trash2 className="mr-2 h-4 w-4" />Delete Project</Button></AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the project "{project.name}".</AlertDialogDescription></AlertDialogHeader>
-                                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive" onClick={handleDeleteProject}>Yes, delete</AlertDialogAction></AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
+                    
+                    <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
+                        <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader><DialogTitle>Edit Project Details</DialogTitle></DialogHeader>
+                            <form onSubmit={handleUpdateProject} className="space-y-4">
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right">Name</Label><Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-siteId" className="text-right">Site ID</Label><Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-location" className="text-right">Location</Label><Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required /></div>
+                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label><Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" /></div>
                                 </div>
-                            </DialogContent>
-                        </Dialog>
-                    )}
+                                <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
+                            </form>
+                            <Separator />
+                            <div className="space-y-2">
+                                <Label className="font-semibold text-destructive">Danger Zone</Label>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild><Button variant="destructive" className="w-full"><Trash2 className="mr-2 h-4 w-4" />Delete Project</Button></AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the project "{project.name}".</AlertDialogDescription></AlertDialogHeader>
+                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive" onClick={handleDeleteProject}>Yes, delete</AlertDialogAction></AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                    
                 </header>
 
                 <Tabs defaultValue="lineage" className="w-full">
@@ -346,8 +336,8 @@ export default function ProjectDetailsPage() {
                         <TabsTrigger value="transactions">Transaction History</TabsTrigger>
                         <TabsTrigger value="sketch">Site Sketch</TabsTrigger>
                         <TabsTrigger value="collection">Document Collection Status</TabsTrigger>
-                        {currentUser.role !== 'Lawyer' && <TabsTrigger value="notes">Notes</TabsTrigger>}
-                        {currentUser.role !== 'Aggregator' && <TabsTrigger value="legal">Legal Notes</TabsTrigger>}
+                        <TabsTrigger value="notes">Notes</TabsTrigger>
+                        <TabsTrigger value="legal">Legal Notes</TabsTrigger>
                     </TabsList>
                     
                     <TabsContent value="lineage" className="pt-4">
@@ -357,7 +347,6 @@ export default function ProjectDetailsPage() {
                             onUpdatePerson={handleUpdatePerson} 
                             onAddFamilyHead={handleAddFamilyHead}
                             onImportSuccess={updateAndPersistOwners}
-                            onFinancialTransactionsUpdate={updateAndPersistFinancials}
                             projectId={projectId} 
                             folders={folders}
                             onAddFolder={handleAddFolder}
@@ -381,7 +370,7 @@ export default function ProjectDetailsPage() {
                         <TransactionHistory projectId={projectId} currentUser={currentUser} />
                     </TabsContent>
                     <TabsContent value="sketch" className="pt-4">
-                        <SiteSketchManager projectId={projectId} currentUser={currentUser} />
+                        <SiteSketchManager projectId={projectId} />
                     </TabsContent>
                     <TabsContent value="collection" className="pt-4">
                         <DocumentCollectionStatusView
@@ -390,16 +379,12 @@ export default function ProjectDetailsPage() {
                             currentUser={currentUser}
                         />
                     </TabsContent>
-                    {currentUser.role !== 'Lawyer' && (
-                        <TabsContent value="notes" className="pt-4">
-                            <Notes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
-                        </TabsContent>
-                    )}
-                    {currentUser.role !== 'Aggregator' && (
-                         <TabsContent value="legal" className="pt-4">
-                            <LegalNotes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
-                        </TabsContent>
-                    )}
+                    <TabsContent value="notes" className="pt-4">
+                        <Notes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
+                    </TabsContent>
+                     <TabsContent value="legal" className="pt-4">
+                        <LegalNotes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
+                    </TabsContent>
                 </Tabs>
             </div>
         </div>

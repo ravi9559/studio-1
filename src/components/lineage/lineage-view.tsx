@@ -7,7 +7,7 @@ import { PersonCard } from './person-card';
 import { LineageSuggestion } from './lineage-suggestion';
 import { Card, CardContent } from '../ui/card';
 import { Loader2, Search, PlusCircle, FileUp } from 'lucide-react';
-import type { Person, Folder, DocumentFile, FinancialTransaction } from '@/types';
+import type { Person, Folder, DocumentFile, User } from '@/types';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import {
@@ -105,13 +105,13 @@ interface LineageViewProps {
     onUpdatePerson: (personId: string, personData: Omit<Person, 'id' | 'heirs'>) => void;
     onAddFamilyHead: (personData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => void;
     onImportSuccess: (newOwners: Person[]) => void;
-    onFinancialTransactionsUpdate: (transactions: FinancialTransaction[]) => void;
     projectId: string;
     folders: Folder[];
     onAddFolder: (parentId: string, name: string) => void;
     onDeleteFolder: (folderId: string) => void;
     onAddFile: (folderId: string, fileData: Omit<DocumentFile, 'id'>) => void;
     onDeleteFile: (folderId: string, fileId: string) => void;
+    currentUser: User | null;
 }
 
 const searchInFamily = (person: Person, query: string): boolean => {
@@ -132,13 +132,13 @@ export function LineageView({
     onUpdatePerson, 
     onAddFamilyHead,
     onImportSuccess,
-    onFinancialTransactionsUpdate,
     projectId, 
     folders,
     onAddFolder,
     onDeleteFolder,
     onAddFile,
-    onDeleteFile
+    onDeleteFile,
+    currentUser,
 }: LineageViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddFamilyHeadOpen, setIsAddFamilyHeadOpen] = useState(false);
@@ -178,7 +178,6 @@ export function LineageView({
                 person={person}
                 onAddHeir={onAddHeir} 
                 onUpdatePerson={onUpdatePerson} 
-                onFinancialTransactionsUpdate={onFinancialTransactionsUpdate}
                 isFamilyHead={true}
                 projectId={projectId}
                 personFolders={folders.filter(f => f.name === person.name)}
@@ -186,6 +185,7 @@ export function LineageView({
                 onDeleteFolder={onDeleteFolder}
                 onAddFile={onAddFile}
                 onDeleteFile={onDeleteFile}
+                currentUser={currentUser}
             />
         ))}
         {filteredHeads.length === 0 && (

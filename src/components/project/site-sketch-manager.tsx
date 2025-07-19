@@ -105,8 +105,8 @@ export function SiteSketchManager({ projectId }: SiteSketchManagerProps) {
                         <Image
                             src={sketchUrl}
                             alt="Site Sketch"
-                            layout="fill"
-                            objectFit="contain"
+                            fill={true}
+                            style={{ objectFit: 'contain' }}
                         />
                     </div>
                 ) : (
