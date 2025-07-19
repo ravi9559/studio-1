@@ -6,6 +6,7 @@ import type { Person, FinancialTransaction, SurveyRecord, LandClassification } f
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Coins, PiggyBank, Scale, User } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 type PlotInfo = {
   surveyNumber: string;
@@ -82,6 +83,10 @@ export function AdvancePaymentGrid({ familyHeads, financialTransactions }: Advan
     return { paidPlots: paid, duePlots: due };
   }, [familyHeads, financialTransactions]);
 
+  const totalPlots = paidPlots.length + duePlots.length;
+  const advancePaidPercentage = totalPlots > 0 ? Math.round((paidPlots.length / totalPlots) * 100) : 0;
+
+
   if (familyHeads.length === 0) {
      return (
         <Card>
@@ -99,6 +104,23 @@ export function AdvancePaymentGrid({ familyHeads, financialTransactions }: Advan
 
   return (
     <div className="space-y-8">
+      {/* Summary Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Advance Payment Summary</CardTitle>
+          <CardDescription>
+            An overview of the advance payment status for this project.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center p-6">
+          <div className="text-center">
+             <p className="text-6xl font-bold text-primary">{advancePaidPercentage}%</p>
+             <p className="text-muted-foreground mt-2">of advances have been paid for {totalPlots} total plots.</p>
+          </div>
+          <Progress value={advancePaidPercentage} className="mt-4 w-full max-w-sm" />
+        </CardContent>
+      </Card>
+
       {/* Advance Paid Section */}
       <Card className="border-green-500/30 bg-green-500/5">
         <CardHeader>
