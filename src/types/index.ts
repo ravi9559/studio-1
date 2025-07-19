@@ -1,3 +1,4 @@
+
 // src/types/index.ts
 
 export type LandClassification = 'Wet' | 'Dry' | 'Unclassified';
@@ -10,11 +11,6 @@ export type SurveyRecord = {
   landClassification: LandClassification;
 };
 
-export type SurveyRecordWithOwner = SurveyRecord & {
-  ownerName: string;
-  ownerId: string;
-};
-
 export type Person = {
   id: string;
   name: string;
@@ -24,7 +20,6 @@ export type Person = {
   maritalStatus: 'Married' | 'Single' | 'Divorced' | 'Widowed';
   status: 'Alive' | 'Died' | 'Unknown' | 'Missing';
   sourceOfLand?: string;
-  holdingPattern?: string;
   landRecords: SurveyRecord[];
   heirs: Person[];
 };
@@ -60,29 +55,16 @@ export type Project = {
   googleMapsLink?: string;
 };
 
-export type Role = {
-    id: string;
-    name: 'Super Admin' | 'Aggregator' | 'Lawyer' | 'Client' | 'Investor' | 'Transaction Partner' | 'Co-Aggregator';
-};
-
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  password?: string;
-  role: Role['name'];
-  status: 'Active' | 'Inactive';
-  avatarUrl?: string;
-  projectIds?: string[];
-  accountType?: 'Individual' | 'Corporate';
-};
+// Simplified for single-user app
+export type User = {}; // No user properties needed for now
+export type Role = {}; // No roles needed for now
 
 export type LegalNote = {
   id:string;
   date: string;
   content: string;
   author: {
-    id: string;
+    id: string; // Keep for data consistency, can be a static value
     name: string;
   };
 };
@@ -113,30 +95,18 @@ export type FinancialTransaction = {
     id: string;
     familyHeadId: string;
     amount: number;
-    date: string; // ISO date string
+    date: string;
     purpose: 'Token Advance' | 'Part Payment';
-    timestamp: string; // ISO datetime string
+    timestamp: string;
 };
-
-export type LegalQueryStatus = 'Resolved' | 'In-Progress' | 'Not Started' | 'Awaiting';
-
-export type LegalQuery = {
-    id: string;
-    query: string;
-    raisedBy: { id: string, name: string };
-    date: string; // ISO date string
-    status: LegalQueryStatus;
-};
-
 
 export type AcquisitionStatus = {
-  id: string; // e.g., `${projectId}-${surveyNumber}-${index}`
+  id: string;
   projectId: string;
   surveyNumber: string;
-  familyHeadId: string; // Added to easily link back to the family head
+  familyHeadId: string;
   familyHeadName: string;
   extent: { acres: string; cents: string };
-  landClassification: LandClassification;
   legal: {
     overallStatus: 'Cleared' | 'Awaiting' | 'On-Progress' | 'Not Started';
   };

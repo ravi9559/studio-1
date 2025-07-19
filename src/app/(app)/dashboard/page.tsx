@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, ArrowRight } from "lucide-react";
 import Link from 'next/link';
-import type { Project, User } from '@/types';
+import type { Project } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { initializeNewProjectData } from '@/lib/project-template';
 
@@ -26,15 +26,9 @@ const initialProjects: Project[] = [
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     try {
-      // Load current user
-      const savedUser = localStorage.getItem('loggedInUser');
-      const user: User | null = savedUser ? JSON.parse(savedUser) : null;
-      setCurrentUser(user);
-
       // Load projects, creating initial if none exist
       let allProjects: Project[];
       const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
@@ -47,13 +41,8 @@ export default function ProjectsPage() {
         allProjects = JSON.parse(savedProjects);
       }
       
-      // Filter projects based on user role/assignment
-      if (user && user.role !== 'Super Admin') {
-        const assignedProjects = allProjects.filter(p => user.projectIds?.includes(p.id));
-        setProjects(assignedProjects);
-      } else {
-        setProjects(allProjects);
-      }
+      setProjects(allProjects);
+
     } catch (e) {
       console.error("Could not load data from local storage", e);
     }
@@ -75,14 +64,12 @@ export default function ProjectsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
           <p className="text-muted-foreground">Manage your projects and sites.</p>
         </div>
-        {currentUser?.role === 'Super Admin' && (
-            <Button asChild>
-              <Link href="/projects/new">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Project
-              </Link>
-            </Button>
-        )}
+        <Button asChild>
+          <Link href="/projects/new">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add New Project
+          </Link>
+        </Button>
       </header>
       
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -110,7 +97,7 @@ export default function ProjectsPage() {
             <CardContent className="flex h-40 flex-col items-center justify-center p-6 text-center">
               <h3 className="text-lg font-semibold">No Projects Yet</h3>
               <p className="text-muted-foreground mt-1">
-                {currentUser?.role === 'Super Admin' ? 'Click "Add New Project" to get started.' : 'You have not been assigned to any projects.'}
+                Click "Add New Project" to get started.
               </p>
             </CardContent>
           </Card>

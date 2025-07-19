@@ -14,7 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { Project, Person, SurveyRecord, LandClassification, Transaction } from '@/types';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { createDefaultFolders } from '@/lib/project-template';
-import { Badge } from '@/components/ui/badge';
 
 const PROJECTS_STORAGE_KEY = 'projects';
 
@@ -76,7 +75,7 @@ const HeirCard: FC<{ person: Person; onAddHeir: (parentId: string, heir: Person)
                  <Dialog open={isAddHeirOpen} onOpenChange={setIsAddHeirOpen}>
                     <DialogTrigger asChild><Button variant="ghost" size="sm"><UserPlus className="mr-2 h-4 w-4" />Add Heir</Button></DialogTrigger>
                     <DialogContent>
-                        <AddHeirForm parentId={person.id} parentName={person.name} onAddHeir={onAddHeir} onClose={() => setIsAddHeirOpen(false)} />
+                       <AddHeirForm parentId={person.id} parentName={person.name} onAddHeir={onAddHeir} onClose={() => setIsAddHeirOpen(false)} />
                     </DialogContent>
                 </Dialog>
             </div>
@@ -84,7 +83,6 @@ const HeirCard: FC<{ person: Person; onAddHeir: (parentId: string, heir: Person)
         </div>
     )
 }
-
 
 export default function CreateProjectPage() {
     const router = useRouter();
@@ -95,7 +93,6 @@ export default function CreateProjectPage() {
     const [projectName, setProjectName] = useState('');
     const [projectSiteId, setProjectSiteId] = useState('');
     const [projectLocation, setProjectLocation] = useState('');
-    const [googleMapsLink, setGoogleMapsLink] = useState('');
 
     // Family Head Details
     const [familyHead, setFamilyHead] = useState<Person>({
@@ -107,7 +104,6 @@ export default function CreateProjectPage() {
         maritalStatus: 'Married',
         status: 'Alive',
         sourceOfLand: 'Self Acquired',
-        holdingPattern: 'Individual',
         landRecords: [],
         heirs: [],
     });
@@ -125,10 +121,7 @@ export default function CreateProjectPage() {
     };
 
     const handleAddLandRecord = (record: Omit<SurveyRecord, 'id'>) => {
-        handleFamilyHeadChange('landRecords', [
-            ...familyHead.landRecords,
-            { ...record, id: `lr-${familyHead.id}-${Date.now()}` }
-        ]);
+        handleFamilyHeadChange('landRecords', [ ...familyHead.landRecords, { ...record, id: `lr-${familyHead.id}-${Date.now()}` }]);
     };
 
     const handleDeleteLandRecord = (index: number) => {
@@ -136,30 +129,16 @@ export default function CreateProjectPage() {
     };
 
     const addHeirToFamily = (parentId: string, newHeir: Person) => {
-        const addHeirRecursive = (people: Person[]): Person[] => {
-            return people.map(p => {
-                if (p.id === parentId) {
-                    return { ...p, heirs: [...p.heirs, newHeir] };
-                }
-                return { ...p, heirs: addHeirRecursive(p.heirs) };
-            });
-        };
+        const addHeirRecursive = (people: Person[]): Person[] => people.map(p => {
+            if (p.id === parentId) return { ...p, heirs: [...p.heirs, newHeir] };
+            return { ...p, heirs: addHeirRecursive(p.heirs) };
+        });
         setFamilyHead(prev => ({...prev, heirs: addHeirRecursive(prev.heirs)}));
     };
     
     const handleAddTransaction = () => {
-        if (!newTxOwner || !newTxSourceName || !newTxYear) {
-            toast({ variant: 'destructive', title: 'Missing Transaction Info', description: 'Please provide Owner, Source Name, and Year.' });
-            return;
-        }
-        setTransactions([...transactions, {
-            owner: newTxOwner,
-            sourceName: newTxSourceName,
-            mode: newTxMode,
-            year: parseInt(newTxYear, 10) || 0,
-            doc: newTxDoc,
-        }]);
-        // Reset fields
+        if (!newTxOwner || !newTxSourceName || !newTxYear) return;
+        setTransactions([...transactions, { owner: newTxOwner, sourceName: newTxSourceName, mode: newTxMode, year: parseInt(newTxYear, 10) || 0, doc: newTxDoc }]);
         setNewTxOwner(''); setNewTxSourceName(''); setNewTxYear(''); setNewTxDoc('');
     };
 
@@ -167,52 +146,27 @@ export default function CreateProjectPage() {
         setTransactions(transactions.filter((_, i) => i !== index));
     };
 
-
     const handleSaveProject = (e: React.FormEvent) => {
         e.preventDefault();
-
-        // --- Validation ---
-        if (!projectName || !projectSiteId || !projectLocation) {
-            toast({ variant: 'destructive', title: 'Missing Project Details', description: 'Please fill in all project details.' });
-            return;
-        }
-        if (!familyHead.name || !familyHead.age) {
-            toast({ variant: 'destructive', title: 'Missing Family Head Details', description: 'Please fill in the family head\'s name and age.' });
-            return;
-        }
-        if (familyHead.landRecords.length === 0) {
-            toast({ variant: 'destructive', title: 'No Land Records', description: 'Please add at least one land record for the family head.' });
+        if (!projectName || !projectSiteId || !projectLocation || !familyHead.name || familyHead.landRecords.length === 0) {
+            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill all required fields.' });
             return;
         }
 
         const newProjectId = `proj-${Date.now()}`;
-        
-        const newProject: Project = {
-            id: newProjectId,
-            name: projectName,
-            siteId: projectSiteId,
-            location: projectLocation,
-            googleMapsLink: googleMapsLink,
-        };
-        
-        const finalTransactions: Transaction[] = transactions.map((tx, i) => ({
-            ...tx,
-            id: `tx-${newProjectId}-${i}`
-        }));
+        const newProject: Project = { id: newProjectId, name: projectName, siteId: projectSiteId, location: projectLocation };
+        const finalTransactions: Transaction[] = transactions.map((tx, i) => ({ ...tx, id: `tx-${newProjectId}-${i}` }));
         
         try {
             const allProjects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
             localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([...allProjects, newProject]));
             localStorage.setItem(`lineage-data-${newProjectId}`, JSON.stringify([familyHead]));
             localStorage.setItem(`transactions-${newProjectId}`, JSON.stringify(finalTransactions));
-            localStorage.setItem(`acquisition-status-${newProjectId}`, '[]');
             localStorage.setItem(`document-folders-${newProjectId}`, JSON.stringify(createDefaultFolders([familyHead])));
             
             toast({ title: 'Project Created', description: `Project "${projectName}" has been successfully created.` });
             router.push('/dashboard');
-
         } catch (error) {
-            console.error("Failed to create project", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to save the new project.' });
         }
     };
@@ -220,148 +174,103 @@ export default function CreateProjectPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <header className="mb-8">
-                <Button variant="ghost" asChild className="mb-2 -ml-4">
-                    <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link>
-                </Button>
+                <Button variant="ghost" asChild className="mb-2 -ml-4"><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link></Button>
                 <h1 className="text-3xl font-bold tracking-tight">Create New Project</h1>
-                <p className="text-muted-foreground">Enter the project and initial lineage details below.</p>
             </header>
 
             <form onSubmit={handleSaveProject} className="space-y-8">
-                {/* Project Details */}
                 <Card>
                     <CardHeader><CardTitle>Project Details</CardTitle></CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2"><Label>Project Name</Label><Input value={projectName} onChange={(e) => setProjectName(e.target.value)} required /></div>
                         <div className="space-y-2"><Label>Site ID</Label><Input value={projectSiteId} onChange={(e) => setProjectSiteId(e.target.value)} required /></div>
                         <div className="space-y-2"><Label>Location</Label><Input value={projectLocation} onChange={(e) => setProjectLocation(e.target.value)} required /></div>
-                        <div className="space-y-2"><Label>Google Maps Link</Label><Input value={googleMapsLink} onChange={(e) => setGoogleMapsLink(e.target.value)} placeholder="Optional URL..." /></div>
                     </CardContent>
                 </Card>
 
-                {/* Family Lineage */}
                 <Card>
-                    <CardHeader><CardTitle>Initial Family Lineage</CardTitle><CardDescription>Enter details for the primary family head, their heirs, and their land.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle>Initial Family Lineage</CardTitle></CardHeader>
                     <CardContent className="space-y-6">
-                        {/* Family Head */}
                         <div className="p-4 border rounded-lg">
                             <h3 className="text-lg font-semibold mb-4">Family Head</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div className="space-y-2"><Label>Name</Label><Input value={familyHead.name} onChange={e => handleFamilyHeadChange('name', e.target.value)} required /></div>
                                 <div className="space-y-2"><Label>Age</Label><Input type="number" value={familyHead.age || ''} onChange={e => handleFamilyHeadChange('age', parseInt(e.target.value, 10))} required /></div>
                                 <div className="space-y-2"><Label>Gender</Label><Select value={familyHead.gender} onValueChange={(v: Person['gender']) => handleFamilyHeadChange('gender', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent></Select></div>
-                                <div className="space-y-2"><Label>Marital Status</Label><Select value={familyHead.maritalStatus} onValueChange={(v: Person['maritalStatus']) => handleFamilyHeadChange('maritalStatus', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Single">Single</SelectItem><SelectItem value="Married">Married</SelectItem><SelectItem value="Divorced">Divorced</SelectItem><SelectItem value="Widowed">Widowed</SelectItem></SelectContent></Select></div>
                                 <div className="space-y-2"><Label>Status</Label><Select value={familyHead.status} onValueChange={(v: Person['status']) => handleFamilyHeadChange('status', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Alive">Alive</SelectItem><SelectItem value="Died">Died</SelectItem><SelectItem value="Missing">Missing</SelectItem><SelectItem value="Unknown">Unknown</SelectItem></SelectContent></Select></div>
                                 <div className="space-y-2"><Label>Source of Land</Label><Select value={familyHead.sourceOfLand} onValueChange={(v) => handleFamilyHeadChange('sourceOfLand', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Self Acquired">Self Acquired</SelectItem><SelectItem value="Inherited">Inherited</SelectItem><SelectItem value="Gift">Gift</SelectItem><SelectItem value="Settlement">Settlement</SelectItem></SelectContent></Select></div>
-                                <div className="space-y-2"><Label>Holding Pattern</Label><Select value={familyHead.holdingPattern} onValueChange={(v) => handleFamilyHeadChange('holdingPattern', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Individual">Individual</SelectItem><SelectItem value="Company">Company</SelectItem><SelectItem value="Trust">Trust</SelectItem></SelectContent></Select></div>
                             </div>
                         </div>
-                        {/* Heirs */}
                         <div className="p-4 border rounded-lg">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-semibold flex items-center gap-2"><Milestone /> Heirs</h3>
                                 <Dialog open={isAddHeirOpen} onOpenChange={setIsAddHeirOpen}>
-                                    <DialogTrigger asChild><Button type="button" disabled={!familyHead.name}><UserPlus className="mr-2 h-4 w-4"/>Add Heir to Family Head</Button></DialogTrigger>
+                                    <DialogTrigger asChild><Button type="button" disabled={!familyHead.name}><UserPlus className="mr-2 h-4 w-4"/>Add Heir</Button></DialogTrigger>
                                     <DialogContent>
                                         <AddHeirForm parentId={familyHead.id} parentName={familyHead.name} onAddHeir={addHeirToFamily} onClose={() => setIsAddHeirOpen(false)} />
                                     </DialogContent>
                                 </Dialog>
                             </div>
-                            {familyHead.heirs.length > 0 ? (
-                                familyHead.heirs.map(heir => <HeirCard key={heir.id} person={heir} onAddHeir={addHeirToFamily} />)
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">No heirs added yet.</p>
-                            )}
+                            {familyHead.heirs.map(heir => <HeirCard key={heir.id} person={heir} onAddHeir={addHeirToFamily} />)}
                         </div>
-                        {/* Land Records */}
                         <LandRecordsForm records={familyHead.landRecords} onAdd={handleAddLandRecord} onDelete={handleDeleteLandRecord} />
                     </CardContent>
                 </Card>
                 
-                {/* Transaction History */}
                 <Card>
-                    <CardHeader><CardTitle>Transaction History</CardTitle><CardDescription>Add initial transaction records for this project.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle>Transaction History</CardTitle></CardHeader>
                     <CardContent className="space-y-6">
-                        {transactions.length > 0 && (
-                            <ul className="space-y-2">
-                                {transactions.map((tx, index) => (
-                                    <li key={index} className="flex items-center justify-between p-2 border rounded-md bg-muted/50 text-sm">
-                                        <span>Owner: <strong>{tx.owner}</strong>, Source: <strong>{tx.sourceName}</strong>, Year: <strong>{tx.year}</strong></span>
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteTransaction(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                         <div className="p-4 border-2 border-dashed rounded-lg space-y-4">
-                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                                <div className="space-y-2"><Label>Owner</Label><Input value={newTxOwner} onChange={e => setNewTxOwner(e.target.value)} /></div>
-                                <div className="space-y-2"><Label>Source Name</Label><Input value={newTxSourceName} onChange={e => setNewTxSourceName(e.target.value)} /></div>
-                                <div className="space-y-2"><Label>Year</Label><Input type="number" value={newTxYear} onChange={e => setNewTxYear(e.target.value)} /></div>
-                                <div className="space-y-2"><Label>Doc Number</Label><Input value={newTxDoc} onChange={e => setNewTxDoc(e.target.value)} /></div>
-                                <div className="space-y-2"><Label>Source Mode</Label><Select value={newTxMode} onValueChange={(v: Transaction['mode']) => setNewTxMode(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Purchase">Purchase</SelectItem><SelectItem value="Legal Heir">Legal Heir</SelectItem><SelectItem value="Gift">Gift</SelectItem><SelectItem value="Settlement">Settlement</SelectItem></SelectContent></Select></div>
-                             </div>
-                             <Button type="button" onClick={handleAddTransaction}><PlusCircle className="mr-2 h-4 w-4" />Add Transaction</Button>
+                        {transactions.map((tx, index) => (
+                            <li key={index} className="flex items-center justify-between p-2 border rounded-md">
+                                <span>{tx.owner} from {tx.sourceName} ({tx.year})</span>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteTransaction(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </li>
+                        ))}
+                         <div className="p-4 border-dashed border-2 rounded-lg grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+                            <div className="space-y-2"><Label>Owner</Label><Input value={newTxOwner} onChange={e => setNewTxOwner(e.target.value)} /></div>
+                            <div className="space-y-2"><Label>Source Name</Label><Input value={newTxSourceName} onChange={e => setNewTxSourceName(e.target.value)} /></div>
+                            <div className="space-y-2"><Label>Year</Label><Input type="number" value={newTxYear} onChange={e => setNewTxYear(e.target.value)} /></div>
+                            <div className="space-y-2"><Label>Doc Number</Label><Input value={newTxDoc} onChange={e => setNewTxDoc(e.target.value)} /></div>
+                            <Button type="button" onClick={handleAddTransaction}><PlusCircle className="mr-2 h-4 w-4" />Add</Button>
                          </div>
                     </CardContent>
                 </Card>
                 
                 <div className="flex justify-end pt-4">
-                    <Button type="submit" size="lg">Save Project & Continue</Button>
+                    <Button type="submit" size="lg">Save Project</Button>
                 </div>
             </form>
         </div>
     );
 }
 
+const LandRecordsForm: FC<{ records: SurveyRecord[], onAdd: (r: Omit<SurveyRecord, 'id'>) => void, onDelete: (i: number) => void }> = ({ records, onAdd, onDelete }) => {
+    const [survey, setSurvey] = useState('');
+    const [acres, setAcres] = useState('');
+    const [cents, setCents] = useState('');
+    const [classification, setClassification] = useState<LandClassification>('Wet');
 
-// --- Sub-component for Land Records Form ---
-const LandRecordsForm: FC<{
-    records: SurveyRecord[],
-    onAdd: (record: Omit<SurveyRecord, 'id'>) => void,
-    onDelete: (index: number) => void
-}> = ({ records, onAdd, onDelete }) => {
-    const [newSurveyNumber, setNewSurveyNumber] = useState('');
-    const [newAcres, setNewAcres] = useState('');
-    const [newCents, setNewCents] = useState('');
-    const [newClassification, setNewClassification] = useState<LandClassification>('Wet');
-    const { toast } = useToast();
-
-    const handleAddClick = () => {
-        if (!newSurveyNumber.trim() || (!newAcres.trim() && !newCents.trim())) {
-            toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a survey number and either acres or cents.' });
-            return;
-        }
-        onAdd({
-            surveyNumber: newSurveyNumber,
-            acres: newAcres,
-            cents: newCents,
-            landClassification: newClassification,
-        });
-        // Reset fields
-        setNewSurveyNumber(''); setNewAcres(''); setNewCents('');
+    const handleAdd = () => {
+        if (!survey.trim()) return;
+        onAdd({ surveyNumber: survey, acres, cents, landClassification: classification });
+        setSurvey(''); setAcres(''); setCents('');
     };
 
     return (
         <div className="p-4 border rounded-lg">
             <h3 className="text-lg font-semibold mb-4">Land Records</h3>
-             {records.length > 0 && (
-                <ul className="space-y-2 mb-4">
-                    {records.map((rec, index) => (
-                        <li key={rec.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/50 text-sm">
-                            <span>S.No: <strong>{rec.surveyNumber}</strong>, Extent: <strong>{rec.acres || '0'}ac {rec.cents || '0'}c</strong>, Class: <strong>{rec.landClassification}</strong></span>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => onDelete(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-             <div className="p-4 border-2 border-dashed rounded-lg space-y-4">
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                    <div className="space-y-2"><Label>Survey/Sub-Div No.</Label><Input value={newSurveyNumber} onChange={e => setNewSurveyNumber(e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Acres</Label><Input type="number" step="any" value={newAcres} onChange={e => setNewAcres(e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Cents</Label><Input type="number" step="any" value={newCents} onChange={e => setNewCents(e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Classification</Label><Select value={newClassification} onValueChange={(v: LandClassification) => setNewClassification(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Wet">Wet</SelectItem><SelectItem value="Dry">Dry</SelectItem><SelectItem value="Unclassified">Unclassified</SelectItem></SelectContent></Select></div>
-                 </div>
-                 <Button type="button" onClick={handleAddClick}><PlusCircle className="mr-2 h-4 w-4" />Add Land Record</Button>
+             {records.map((rec, i) => (
+                <div key={i} className="flex items-center justify-between p-2 border rounded-md mb-2">
+                    <span>S.No: {rec.surveyNumber}, Extent: {rec.acres||'0'}ac {rec.cents||'0'}c, Class: {rec.landClassification}</span>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => onDelete(i)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+            ))}
+             <div className="p-4 border-dashed border-2 rounded-lg grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+                <div className="space-y-2"><Label>Survey/Sub-Div No.</Label><Input value={survey} onChange={e => setSurvey(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Acres</Label><Input type="number" value={acres} onChange={e => setAcres(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Cents</Label><Input type="number" value={cents} onChange={e => setCents(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Classification</Label><Select value={classification} onValueChange={(v: LandClassification) => setClassification(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Wet">Wet</SelectItem><SelectItem value="Dry">Dry</SelectItem><SelectItem value="Unclassified">Unclassified</SelectItem></SelectContent></Select></div>
+                 <Button type="button" onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Add</Button>
              </div>
         </div>
     )

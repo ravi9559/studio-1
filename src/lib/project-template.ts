@@ -1,10 +1,6 @@
 
-// src/lib/project-template.ts
-import type { Person, AcquisitionStatus, Folder, Transaction, SurveyRecord } from '@/types';
+import type { Person, Folder } from '@/types';
 
-// --- Owner and Folder Creation Logic ---
-
-// Pass oldFolders = [] for new projects
 export function createDefaultFolders(owners: Person[], oldFolders: Folder[] = []): Folder[] {
   const findOldFolder = (path: string[]) => {
       let currentLevel = oldFolders;
@@ -30,46 +26,19 @@ export function createDefaultFolders(owners: Person[], oldFolders: Folder[] = []
       name: owner.name,
       files: oldOwnerFolder?.files || [],
       children: [
-        { 
-            id: `revenue-${owner.id}`, 
-            name: 'Revenue Records', 
-            children: oldRevenueFolder?.children || [], 
-            files: oldRevenueFolder?.files || [] 
-        },
-        { 
-            id: `sro-${owner.id}`, 
-            name: 'SRO Documents', 
-            children: oldSroFolder?.children || [], 
-            files: oldSroFolder?.files || []
-        },
+        { id: `revenue-${owner.id}`, name: 'Revenue Records', children: oldRevenueFolder?.children || [], files: oldRevenueFolder?.files || [] },
+        { id: `sro-${owner.id}`, name: 'SRO Documents', children: oldSroFolder?.children || [], files: oldSroFolder?.files || [] },
       ],
     };
   });
 }
 
-// --- Main Initializer Function ---
-
 export function initializeNewProjectData(projectId: string) {
     if(!projectId) return;
-
-    // Lineage Data - Start with an empty array
     localStorage.setItem(`lineage-data-${projectId}`, JSON.stringify([]));
-
-    // Acquisition Status Data - Start with an empty array
     localStorage.setItem(`acquisition-status-${projectId}`, JSON.stringify([]));
-
-    // Folder Structure for Title Documents - Start with an empty array
     localStorage.setItem(`document-folders-${projectId}`, JSON.stringify([]));
-
-    // Initial Transactions - Start with an empty array
     localStorage.setItem(`transactions-${projectId}`, JSON.stringify([]));
-    
-    // Financial Transactions - Start with an empty array
     localStorage.setItem(`financial-transactions-${projectId}`, JSON.stringify([]));
-
-    // Files - Start with an empty array
-    localStorage.setItem(`files-${projectId}`, JSON.stringify([]));
-
-    // Site Sketch - Start with null/empty
     localStorage.removeItem(`site-sketch-${projectId}`);
 }
