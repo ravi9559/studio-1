@@ -39,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const verifySession = useCallback(() => {
+        setLoading(true);
         try {
             const sessionActive = sessionStorage.getItem('sessionActive');
             if (sessionActive === 'true') {
@@ -58,7 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         verifySession();
         
-        // This handles cases where user logs out in another tab
         const handleStorageChange = (event: StorageEvent) => {
             if (event.key === 'sessionActive' || event.key === AUTH_STORAGE_KEY) {
                 verifySession();
@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!loading) {
             if (!user && pathname !== '/login') {
                 router.replace('/login');
-            } else if (user && pathname === '/login') {
+            } else if (user && (pathname === '/login' || pathname === '/')) {
                 router.replace('/dashboard');
             }
         }

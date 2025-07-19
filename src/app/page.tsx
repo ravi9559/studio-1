@@ -4,15 +4,23 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 export default function HomePage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    // A logged-in user is redirected to dashboard inside the layout
-    // A non-logged in user is redirected to login inside the layout
-    // This page can just show a loader.
-  }, [router]);
+    // This logic is now handled by the AuthProvider, but we can still
+    // redirect from here once the auth state is known.
+    if (!loading) {
+      if (user) {
+        router.replace('/dashboard');
+      } else {
+        router.replace('/login');
+      }
+    }
+  }, [user, loading, router]);
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background">

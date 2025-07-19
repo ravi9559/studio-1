@@ -16,6 +16,8 @@ export default function AppLayout({
   const { user, loading } = useAuth();
   const router = useRouter();
 
+  // The AuthProvider now handles redirection, so this check is simplified.
+  // We just need to ensure we show a loader while auth state is being determined.
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/login');
