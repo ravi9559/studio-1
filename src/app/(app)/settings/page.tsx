@@ -5,14 +5,21 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Moon, Sun, Trash2 } from 'lucide-react';
+import { Moon, Sun, Trash2, User, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 
 export default function SettingsPage() {
     const { toast } = useToast();
+    const { user, changePassword } = useAuth();
     const [isDarkMode, setIsDarkMode] = useState(false);
+
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -29,17 +36,43 @@ export default function SettingsPage() {
         }
     }, [isDarkMode]);
 
+    const handlePasswordChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            toast({ variant: 'destructive', title: 'Error', description: 'New passwords do not match.' });
+            return;
+        }
+        if (!currentPassword || !newPassword) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please fill all password fields.' });
+            return;
+        }
+
+        const success = await changePassword(currentPassword, newPassword);
+
+        if (success) {
+            toast({ title: 'Success', description: 'Your password has been changed.' });
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Your current password was incorrect.' });
+        }
+    };
+    
     const handleClearData = () => {
         try {
+            // Keep auth and theme data
+            const theme = localStorage.getItem('theme');
+            const authData = localStorage.getItem('admin-auth');
             localStorage.clear();
-            if (typeof window !== 'undefined') {
-                localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-            }
+            if (theme) localStorage.setItem('theme', theme);
+            if (authData) localStorage.setItem('admin-auth', authData);
+
             toast({
                 title: "Success",
-                description: "All local application data has been cleared.",
+                description: "All project data has been cleared.",
             });
-            window.location.href = '/';
+            window.location.href = '/dashboard';
         } catch (e) {
             toast({
                 variant: "destructive",
@@ -53,8 +86,39 @@ export default function SettingsPage() {
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-                <p className="text-muted-foreground">Manage application settings.</p>
+                <p className="text-muted-foreground">Manage your profile and application settings.</p>
             </div>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><User /> User Profile</CardTitle>
+                    <CardDescription>Manage your account password.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                     <div className="flex items-center space-x-4 rounded-md border p-4">
+                        <KeyRound className="h-5 w-5" />
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-medium leading-none">Email</p>
+                          <p className="text-sm text-muted-foreground">{user?.email}</p>
+                        </div>
+                     </div>
+                     <form onSubmit={handlePasswordChange} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="current-password">Current Password</Label>
+                            <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="new-password">New Password</Label>
+                            <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="confirm-password">Confirm New Password</Label>
+                            <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                        </div>
+                        <Button type="submit">Change Password</Button>
+                     </form>
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader>
@@ -77,28 +141,28 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent>
                      <div>
-                        <Label className="font-medium">Clear Local Data</Label>
+                        <Label className="font-medium">Clear Project Data</Label>
                         <p className="text-xs text-muted-foreground">
-                           This will permanently delete all projects and data saved in your browser.
+                           This will permanently delete all projects and associated data from your browser. Your login will not be affected.
                         </p>
                     </div>
                 </CardContent>
                 <CardFooter className="border-t pt-6">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive">Clear All Data</Button>
+                            <Button variant="destructive">Clear Project Data</Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This will permanently delete all application data from your browser.
+                                    This will permanently delete all project data from your browser. This cannot be undone.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleClearData}>
-                                    Yes, delete everything
+                                    Yes, delete project data
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>

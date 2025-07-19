@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { LegalNote, User } from '@/types';
+import type { LegalNote } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -17,23 +17,21 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 interface LegalNotesProps {
     projectId: string;
     surveyNumbers: string[];
-    currentUser: User | null;
 }
 
 interface NoteEditorProps {
     surveyNumber: string;
     projectId: string;
-    currentUser: User | null;
     onNoteAdded: () => void;
 }
 
-function NoteEditor({ surveyNumber, projectId, currentUser, onNoteAdded }: NoteEditorProps) {
+function NoteEditor({ surveyNumber, projectId, onNoteAdded }: NoteEditorProps) {
     const [content, setContent] = useState('');
     const { toast } = useToast();
     const storageKey = `legal-notes-${projectId}-${surveyNumber}`;
 
     const handleSaveNote = () => {
-        if (!content.trim() || !currentUser) {
+        if (!content.trim()) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -47,8 +45,8 @@ function NoteEditor({ surveyNumber, projectId, currentUser, onNoteAdded }: NoteE
             date: new Date().toISOString(),
             content: content,
             author: {
-                id: currentUser.id,
-                name: currentUser.name,
+                id: 'admin', // Simplified for single-user app
+                name: 'Admin',
             },
         };
 
@@ -134,7 +132,7 @@ function EditNoteDialog({ isOpen, onOpenChange, note, onSave }: EditNoteDialogPr
     )
 }
 
-export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotesProps) {
+export function LegalNotes({ projectId, surveyNumbers }: LegalNotesProps) {
     const [notesBySurvey, setNotesBySurvey] = useState<Record<string, LegalNote[]>>({});
     const [noteToEdit, setNoteToEdit] = useState<LegalNote | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -159,12 +157,7 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
 
     const refreshNotes = () => setVersion(v => v + 1);
 
-    const canAddNotes = currentUser?.role === 'Lawyer';
-    const canEditNotes = currentUser?.role === 'Super Admin' || currentUser?.role === 'Lawyer';
-    const canDelete = currentUser?.role === 'Super Admin';
-
     const handleEditNote = (note: LegalNote) => {
-        if (!canEditNotes) return;
         setNoteToEdit(note);
         setIsEditDialogOpen(true);
     };
@@ -189,8 +182,6 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
         toast({ title: 'Note Deleted' });
     };
 
-    if (!currentUser || currentUser.role === 'Aggregator') return null;
-
     return (
         <>
             <Accordion type="multiple" className="w-full space-y-4">
@@ -200,14 +191,11 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
                             Notes for Survey No: {sn}
                         </AccordionTrigger>
                         <AccordionContent className="p-4 border-t">
-                            {canAddNotes && (
-                                <NoteEditor
-                                    surveyNumber={sn}
-                                    projectId={projectId}
-                                    currentUser={currentUser}
-                                    onNoteAdded={refreshNotes}
-                                />
-                            )}
+                            <NoteEditor
+                                surveyNumber={sn}
+                                projectId={projectId}
+                                onNoteAdded={refreshNotes}
+                            />
                             <div className="mt-6 space-y-4">
                                 {notesBySurvey[sn]?.map(note => (
                                     <Card key={note.id}>
@@ -222,32 +210,28 @@ export function LegalNotes({ projectId, surveyNumbers, currentUser }: LegalNotes
                                                     </CardDescription>
                                                 </div>
                                                  <div className="flex gap-1">
-                                                    {canEditNotes && (
-                                                        <Button variant="ghost" size="icon" onClick={() => handleEditNote(note)}>
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
-                                                    {canDelete && (
-                                                         <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        This will permanently delete this note.
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteNote(sn, note.id)}>Delete</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    )}
+                                                    <Button variant="ghost" size="icon" onClick={() => handleEditNote(note)}>
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                     <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    This will permanently delete this note.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteNote(sn, note.id)}>Delete</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 </div>
                                             </div>
                                         </CardHeader>

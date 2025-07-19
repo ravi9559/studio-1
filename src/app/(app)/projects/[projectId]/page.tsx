@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import type { Project, Person, Folder, DocumentFile, FinancialTransaction, User } from '@/types';
+import type { Project, Person, Folder, DocumentFile, FinancialTransaction } from '@/types';
 import { initializeNewProjectData, createDefaultFolders } from '@/lib/project-template';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,9 +47,6 @@ export default function ProjectDetailsPage() {
     const ownersStorageKey = useMemo(() => `lineage-data-${projectId}`, [projectId]);
     const folderStorageKey = useMemo(() => `document-folders-${projectId}`, [projectId]);
     const financialTransactionsStorageKey = useMemo(() => `financial-transactions-${projectId}`, [projectId]);
-
-    // Simplified for single-user app, we can assume a default user or remove checks
-    const currentUser: User = {};
 
     // --- Data Loading and Initialization ---
     useEffect(() => {
@@ -351,7 +348,6 @@ export default function ProjectDetailsPage() {
                             onDeleteFolder={handleDeleteFolder}
                             onAddFile={handleAddFileToFolder}
                             onDeleteFile={handleDeleteFileFromFolder}
-                            currentUser={currentUser}
                         />
                     </TabsContent>
                     <TabsContent value="documents" className="pt-4">
@@ -361,20 +357,19 @@ export default function ProjectDetailsPage() {
                             onDeleteFolder={handleDeleteFolder}
                             onAddFile={handleAddFileToFolder}
                             onDeleteFile={handleDeleteFileFromFolder}
-                            currentUser={currentUser}
                         />
                     </TabsContent>
                     <TabsContent value="transactions" className="pt-4">
-                        <TransactionHistory projectId={projectId} currentUser={currentUser} />
+                        <TransactionHistory projectId={projectId} />
                     </TabsContent>
                     <TabsContent value="sketch" className="pt-4">
                         <SiteSketchManager projectId={projectId} />
                     </TabsContent>
                     <TabsContent value="notes" className="pt-4">
-                        <Notes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
+                        <Notes projectId={projectId} surveyNumbers={surveyNumbers} />
                     </TabsContent>
                      <TabsContent value="legal" className="pt-4">
-                        <LegalNotes projectId={projectId} surveyNumbers={surveyNumbers} currentUser={currentUser} />
+                        <LegalNotes projectId={projectId} surveyNumbers={surveyNumbers} />
                     </TabsContent>
                 </Tabs>
             </div>

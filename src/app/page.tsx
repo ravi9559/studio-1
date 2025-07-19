@@ -9,7 +9,9 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/dashboard');
+    // A logged-in user is redirected to dashboard inside the layout
+    // A non-logged in user is redirected to login inside the layout
+    // This page can just show a loader.
   }, [router]);
 
   return (

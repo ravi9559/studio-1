@@ -5,6 +5,7 @@ import {
   LandPlot,
   Settings,
   FolderKanban,
+  LogOut,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -14,13 +15,22 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   useSidebar,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/context/auth-context';
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { contextualMenu } = useSidebar();
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   return (
     <Sidebar>
@@ -51,10 +61,14 @@ export function AppSidebar() {
         </SidebarMenuItem>
         {contextualMenu}
       </SidebarMenu>
-      <SidebarFooter>
-        <p className="text-xs text-muted-foreground p-2 group-data-[collapsible=icon]:hidden">
-            A single-user application for land and lineage management.
-        </p>
+      <SidebarFooter className="mt-auto">
+        <SidebarSeparator />
+         <SidebarMenuItem>
+          <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
+              <LogOut />
+              <span>Logout</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
       </SidebarFooter>
     </Sidebar>
   );

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Folder as FolderIcon, FolderPlus, File as FileIcon, FilePlus, Trash2, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
-import type { Folder, DocumentFile, User } from '@/types';
+import type { Folder, DocumentFile } from '@/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -115,17 +115,11 @@ const FolderView: FC<{
   onAddFile: (folderId: string, fileData: Omit<DocumentFile, 'id'>) => void;
   onDeleteFile: (folderId: string, fileId: string) => void;
   level: number;
-  currentUser: User | null;
-}> = ({ folder, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile, level, currentUser }) => {
+}> = ({ folder, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile, level }) => {
   const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
   const { toast } = useToast();
   
-  const userRole = currentUser?.role;
-  const canEdit = userRole === 'Super Admin' || userRole === 'Aggregator' || userRole === 'Lawyer';
-  const canDelete = userRole === 'Super Admin';
-  const canDownload = userRole === 'Lawyer' || userRole === 'Super Admin';
-
   const handleDownload = (file: DocumentFile) => {
     if (!file.url) {
         toast({
@@ -149,31 +143,27 @@ const FolderView: FC<{
         <FolderIcon className="h-5 w-5 text-primary" />
         <span className="flex-grow font-medium">{folder.name}</span>
         
-        {canEdit && (
-          <>
-            {/* Add File Dialog */}
-            <Dialog open={isAddFileOpen} onOpenChange={setIsAddFileOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" title="Add File">
-                  <FilePlus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <AddFileDialog folderName={folder.name} onSave={(data) => onAddFile(folder.id, data)} onOpenChange={setIsAddFileOpen} />
-            </Dialog>
+        {/* Add File Dialog */}
+        <Dialog open={isAddFileOpen} onOpenChange={setIsAddFileOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Add File">
+              <FilePlus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <AddFileDialog folderName={folder.name} onSave={(data) => onAddFile(folder.id, data)} onOpenChange={setIsAddFileOpen} />
+        </Dialog>
 
-            {/* Add Folder Dialog */}
-            <Dialog open={isAddFolderOpen} onOpenChange={setIsAddFolderOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" title="Add Sub-folder">
-                  <FolderPlus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <AddFolderDialog folderName={folder.name} onSave={(name) => onAddFolder(folder.id, name)} onOpenChange={setIsAddFolderOpen} />
-            </Dialog>
-          </>
-        )}
+        {/* Add Folder Dialog */}
+        <Dialog open={isAddFolderOpen} onOpenChange={setIsAddFolderOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Add Sub-folder">
+              <FolderPlus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <AddFolderDialog folderName={folder.name} onSave={(name) => onAddFolder(folder.id, name)} onOpenChange={setIsAddFolderOpen} />
+        </Dialog>
         
-        {canDelete && level > 2 && ( // Only allow deleting folders deeper than the main categories
+        {level > 2 && ( // Only allow deleting folders deeper than the main categories
             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDeleteFolder(folder.id)} title="Delete Folder">
                 <Trash2 className="h-4 w-4" />
             </Button>
@@ -188,23 +178,19 @@ const FolderView: FC<{
             <span className="flex-grow">{file.name}</span>
             <span className="text-xs text-muted-foreground">{file.size}</span>
             <span className="text-xs text-muted-foreground">{format(new Date(file.uploaded), 'PP')}</span>
-            {canDownload && (
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(file)} title="Download File" disabled={!file.url}>
-                  <Download className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            {canEdit && (
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDeleteFile(folder.id, file.id)} title="Delete File">
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            )}
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(file)} title="Download File" disabled={!file.url}>
+                <Download className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDeleteFile(folder.id, file.id)} title="Delete File">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
         ))}
       </div>
 
       {/* Render Sub-folders */}
       {folder.children.map((child) => (
-        <FolderView key={child.id} folder={child} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} onAddFile={onAddFile} onDeleteFile={onDeleteFile} level={level + 1} currentUser={currentUser} />
+        <FolderView key={child.id} folder={child} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} onAddFile={onAddFile} onDeleteFile={onDeleteFile} level={level + 1} />
       ))}
     </div>
   );
@@ -218,10 +204,9 @@ interface TitleDocumentsViewProps {
   onDeleteFolder: (folderId: string) => void;
   onAddFile: (folderId: string, fileData: Omit<DocumentFile, 'id'>) => void;
   onDeleteFile: (folderId: string, fileId: string) => void;
-  currentUser: User | null;
 }
 
-export function TitleDocumentsView({ folders, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile, currentUser }: TitleDocumentsViewProps) {
+export function TitleDocumentsView({ folders, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile }: TitleDocumentsViewProps) {
   return (
     <Card>
       <CardHeader>
@@ -235,7 +220,7 @@ export function TitleDocumentsView({ folders, onAddFolder, onDeleteFolder, onAdd
       <CardContent>
         {folders.length > 0 ? (
           folders.map((folder) => (
-            <FolderView key={folder.id} folder={folder} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} onAddFile={onAddFile} onDeleteFile={onDeleteFile} level={0} currentUser={currentUser} />
+            <FolderView key={folder.id} folder={folder} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} onAddFile={onAddFile} onDeleteFile={onDeleteFile} level={0} />
           ))
         ) : (
           <div className="text-center text-muted-foreground p-8">

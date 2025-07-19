@@ -20,7 +20,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { initialTransactions } from '@/lib/initial-data';
-import type { User } from '@/types';
 
 // Define the type for a transaction
 type Transaction = {
@@ -34,10 +33,9 @@ type Transaction = {
 
 interface TransactionHistoryProps {
     projectId: string;
-    currentUser: User | null;
 }
 
-export function TransactionHistory({ projectId, currentUser }: TransactionHistoryProps) {
+export function TransactionHistory({ projectId }: TransactionHistoryProps) {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -45,8 +43,6 @@ export function TransactionHistory({ projectId, currentUser }: TransactionHistor
 
     const storageKey = `transactions-${projectId}`;
     
-    const canEdit = currentUser?.role === 'Super Admin';
-
     // Load transactions from localStorage
     useEffect(() => {
         if (!projectId) return;
@@ -68,14 +64,14 @@ export function TransactionHistory({ projectId, currentUser }: TransactionHistor
 
     // Save transactions to localStorage
     useEffect(() => {
-        if (isLoaded && canEdit) {
+        if (isLoaded) {
             try {
                 localStorage.setItem(storageKey, JSON.stringify(transactions));
             } catch (e) {
                 console.error("Could not save transactions", e);
             }
         }
-    }, [transactions, isLoaded, storageKey, canEdit]);
+    }, [transactions, isLoaded, storageKey]);
 
     const handleAddRecord = () => {
         setTransactionToEdit(null);
@@ -115,12 +111,10 @@ export function TransactionHistory({ projectId, currentUser }: TransactionHistor
                         <CardTitle>Transaction History</CardTitle>
                         <CardDescription>Chronological record of land ownership.</CardDescription>
                     </div>
-                    {canEdit && (
-                        <Button onClick={handleAddRecord}>
-                            <PlusCircle className="mr-2 h-4 w-4"/>
-                            Add Record
-                        </Button>
-                    )}
+                    <Button onClick={handleAddRecord}>
+                        <PlusCircle className="mr-2 h-4 w-4"/>
+                        Add Record
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -131,7 +125,7 @@ export function TransactionHistory({ projectId, currentUser }: TransactionHistor
                             <TableHead>Source Mode</TableHead>
                             <TableHead>Year</TableHead>
                             <TableHead>Doc Number</TableHead>
-                            {canEdit && <TableHead className="text-right">Actions</TableHead>}
+                            <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -144,36 +138,34 @@ export function TransactionHistory({ projectId, currentUser }: TransactionHistor
                                 </TableCell>
                                 <TableCell>{tx.year}</TableCell>
                                 <TableCell>{tx.doc}</TableCell>
-                                {canEdit && (
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="ghost" size="icon" onClick={() => handleEditRecord(tx)}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This will permanently delete this transaction record.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteRecord(tx.id)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                )}
+                                <TableCell className="text-right space-x-2">
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditRecord(tx)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will permanently delete this transaction record.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteRecord(tx.id)}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </TableCell>
                             </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={canEdit ? 6 : 5} className="h-24 text-center">
+                                    <TableCell colSpan={6} className="h-24 text-center">
                                         No transaction records found.
                                     </TableCell>
                                 </TableRow>
@@ -182,14 +174,12 @@ export function TransactionHistory({ projectId, currentUser }: TransactionHistor
                     </Table>
                 </CardContent>
             </Card>
-            {canEdit && (
-                <TransactionFormDialog
-                    isOpen={isDialogOpen}
-                    onOpenChange={setIsDialogOpen}
-                    onSave={handleSaveRecord}
-                    transaction={transactionToEdit}
-                />
-            )}
+            <TransactionFormDialog
+                isOpen={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+                onSave={handleSaveRecord}
+                transaction={transactionToEdit}
+            />
         </>
     );
 }

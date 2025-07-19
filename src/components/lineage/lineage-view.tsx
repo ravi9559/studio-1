@@ -7,7 +7,7 @@ import { PersonCard } from './person-card';
 import { LineageSuggestion } from './lineage-suggestion';
 import { Card, CardContent } from '../ui/card';
 import { Loader2, Search, PlusCircle, FileUp } from 'lucide-react';
-import type { Person, Folder, DocumentFile, User } from '@/types';
+import type { Person, Folder, DocumentFile } from '@/types';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import {
@@ -111,7 +111,6 @@ interface LineageViewProps {
     onDeleteFolder: (folderId: string) => void;
     onAddFile: (folderId: string, fileData: Omit<DocumentFile, 'id'>) => void;
     onDeleteFile: (folderId: string, fileId: string) => void;
-    currentUser: User | null;
 }
 
 const searchInFamily = (person: Person, query: string): boolean => {
@@ -138,7 +137,6 @@ export function LineageView({
     onDeleteFolder,
     onAddFile,
     onDeleteFile,
-    currentUser,
 }: LineageViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddFamilyHeadOpen, setIsAddFamilyHeadOpen] = useState(false);
@@ -185,7 +183,6 @@ export function LineageView({
                 onDeleteFolder={onDeleteFolder}
                 onAddFile={onAddFile}
                 onDeleteFile={onDeleteFile}
-                currentUser={currentUser}
             />
         ))}
         {filteredHeads.length === 0 && (

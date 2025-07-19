@@ -55,8 +55,10 @@ export type Project = {
   googleMapsLink?: string;
 };
 
-// Simplified for single-user app
-export type User = {}; // No user properties needed for now
+// Updated for single admin user
+export type User = {
+  email: string;
+};
 export type Role = {}; // No roles needed for now
 
 export type LegalNote = {

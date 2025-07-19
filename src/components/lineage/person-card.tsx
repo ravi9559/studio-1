@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from '../ui/separator';
-import type { Person, SurveyRecord, LandClassification, Note, LegalNote, User, Transaction, Folder, DocumentFile, FinancialTransaction } from '@/types';
+import type { Person, SurveyRecord, LandClassification, Note, LegalNote, Transaction, Folder, DocumentFile, FinancialTransaction } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { format, isValid } from 'date-fns';
@@ -171,16 +171,10 @@ const FolderView: FC<{
   onAddFile: (folderId: string, fileData: Omit<DocumentFile, 'id'>) => void;
   onDeleteFile: (folderId: string, fileId: string) => void;
   level: number;
-  currentUser: User | null;
-}> = ({ folder, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile, level, currentUser }) => {
+}> = ({ folder, onAddFolder, onDeleteFolder, onAddFile, onDeleteFile, level }) => {
   const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
   const { toast } = useToast();
-
-  const userRole = currentUser?.role;
-  const canEdit = userRole === 'Super Admin' || userRole === 'Aggregator' || userRole === 'Lawyer';
-  const canDelete = userRole === 'Super Admin';
-  const canDownload = userRole === 'Lawyer' || userRole === 'Super Admin';
 
   const handleDownload = (file: DocumentFile) => {
     if (!file.url) {
@@ -205,31 +199,27 @@ const FolderView: FC<{
         <FolderIcon className="h-5 w-5 text-primary" />
         <span className="flex-grow font-medium">{folder.name}</span>
         
-        {canEdit && (
-          <>
-            {/* Add File Dialog */}
-            <Dialog open={isAddFileOpen} onOpenChange={setIsAddFileOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" title="Add File">
-                  <FilePlus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <AddFileDialog folderName={folder.name} onSave={(data) => onAddFile(folder.id, data)} onOpenChange={setIsAddFileOpen} />
-            </Dialog>
+        {/* Add File Dialog */}
+        <Dialog open={isAddFileOpen} onOpenChange={setIsAddFileOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Add File">
+              <FilePlus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <AddFileDialog folderName={folder.name} onSave={(data) => onAddFile(folder.id, data)} onOpenChange={setIsAddFileOpen} />
+        </Dialog>
 
-            {/* Add Folder Dialog */}
-            <Dialog open={isAddFolderOpen} onOpenChange={setIsAddFolderOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" title="Add Sub-folder">
-                  <FolderPlus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <AddFolderDialog folderName={folder.name} onSave={(name) => onAddFolder(folder.id, name)} onOpenChange={setIsAddFolderOpen} />
-            </Dialog>
-          </>
-        )}
+        {/* Add Folder Dialog */}
+        <Dialog open={isAddFolderOpen} onOpenChange={setIsAddFolderOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Add Sub-folder">
+              <FolderPlus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <AddFolderDialog folderName={folder.name} onSave={(name) => onAddFolder(folder.id, name)} onOpenChange={setIsAddFolderOpen} />
+        </Dialog>
         
-        {canDelete && level > 2 && ( // Only allow deleting folders deeper than the main categories
+        {level > 2 && ( // Only allow deleting folders deeper than the main categories
             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDeleteFolder(folder.id)} title="Delete Folder">
                 <Trash2 className="h-4 w-4" />
             </Button>
@@ -247,23 +237,19 @@ const FolderView: FC<{
             <span className="flex-grow">{file.name}</span>
             <span className="text-xs text-muted-foreground">{file.size}</span>
             <span className="text-xs text-muted-foreground">{formattedDate}</span>
-            {canDownload && (
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(file)} title="Download File" disabled={!file.url}>
-                  <Download className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            {canEdit && (
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDeleteFile(folder.id, file.id)} title="Delete File">
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            )}
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(file)} title="Download File" disabled={!file.url}>
+                <Download className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDeleteFile(folder.id, file.id)} title="Delete File">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
         )})}
       </div>
 
       {/* Render Sub-folders */}
       {folder.children.map((child) => (
-        <FolderView key={child.id} folder={child} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} onAddFile={onAddFile} onDeleteFile={onDeleteFile} level={level + 1} currentUser={currentUser} />
+        <FolderView key={child.id} folder={child} onAddFolder={onAddFolder} onDeleteFolder={onDeleteFolder} onAddFile={onAddFile} onDeleteFile={onDeleteFile} level={level + 1} />
       ))}
     </div>
   );
@@ -276,7 +262,6 @@ interface PersonCardProps {
   onUpdatePerson: (personId: string, personData: Omit<Person, 'id' | 'heirs'>) => void;
   isFamilyHead?: boolean;
   projectId: string;
-  currentUser: User | null;
   personFolders: Folder[];
   onAddFolder: (parentId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
@@ -307,7 +292,6 @@ const AddHeirForm: FC<{ personName: string, parentId: string, onAddHeir: PersonC
             maritalStatus,
             status,
             sourceOfLand,
-            holdingPattern,
         });
         closeDialog();
     };
@@ -372,10 +356,6 @@ const AddHeirForm: FC<{ personName: string, parentId: string, onAddHeir: PersonC
                     <Label htmlFor="add-sourceOfLand" className="text-right">Source of Land</Label>
                     <Input id="add-sourceOfLand" value={sourceOfLand} onChange={e => setSourceOfLand(e.target.value)} className="col-span-3" placeholder="e.g., Purchase, Legal Heir" />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="add-holdingPattern" className="text-right">Holding Pattern</Label>
-                    <Input id="add-holdingPattern" value={holdingPattern} onChange={e => setHoldingPattern(e.target.value)} className="col-span-3" placeholder="e.g., Joint, Individual" />
-                </div>
             </div>
             <DialogFooter>
                 <Button type="submit">Save Heir</Button>
@@ -393,7 +373,6 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
     const [maritalStatus, setMaritalStatus] = useState<Person['maritalStatus']>(person.maritalStatus);
     const [status, setStatus] = useState<Person['status']>(person.status);
     const [sourceOfLand, setSourceOfLand] = useState(person.sourceOfLand || '');
-    const [holdingPattern, setHoldingPattern] = useState(person.holdingPattern || '');
     
     // Land records management state
     const [landRecords, setLandRecords] = useState<SurveyRecord[]>(person.landRecords || []);
@@ -435,7 +414,6 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
             maritalStatus,
             status,
             sourceOfLand,
-            holdingPattern,
             landRecords,
         });
         closeDialog();
@@ -508,10 +486,6 @@ const EditPersonForm: FC<{ person: Person, onUpdatePerson: PersonCardProps['onUp
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="edit-sourceOfLand" className="text-right">Source of Land</Label>
                         <Input id="edit-sourceOfLand" value={sourceOfLand} onChange={e => setSourceOfLand(e.target.value)} className="col-span-3" placeholder="e.g., Purchase, Legal Heir" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="edit-holdingPattern" className="text-right">Holding Pattern</Label>
-                        <Input id="edit-holdingPattern" value={holdingPattern} onChange={e => setHoldingPattern(e.target.value)} className="col-span-3" placeholder="e.g., Joint, Individual" />
                     </div>
 
                     <div className="p-4 border rounded-lg space-y-4">
@@ -767,7 +741,6 @@ export const PersonCard: FC<PersonCardProps> = ({
     onUpdatePerson, 
     isFamilyHead, 
     projectId, 
-    currentUser,
     personFolders,
     onAddFolder,
     onDeleteFolder,
@@ -795,10 +768,6 @@ export const PersonCard: FC<PersonCardProps> = ({
   const [editingLegalNote, setEditingLegalNote] = useState<AggregatedLegalNote | null>(null);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [finTxToEdit, setFinTxToEdit] = useState<FinancialTransaction | null>(null);
-
-  const canDeleteLegalNote = currentUser?.role !== 'Lawyer';
-  const canEditFinancials = currentUser?.role === 'Super Admin' || currentUser?.role === 'Aggregator';
-
 
   const surveyNumbers = useMemo(() => {
     const numbers = new Set<string>();
@@ -957,7 +926,6 @@ export const PersonCard: FC<PersonCardProps> = ({
   }, [projectId, refreshData, toast]);
 
   const handleSaveLegalNote = useCallback((surveyNumber: string, data: Omit<LegalNote, 'id' | 'date' | 'author'>) => {
-    if (!currentUser) return;
     const storageKey = `legal-notes-${projectId}-${surveyNumber}`;
     const items: LegalNote[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
@@ -966,14 +934,14 @@ export const PersonCard: FC<PersonCardProps> = ({
         localStorage.setItem(storageKey, JSON.stringify(updatedItems));
         toast({ title: 'Legal Note Updated' });
     } else {
-        const newItem: LegalNote = { ...data, id: `legal-note-${Date.now()}`, date: new Date().toISOString(), author: { id: currentUser.id, name: currentUser.name } };
+        const newItem: LegalNote = { ...data, id: `legal-note-${Date.now()}`, date: new Date().toISOString(), author: { id: 'admin', name: 'Admin' } };
         localStorage.setItem(storageKey, JSON.stringify([newItem, ...items]));
         toast({ title: 'Legal Note Added' });
     }
     setEditingLegalNote(null);
     setLegalNoteDialogOpen(false);
     refreshData();
-  }, [projectId, currentUser, editingLegalNote, refreshData, toast]);
+  }, [projectId, editingLegalNote, refreshData, toast]);
 
   const handleDeleteLegalNote = useCallback((note: AggregatedLegalNote) => {
     const storageKey = `legal-notes-${projectId}-${note.surveyNumber}`;
@@ -1028,7 +996,6 @@ export const PersonCard: FC<PersonCardProps> = ({
             <div><span className="font-semibold">Age:</span> {person.age}</div>
             <div><span className="font-semibold">Marital Status:</span> {person.maritalStatus}</div>
             {person.sourceOfLand && <div><span className="font-semibold">Source of Land:</span> {person.sourceOfLand}</div>}
-            {person.holdingPattern && <div><span className="font-semibold">Holding Pattern:</span> {person.holdingPattern}</div>}
         </div>
         
         {person.landRecords && person.landRecords.length > 0 && (
@@ -1093,7 +1060,6 @@ export const PersonCard: FC<PersonCardProps> = ({
                 onAddHeir={onAddHeir} 
                 onUpdatePerson={onUpdatePerson} 
                 projectId={projectId} 
-                currentUser={currentUser}
                 personFolders={[]}
                 onAddFolder={onAddFolder}
                 onDeleteFolder={onDeleteFolder}
@@ -1163,11 +1129,9 @@ export const PersonCard: FC<PersonCardProps> = ({
                         <div className="flex items-center gap-2"><Wallet /> Financial Transactions</div>
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t">
-                        {canEditFinancials && (
-                            <div className="flex justify-end mb-4">
-                                <Button size="sm" onClick={() => { setFinTxToEdit(null); setIsFinTxDialogOpen(true); }}><Plus className="mr-2 h-4 w-4" />Add Payment</Button>
-                            </div>
-                        )}
+                        <div className="flex justify-end mb-4">
+                            <Button size="sm" onClick={() => { setFinTxToEdit(null); setIsFinTxDialogOpen(true); }}><Plus className="mr-2 h-4 w-4" />Add Payment</Button>
+                        </div>
                         <div className="rounded-md border">
                             <Table>
                               <TableHeader>
@@ -1176,7 +1140,7 @@ export const PersonCard: FC<PersonCardProps> = ({
                                       <TableHead>Purpose</TableHead>
                                       <TableHead>Date of Payment</TableHead>
                                       <TableHead>Recorded At</TableHead>
-                                      {canEditFinancials && <TableHead className="text-right">Actions</TableHead>}
+                                      <TableHead className="text-right">Actions</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1192,19 +1156,17 @@ export const PersonCard: FC<PersonCardProps> = ({
                                           <TableCell><Badge variant={tx.purpose === 'Token Advance' ? 'secondary' : 'default'}>{tx.purpose}</Badge></TableCell>
                                           <TableCell>{formattedPaymentDate}</TableCell>
                                           <TableCell>{formattedRecordedDate}</TableCell>
-                                           {canEditFinancials && (
-                                                <TableCell className="text-right space-x-1">
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(tx, 'financial-transaction')}><Edit className="h-4 w-4" /></Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this financial record.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteFinancialTx(tx.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                                                    </AlertDialog>
-                                                </TableCell>
-                                           )}
+                                            <TableCell className="text-right space-x-1">
+                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(tx, 'financial-transaction')}><Edit className="h-4 w-4" /></Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                    <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this financial record.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteFinancialTx(tx.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
                                       </TableRow>
                                   )}) : (
                                       <TableRow>
-                                          <TableCell colSpan={canEditFinancials ? 5 : 4} className="h-24 text-center">
+                                          <TableCell colSpan={5} className="h-24 text-center">
                                               No financial transactions recorded for this family.
                                           </TableCell>
                                       </TableRow>
@@ -1230,8 +1192,7 @@ export const PersonCard: FC<PersonCardProps> = ({
                                     onDeleteFolder={onDeleteFolder} 
                                     onAddFile={onAddFile} 
                                     onDeleteFile={onDeleteFile} 
-                                    level={0} 
-                                    currentUser={currentUser}
+                                    level={0}
                                 />
                             ))
                             ) : (
@@ -1299,12 +1260,10 @@ export const PersonCard: FC<PersonCardProps> = ({
                                         </div>
                                         <div>
                                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(note, 'legal-note')}><Edit className="h-4 w-4" /></Button>
-                                            {canDeleteLegalNote && (
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                    <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this legal note.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteLegalNote(note)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                                                </AlertDialog>
-                                            )}
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete this legal note.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDeleteLegalNote(note)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                            </AlertDialog>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-3 pt-0"><p className="text-sm whitespace-pre-wrap">{note.content}</p></CardContent>
@@ -1460,6 +1419,3 @@ function FormDialog<T>(
         </Dialog>
     );
 }
-
-
-    
