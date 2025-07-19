@@ -40,11 +40,6 @@ export default function AppLayout({
           <main className="flex-grow">
             {children}
           </main>
-          <footer className="text-center p-4 text-xs text-muted-foreground border-t">
-            <p>
-              <span className="font-bold">O2O</span> | Simplifying Real Estate Transactions. All rights reserved.
-            </p>
-          </footer>
         </div>
       </SidebarInset>
     </SidebarProvider>

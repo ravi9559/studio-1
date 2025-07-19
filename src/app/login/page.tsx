@@ -45,8 +45,8 @@ export default function LoginPage() {
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10">
                         <LandPlot className="h-8 w-8 text-primary" />
                     </div>
-                    <CardTitle className="text-2xl">TitleLine Admin Login</CardTitle>
-                    <CardDescription>Enter your credentials to access the dashboard.</CardDescription>
+                    <CardTitle className="text-2xl">TitleLine</CardTitle>
+                    <CardDescription>Enter your credentials to access the Application.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">

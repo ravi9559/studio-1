@@ -23,7 +23,16 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          {children}
+          <div className="flex flex-col min-h-screen">
+            <main className="flex-grow">
+              {children}
+            </main>
+            <footer className="text-center p-4 text-xs text-muted-foreground border-t mt-auto">
+              <p>
+                <span className="font-bold">Lakshmi Balaji | O2O</span> | Simplifying Real Estate Transactions. All rights reserved.
+              </p>
+            </footer>
+          </div>
           <Toaster />
         </AuthProvider>
       </body>
