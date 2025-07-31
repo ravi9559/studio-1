@@ -16,7 +16,7 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, isLoadingAuth } = useAuth();
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -37,6 +37,15 @@ export default function LoginPage() {
             setIsLoading(false);
         }
     };
+     
+    // Show a loading indicator while Firebase Auth is initializing
+    if (isLoadingAuth) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
+          <p className="text-gray-600">Loading authentication...</p>
+        </div>
+      );
+    }
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">

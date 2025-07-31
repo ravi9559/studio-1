@@ -13,18 +13,10 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+  const { user, isLoadingAuth } = useAuth()
 
-  // The AuthProvider now handles redirection, so this check is simplified.
-  // We just need to ensure we show a loader while auth state is being determined.
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/login');
-    }
-  }, [user, loading, router]);
 
-  if (loading || !user) {
+  if (isLoadingAuth || !user) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin" />

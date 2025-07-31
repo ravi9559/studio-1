@@ -1,4 +1,4 @@
-
+// src/app/(app)/settings/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,18 +9,19 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Moon, Sun, Trash2, User, KeyRound } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast'; // Ensure this hook is correctly implemented
+import { useAuth } from '@/context/auth-context'; // Ensure this path is correct
 
 export default function SettingsPage() {
     const { toast } = useToast();
-    const { user, changePassword } = useAuth();
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const { user, changePassword } = useAuth(); // 'user' will now correctly be the Firebase User object
 
+    const [isDarkMode, setIsDarkMode] = useState(false);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
+    // Theme logic (assuming it's working as expected)
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const savedTheme = localStorage.getItem('theme');
@@ -38,6 +39,12 @@ export default function SettingsPage() {
 
     const handlePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to change your password.' });
+            return;
+        }
+
         if (newPassword !== confirmPassword) {
             toast({ variant: 'destructive', title: 'Error', description: 'New passwords do not match.' });
             return;
@@ -47,15 +54,18 @@ export default function SettingsPage() {
             return;
         }
 
+        // Call the changePassword function from the AuthContext
         const success = await changePassword(currentPassword, newPassword);
 
         if (success) {
-            toast({ title: 'Success', description: 'Your password has been changed.' });
+            toast({ title: 'Success', description: 'Your password has been changed successfully.' });
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: 'Your current password was incorrect.' });
+            // The changePassword function in AuthContext already logs Firebase errors.
+            // Here, we provide a generic error message or refine based on specific codes if needed.
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to change password. Please check your current password and try again.' });
         }
     };
     
@@ -63,15 +73,18 @@ export default function SettingsPage() {
         try {
             // Keep auth and theme data
             const theme = localStorage.getItem('theme');
-            const authData = localStorage.getItem('admin-auth');
+            // Note: 'admin-auth' was from your old local storage auth.
+            // If you still have other local storage data you want to preserve, list them here.
             localStorage.clear();
             if (theme) localStorage.setItem('theme', theme);
-            if (authData) localStorage.setItem('admin-auth', authData);
+            // No need to preserve 'admin-auth' if you're fully on Firebase Auth
 
             toast({
                 title: "Success",
                 description: "All project data has been cleared.",
             });
+            // This redirect might be problematic if it clears session data.
+            // Consider a full page reload or a more controlled state reset if needed.
             window.location.href = '/dashboard';
         } catch (e) {
             toast({
@@ -99,7 +112,8 @@ export default function SettingsPage() {
                         <KeyRound className="h-5 w-5" />
                         <div className="flex-1 space-y-1">
                           <p className="text-sm font-medium leading-none">Email</p>
-                          <p className="text-sm text-muted-foreground">{user?.email}</p>
+                          {/* Display the logged-in user's email */}
+                          <p className="text-sm text-muted-foreground">{user?.email || 'Not logged in'}</p>
                         </div>
                      </div>
                      <form onSubmit={handlePasswordChange} className="space-y-4">

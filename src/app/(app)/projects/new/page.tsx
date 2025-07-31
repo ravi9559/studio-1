@@ -14,8 +14,15 @@ import { useToast } from '@/hooks/use-toast';
 import type { Project, Person, SurveyRecord, LandClassification, Transaction } from '@/types';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { createDefaultFolders } from '@/lib/project-template';
+import { doc, setDoc, collection } from 'firebase/firestore';
+import { useContext } from 'react';
+import { AuthContext } from '@/context/auth-context'; // adjust path if needed
 
-const PROJECTS_STORAGE_KEY = 'projects';
+
+const PROJECTS_STORAGE_KEY = 'projects'; 
+const { user } = useContext(AuthContext); 
+const { db } = useContext(AuthContext);
+
 
 
 const AddHeirForm: FC<{
@@ -158,11 +165,32 @@ export default function CreateProjectPage() {
         const finalTransactions: Transaction[] = transactions.map((tx, i) => ({ ...tx, id: `tx-${newProjectId}-${i}` }));
         
         try {
-            const allProjects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
-            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([...allProjects, newProject]));
-            localStorage.setItem(`lineage-data-${newProjectId}`, JSON.stringify([familyHead]));
-            localStorage.setItem(`transactions-${newProjectId}`, JSON.stringify(finalTransactions));
-            localStorage.setItem(`document-folders-${newProjectId}`, JSON.stringify(createDefaultFolders([familyHead])));
+            // const allProjects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
+            // localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([...allProjects, newProject]));
+            // localStorage.setItem(`lineage-data-${newProjectId}`, JSON.stringify([familyHead]));
+            // localStorage.setItem(`transactions-${newProjectId}`, JSON.stringify(finalTransactions));
+            // localStorage.setItem(`document-folders-${newProjectId}`, JSON.stringify(createDefaultFolders([familyHead]))); 
+            const projectRef = doc(db, 'projects', newProjectId);
+await setDoc(projectRef, {
+  ...newProject,
+  ownerUid: user?.uid,
+  createdAt: new Date().toISOString(),
+});
+
+// Store family head lineage
+await setDoc(doc(db, 'projects', newProjectId, 'lineage', familyHead.id), familyHead);
+
+// Store transactions
+for (const tx of finalTransactions) {
+  await setDoc(doc(db, 'projects', newProjectId, 'transactions', tx.id), tx);
+}
+
+// Optionally: store folders as metadata
+const folders = createDefaultFolders([familyHead]);
+for (const folder of folders) {
+  await setDoc(doc(db, 'projects', newProjectId, 'folders', folder.id), folder);
+}
+
             
             toast({ title: 'Project Created', description: `Project "${projectName}" has been successfully created.` });
             router.push('/dashboard');
