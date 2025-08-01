@@ -11,17 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PlusCircle, Trash2, ArrowLeft, UserPlus, Milestone } from "lucide-react";
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import type { Project, Person, SurveyRecord, LandClassification, Transaction } from '@/types';
+import type { Project, Person, SurveyRecord, LandClassification, Transaction ,Folder  } from '@/types';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { createDefaultFolders } from '@/lib/project-template';
-import { doc, setDoc, collection } from 'firebase/firestore';
-import { useContext } from 'react';
-import { AuthContext } from '@/context/auth-context'; // adjust path if needed
+import { createDefaultFolders } from '@/lib/project-template'; 
 
+// Firestore imports
+import { addDoc, collection } from 'firebase/firestore';
+import { useAuth } from '@/context/auth-context'; // Import useAuth to get the db instance
 
-const PROJECTS_STORAGE_KEY = 'projects'; 
-const { user } = useContext(AuthContext); 
-const { db } = useContext(AuthContext);
 
 
 
@@ -94,7 +91,9 @@ const HeirCard: FC<{ person: Person; onAddHeir: (parentId: string, heir: Person)
 export default function CreateProjectPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const { db } = useAuth(); // Access the Firestore db instance
     const [isAddHeirOpen, setIsAddHeirOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false); // Add loading state
 
     // Project Details
     const [projectName, setProjectName] = useState('');
@@ -153,49 +152,70 @@ export default function CreateProjectPage() {
         setTransactions(transactions.filter((_, i) => i !== index));
     };
 
-    const handleSaveProject = (e: React.FormEvent) => {
+    // const handleSaveProject = (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     if (!projectName || !projectSiteId || !projectLocation || !familyHead.name || familyHead.landRecords.length === 0) {
+    //         toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill all required fields.' });
+    //         return;
+    //     }
+
+    //     const newProjectId = `proj-${Date.now()}`;
+    //     const newProject: Project = { id: newProjectId, name: projectName, siteId: projectSiteId, location: projectLocation };
+    //     const finalTransactions: Transaction[] = transactions.map((tx, i) => ({ ...tx, id: `tx-${newProjectId}-${i}` }));
+        
+    //     try {
+    //         const allProjects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
+    //         localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([...allProjects, newProject]));
+    //         localStorage.setItem(`lineage-data-${newProjectId}`, JSON.stringify([familyHead]));
+    //         localStorage.setItem(`transactions-${newProjectId}`, JSON.stringify(finalTransactions));
+    //         localStorage.setItem(`document-folders-${newProjectId}`, JSON.stringify(createDefaultFolders([familyHead])));
+            
+    //         toast({ title: 'Project Created', description: `Project "${projectName}" has been successfully created.` });
+    //         router.push('/dashboard');
+    //     } catch (error) {
+    //         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save the new project.' });
+    //     }
+    // };  
+
+
+     const handleSaveProject = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!projectName || !projectSiteId || !projectLocation || !familyHead.name || familyHead.landRecords.length === 0) {
             toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill all required fields.' });
             return;
         }
+        if (!db) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not initialized. Please try again.' });
+            return;
+        }
 
-        const newProjectId = `proj-${Date.now()}`;
-        const newProject: Project = { id: newProjectId, name: projectName, siteId: projectSiteId, location: projectLocation };
-        const finalTransactions: Transaction[] = transactions.map((tx, i) => ({ ...tx, id: `tx-${newProjectId}-${i}` }));
+        setIsLoading(true); // Set loading state
         
+        // Prepare data for Firestore
+        const finalTransactions: Transaction[] = transactions.map((tx, i) => ({ ...tx, id: `tx-${Date.now()}-${i}` }));
+        const defaultFolders: Folder[] = createDefaultFolders([familyHead]);
+
+        const newProjectData = {
+            name: projectName,
+            siteId: projectSiteId,
+            location: projectLocation,
+            createdAt: new Date().toISOString(), // Add timestamp
+            familyHead: familyHead, // Store the entire familyHead object
+            transactions: finalTransactions, // Store all transactions
+            documentFolders: defaultFolders, // Store default folders
+        };
+
         try {
-            // const allProjects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
-            // localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([...allProjects, newProject]));
-            // localStorage.setItem(`lineage-data-${newProjectId}`, JSON.stringify([familyHead]));
-            // localStorage.setItem(`transactions-${newProjectId}`, JSON.stringify(finalTransactions));
-            // localStorage.setItem(`document-folders-${newProjectId}`, JSON.stringify(createDefaultFolders([familyHead]))); 
-            const projectRef = doc(db, 'projects', newProjectId);
-await setDoc(projectRef, {
-  ...newProject,
-  ownerUid: user?.uid,
-  createdAt: new Date().toISOString(),
-});
-
-// Store family head lineage
-await setDoc(doc(db, 'projects', newProjectId, 'lineage', familyHead.id), familyHead);
-
-// Store transactions
-for (const tx of finalTransactions) {
-  await setDoc(doc(db, 'projects', newProjectId, 'transactions', tx.id), tx);
-}
-
-// Optionally: store folders as metadata
-const folders = createDefaultFolders([familyHead]);
-for (const folder of folders) {
-  await setDoc(doc(db, 'projects', newProjectId, 'folders', folder.id), folder);
-}
-
+            // Add a new document to the 'projects' collection
+            const docRef = await addDoc(collection(db, "projects"), newProjectData);
             
-            toast({ title: 'Project Created', description: `Project "${projectName}" has been successfully created.` });
-            router.push('/dashboard');
+            toast({ title: 'Project Created', description: `Project "${projectName}" has been successfully created. ID: ${docRef.id}` });
+            router.push(`/dashboard`); // Redirect to dashboard or a project details page
         } catch (error) {
+            console.error("Error adding document: ", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to save the new project.' });
+        } finally {
+            setIsLoading(false); // Reset loading state
         }
     };
 

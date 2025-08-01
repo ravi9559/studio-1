@@ -53,6 +53,10 @@ export type Project = {
   siteId: string;
   location: string;
   googleMapsLink?: string;
+  createdAt?: string; // Add this if you're saving a timestamp
+  familyHead: Person;
+   transactions: Transaction[]
+   documentFolders: Folder[];
 };
 
 // Updated for single admin user
