@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -23,8 +22,9 @@ import { LegalNotes } from '@/components/project/legal-notes';
 import { SiteSketchManager } from '@/components/project/site-sketch-manager';
 import { AdvancePaymentGrid } from '@/components/transactions/advance-payment-grid';
 
-// --- Storage Keys ---
-const PROJECTS_STORAGE_KEY = 'projects';
+// Firestore imports
+import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { useAuth } from '@/context/auth-context';
 
 // --- Main Page Component ---
 export default function ProjectDetailsPage() {
@@ -32,74 +32,60 @@ export default function ProjectDetailsPage() {
     const projectId = params.projectId as string;
     const { toast } = useToast();
     const router = useRouter();
+    const { db } = useAuth(); // Get the Firestore instance
 
     const [project, setProject] = useState<Project | null>(null);
     const [owners, setOwners] = useState<Person[]>([]);
     const [folders, setFolders] = useState<Folder[]>([]);
     const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>([]);
     const [loading, setLoading] = useState(true);
-    
+
     const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
     const [editedProjectName, setEditedProjectName] = useState('');
     const [editedProjectSiteId, setEditedProjectSiteId] = useState('');
     const [editedProjectLocation, setEditedProjectLocation] = useState('');
     const [editedGoogleMapsLink, setEditedGoogleMapsLink] = useState('');
 
-    const ownersStorageKey = useMemo(() => `lineage-data-${projectId}`, [projectId]);
-    const folderStorageKey = useMemo(() => `document-folders-${projectId}`, [projectId]);
-    const financialTransactionsStorageKey = useMemo(() => `financial-transactions-${projectId}`, [projectId]);
-
-    // --- Data Loading and Initialization ---
+    // --- Data Loading from Firestore ---
     useEffect(() => {
-        if (!projectId) return;
+        if (!projectId || !db) return;
         setLoading(true);
+        const fetchProjectData = async () => {
+            try {
+                // Fetch the main project document
+                const docRef = doc(db, "projects", projectId);
+                const docSnap = await getDoc(docRef);
 
-        try {
-            // --- Load Project ---
-            const savedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-            if (!savedProjects) {
-                 setProject(null);
-                 setLoading(false);
-                 return;
-            }
-            const allProjects: Project[] = JSON.parse(savedProjects);
-            
-            // Find the current project
-            const currentProject = allProjects.find(p => p.id === projectId);
-            if (currentProject) {
-                setProject(currentProject);
-                setEditedProjectName(currentProject.name);
-                setEditedProjectSiteId(currentProject.siteId);
-                setEditedProjectLocation(currentProject.location);
-                setEditedGoogleMapsLink(currentProject.googleMapsLink || '');
-            } else {
-                setProject(null);
+                if (docSnap.exists()) {
+                    const projectData = { id: docSnap.id, ...docSnap.data() } as Project;
+                    setProject(projectData);
+                    setEditedProjectName(projectData.name);
+                    setEditedProjectSiteId(projectData.siteId);
+                    setEditedProjectLocation(projectData.location);
+                    setEditedGoogleMapsLink(projectData.googleMapsLink || '');
+
+                    // Extract nested data
+                    const familyHead = projectData.familyHead;
+                    setOwners([familyHead]); // Assume the entire lineage is nested under familyHead
+                    setFolders(projectData.documentFolders);
+                    setFinancialTransactions(projectData.financialTransactions || []);
+                } else {
+                    toast({ variant: 'destructive', title: 'Project Not Found', description: 'This project ID does not exist.' });
+                    setProject(null);
+                }
+            } catch (e) {
+                console.error("Error fetching project data:", e);
+                toast({ variant: 'destructive', title: 'Error Loading Data', description: 'There was a problem loading project data from Firestore.' });
+            } finally {
                 setLoading(false);
-                return;
             }
+        };
 
-            // --- Load or Regenerate Project-Specific Data ---
-            let loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || 'null');
-            let loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || 'null');
-            let loadedFinancials = JSON.parse(localStorage.getItem(financialTransactionsStorageKey) || '[]');
-            
-            if (!loadedOwners) {
-                initializeNewProjectData(projectId);
-                loadedOwners = JSON.parse(localStorage.getItem(ownersStorageKey) || '[]');
-                loadedFolders = JSON.parse(localStorage.getItem(folderStorageKey) || '[]');
-                loadedFinancials = JSON.parse(localStorage.getItem(financialTransactionsStorageKey) || '[]');
-            }
-            
-            setOwners(loadedOwners);
-            setFolders(loadedFolders);
-            setFinancialTransactions(loadedFinancials);
+        fetchProjectData();
+    }, [projectId, db, toast]);
 
-        } catch (e) {
-            console.error("Could not load project data", e);
-            toast({ variant: 'destructive', title: 'Error Loading Data', description: 'There was a problem initializing project data.' });
-        }
-        setLoading(false);
-    }, [projectId, ownersStorageKey, folderStorageKey, financialTransactionsStorageKey, toast]);
+    // All other logic that relies on `owners` will now be triggered when the `setOwners` call in useEffect completes.
+    // The `useEffect` that updates folders based on owners is now redundant because folders are loaded directly from the project doc.
 
     const allSurveyRecords = useMemo(() => {
         const records: { ownerName: string, ownerId: string, surveyNumber: string, acres: string, cents: string }[] = [];
@@ -119,267 +105,204 @@ export default function ProjectDetailsPage() {
         return records;
     }, [owners]);
 
+    // --- Update Project Details in Firestore ---
+    const handleUpdateProject = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!project || !db || !editedProjectName || !editedProjectSiteId || !editedProjectLocation) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Missing project details or Firestore not initialized.' });
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const docRef = doc(db, "projects", projectId);
+            await updateDoc(docRef, {
+                name: editedProjectName,
+                siteId: editedProjectSiteId,
+                location: editedProjectLocation,
+                googleMapsLink: editedGoogleMapsLink
+            });
+
+            // Update local state to reflect the change
+            setProject(prev => prev ? { ...prev, name: editedProjectName, siteId: editedProjectSiteId, location: editedProjectLocation, googleMapsLink: editedGoogleMapsLink } : null);
+            setIsEditProjectDialogOpen(false);
+            toast({ title: 'Project Updated', description: 'The project details have been successfully saved to Firestore.' });
+        } catch (error) {
+            console.error("Failed to update project in Firestore", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to update project details in Firestore.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // --- Delete Project from Firestore ---
+    const handleDeleteProject = async () => {
+        if (!project || !db) return;
+
+        setLoading(true);
+
+        try {
+            const docRef = doc(db, "projects", projectId);
+            await deleteDoc(docRef);
+
+            toast({ title: "Project Deleted", description: `The project "${project.name}" has been removed from Firestore.`, });
+            router.push('/dashboard');
+        } catch (error) {
+            console.error("Failed to delete project from Firestore", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete project from Firestore.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Placeholder functions for now, these would need to be updated to use Firestore
+    // For now, they will not save to the database. They will only update local state.
     const updateAndPersistOwners = useCallback((newOwners: Person[]) => {
         setOwners(newOwners);
-        localStorage.setItem(ownersStorageKey, JSON.stringify(newOwners));
-    }, [ownersStorageKey]);
-    
+        // TODO: Implement Firestore update here. Example:
+        // const docRef = doc(db, "projects", projectId);
+        // updateDoc(docRef, { familyHead: newOwners[0] });
+    }, []);
+
     const updateAndPersistFinancials = useCallback((newFinancials: FinancialTransaction[]) => {
         setFinancialTransactions(newFinancials);
-        localStorage.setItem(financialTransactionsStorageKey, JSON.stringify(newFinancials));
-    }, [financialTransactionsStorageKey]);
-
+        // TODO: Implement Firestore update here. Example:
+        // const docRef = doc(db, "projects", projectId);
+        // updateDoc(docRef, { financialTransactions: newFinancials });
+    }, []);
+    
+    // This useEffect is now redundant since folders are loaded from the project doc.
+    // It's commented out to prevent unexpected behavior.
+    /*
     useEffect(() => {
         if (owners && owners.length > 0) {
             setFolders(currentFolders => {
                 const newFolders = createDefaultFolders(owners, currentFolders);
                 if (JSON.stringify(newFolders) !== JSON.stringify(currentFolders)) {
-                    localStorage.setItem(folderStorageKey, JSON.stringify(newFolders));
+                    // TODO: Update Firestore here as well
                     return newFolders;
                 }
                 return currentFolders;
             });
         }
-    }, [owners, folderStorageKey]);
+    }, [owners]);
+    */
+
+    const handleAddFolder = useCallback((folderName: string, parentFolderId?: string) => {
+        // TODO: Implement Firestore update logic
+    }, [folders, projectId, db]);
     
-    const handleUpdateProject = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!project || !editedProjectName || !editedProjectSiteId || !editedProjectLocation) return;
-        const updatedProjectData: Project = { ...project, name: editedProjectName, siteId: editedProjectSiteId, location: editedProjectLocation, googleMapsLink: editedGoogleMapsLink };
-        try {
-            const projects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
-            const updatedProjects = projects.map(p => p.id === projectId ? updatedProjectData : p);
-            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
-            setProject(updatedProjectData);
-            setIsEditProjectDialogOpen(false);
-            toast({ title: 'Project Updated', description: 'The project details have been successfully saved.' });
-        } catch (error) {
-            console.error("Failed to update project", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to update project details.' });
-        }
-    };
-
-    const handleDeleteProject = () => {
-        if (!project) return;
-        
-        try {
-            // 1. Remove the main project entry
-            const projects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
-            const updatedProjects = projects.filter(p => p.id !== projectId);
-            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
-
-            // 2. Remove all associated project-specific data
-            localStorage.removeItem(ownersStorageKey);
-            localStorage.removeItem(folderStorageKey);
-            localStorage.removeItem(`acquisition-status-${projectId}`);
-            localStorage.removeItem(`transactions-${projectId}`);
-            localStorage.removeItem(financialTransactionsStorageKey);
-            localStorage.removeItem(`files-${projectId}`);
-            localStorage.removeItem(`site-sketch-${projectId}`);
-
-            // 3. Remove item-specific data (notes, tasks, etc.)
-            allSurveyRecords.forEach(record => {
-                localStorage.removeItem(`notes-${projectId}-${record.surveyNumber}`);
-                localStorage.removeItem(`legal-notes-${projectId}-${record.surveyNumber}`);
-                localStorage.removeItem(`aggregation-${projectId}-${record.surveyNumber}`);
-            });
-
-            toast({
-                title: "Project Deleted",
-                description: `The project "${project.name}" and all its data have been removed.`,
-            });
-            router.push('/dashboard');
-        } catch (error) {
-            console.error("Failed to delete project", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete project.' });
-        }
-    };
-
-    const handleAddFamilyHead = useCallback((personData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
-        const newFamilyHead: Person = { ...personData, id: `owner-${Date.now()}`, heirs: [], landRecords: [] };
-        const newOwners = [...owners, newFamilyHead];
-        updateAndPersistOwners(newOwners);
-        toast({ title: "Family Head Added", description: `${newFamilyHead.name} has been added.` });
-    }, [owners, updateAndPersistOwners, toast]);
-    
-    const handleAddHeir = useCallback((parentId: string, heirData: Omit<Person, 'id' | 'heirs' | 'landRecords'>) => {
-        const newOwners = JSON.parse(JSON.stringify(owners));
-        const addHeirRecursive = (person: Person): boolean => {
-            if (person.id === parentId) {
-                person.heirs.push({ ...heirData, id: `heir-${parentId}-${Date.now()}`, landRecords: [], heirs: [] });
-                return true;
-            }
-            return person.heirs.some(addHeirRecursive);
-        };
-        if (newOwners.some(addHeirRecursive)) {
-            updateAndPersistOwners(newOwners);
-            toast({ title: 'Heir Added' });
-        }
-    }, [owners, updateAndPersistOwners, toast]);
-
-    const handleUpdatePerson = useCallback((personId: string, personData: Omit<Person, 'id' | 'heirs'>) => {
-        const newOwners = JSON.parse(JSON.stringify(owners));
-        const updatePersonRecursive = (person: Person): boolean => {
-            if (person.id === personId) {
-                Object.assign(person, personData);
-                return true;
-            }
-            return person.heirs.some(updatePersonRecursive);
-        };
-        if (newOwners.some(updatePersonRecursive)) {
-             updateAndPersistOwners(newOwners);
-             toast({ title: 'Record Updated' });
-        }
-    }, [owners, updateAndPersistOwners, toast]);
-
-    const handleAddFolder = useCallback((parentId: string, name: string) => {
-        const newFolder: Folder = { id: `folder-${Date.now()}`, name, children: [], files: [] };
-        const addRecursive = (nodes: Folder[]): Folder[] => nodes.map(node => {
-            if (node.id === parentId) return { ...node, children: [...node.children, newFolder] };
-            return { ...node, children: addRecursive(node.children) };
-        });
-        const updatedFolders = parentId === 'root' ? [...folders, newFolder] : addRecursive(folders);
-        setFolders(updatedFolders);
-        localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
-    }, [folders, folderStorageKey]);
-
     const handleDeleteFolder = useCallback((folderId: string) => {
-        const deleteRecursive = (nodes: Folder[]): Folder[] => nodes
-            .filter(node => node.id !== folderId)
-            .map(node => ({ ...node, children: deleteRecursive(node.children) }));
-        const updatedFolders = deleteRecursive(folders);
-        setFolders(updatedFolders);
-        localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
-    }, [folders, folderStorageKey]);
+        // TODO: Implement Firestore update logic
+    }, [folders, projectId, db]);
+    
+    const handleAddFileToFolder = useCallback((folderId: string, file: DocumentFile) => {
+        // TODO: Implement Firestore update logic
+    }, [folders, projectId, db]);
+    
+    const handleDeleteFileFromFolder = useCallback((fileId: string, folderId: string) => {
+        // TODO: Implement Firestore update logic
+    }, [folders, projectId, db]);
 
-    const handleAddFileToFolder = useCallback((folderId: string, fileData: Omit<DocumentFile, 'id'>) => {
-        const newFile: DocumentFile = { id: `file-${Date.now()}`, ...fileData };
-        const addFileRecursive = (nodes: Folder[]): Folder[] => nodes.map(node => {
-            if (node.id === folderId) return { ...node, files: [...(node.files || []), newFile] };
-            return { ...node, children: addFileRecursive(node.children) };
-        });
-        const updatedFolders = addFileRecursive(folders);
-        setFolders(updatedFolders);
-        localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
-        toast({ title: "File Uploaded" });
-    }, [folders, folderStorageKey, toast]);
+    const surveyNumbers = useMemo(() => allSurveyRecords.map(r => r.surveyNumber), [allSurveyRecords]);
 
-    const handleDeleteFileFromFolder = useCallback((folderId: string, fileId: string) => {
-        const deleteFileRecursive = (nodes: Folder[]): Folder[] => nodes.map(node => {
-            if (node.id === folderId) return { ...node, files: (node.files || []).filter(f => f.id !== fileId) };
-            return { ...node, children: deleteFileRecursive(node.children) };
-        });
-        const updatedFolders = deleteFileRecursive(folders);
-        setFolders(updatedFolders);
-        localStorage.setItem(folderStorageKey, JSON.stringify(updatedFolders));
-        toast({ title: "File Deleted" });
-    }, [folders, folderStorageKey, toast]);
-
-    if (loading) return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-
-    if (!project) {
+    if (!project && !loading) {
         return (
-            <div className="p-8 text-center">
-                <h1 className="text-2xl font-bold mb-4">Project not found</h1>
-                <Button variant="outline" asChild className="mt-4"><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link></Button>
+            <div className="p-4 sm:p-6 lg:p-8 text-center text-muted-foreground">
+                <p>Project not found.</p>
+                <Button asChild className="mt-4">
+                    <Link href="/dashboard">Back to Dashboard</Link>
+                </Button>
             </div>
-        )
+        );
+    }
+
+    if (loading || !project) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
     }
     
-    const surveyNumbers = allSurveyRecords.map(r => r.surveyNumber);
-
     return (
-        <div className="relative">
-            <div className="p-4 sm:p-6 lg:p-8 space-y-4">
-                <header className="flex items-center justify-between">
+        <div className="p-4 sm:p-6 lg:p-8">
+            <header className="mb-8 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                    <Button variant="ghost" asChild><Link href="/dashboard"><ArrowLeft className="h-4 w-4" /></Link></Button>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-                        <p className="text-muted-foreground">Site ID: {project.siteId} &middot; {project.location}</p>
+                        <p className="text-muted-foreground">{project.siteId} - {project.location}</p>
                     </div>
-                    
+                </div>
+                <div className="flex space-x-2">
                     <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
-                        <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit Project</Button></DialogTrigger>
-                        <DialogContent className="sm:max-w-xl">
+                        <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit</Button></DialogTrigger>
+                        <DialogContent>
                             <DialogHeader><DialogTitle>Edit Project Details</DialogTitle></DialogHeader>
-                            <form onSubmit={handleUpdateProject} className="space-y-4">
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right">Name</Label><Input id="edit-name" value={editedProjectName} onChange={(e) => setEditedProjectName(e.target.value)} className="col-span-3" required /></div>
-                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-siteId" className="text-right">Site ID</Label><Input id="edit-siteId" value={editedProjectSiteId} onChange={(e) => setEditedProjectSiteId(e.target.value)} className="col-span-3" required /></div>
-                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-location" className="text-right">Location</Label><Input id="edit-location" value={editedProjectLocation} onChange={(e) => setEditedProjectLocation(e.target.value)} className="col-span-3" required /></div>
-                                    <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-googleMapsLink" className="text-right">Map Link</Label><Input id="edit-googleMapsLink" value={editedGoogleMapsLink} onChange={(e) => setEditedGoogleMapsLink(e.target.value)} className="col-span-3" /></div>
-                                </div>
+                            <form onSubmit={handleUpdateProject} className="space-y-4 py-4">
+                                <div className="space-y-2"><Label>Project Name</Label><Input value={editedProjectName} onChange={e => setEditedProjectName(e.target.value)} required /></div>
+                                <div className="space-y-2"><Label>Site ID</Label><Input value={editedProjectSiteId} onChange={e => setEditedProjectSiteId(e.target.value)} required /></div>
+                                <div className="space-y-2"><Label>Location</Label><Input value={editedProjectLocation} onChange={e => setEditedProjectLocation(e.target.value)} required /></div>
+                                <div className="space-y-2"><Label>Google Maps Link</Label><Input value={editedGoogleMapsLink} onChange={e => setEditedGoogleMapsLink(e.target.value)} /></div>
                                 <DialogFooter><Button type="submit">Save Changes</Button></DialogFooter>
                             </form>
-                            <Separator />
-                            <div className="space-y-2">
-                                <Label className="font-semibold text-destructive">Danger Zone</Label>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild><Button variant="destructive" className="w-full"><Trash2 className="mr-2 h-4 w-4" />Delete Project</Button></AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the project "{project.name}".</AlertDialogDescription></AlertDialogHeader>
-                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive" onClick={handleDeleteProject}>Yes, delete</AlertDialogAction></AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
                         </DialogContent>
                     </Dialog>
                     
-                </header>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild><Button variant="destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</Button></AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete your project and all associated data from the server.</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteProject} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            </header>
 
-                <Tabs defaultValue="lineage" className="w-full">
-                    <TabsList>
-                        <TabsTrigger value="lineage">Family Lineage</TabsTrigger>
-                        <TabsTrigger value="payments">Advance Payments</TabsTrigger>
-                        <TabsTrigger value="documents">Title Documents</TabsTrigger>
-                        <TabsTrigger value="transactions">Transaction History</TabsTrigger>
-                        <TabsTrigger value="sketch">Site Sketch</TabsTrigger>
-                        <TabsTrigger value="notes">Notes</TabsTrigger>
-                        <TabsTrigger value="legal">Legal Notes</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="lineage" className="pt-4">
-                        <LineageView 
-                            familyHeads={owners} 
-                            onAddHeir={handleAddHeir} 
-                            onUpdatePerson={handleUpdatePerson} 
-                            onAddFamilyHead={handleAddFamilyHead}
-                            projectId={projectId} 
-                            folders={folders}
-                            onAddFolder={handleAddFolder}
-                            onDeleteFolder={handleDeleteFolder}
-                            onAddFile={handleAddFileToFolder}
-                            onDeleteFile={handleDeleteFileFromFolder}
-                        />
-                    </TabsContent>
-                    <TabsContent value="payments" className="pt-4">
-                        <AdvancePaymentGrid
-                            familyHeads={owners}
-                            financialTransactions={financialTransactions}
-                        />
-                    </TabsContent>
-                    <TabsContent value="documents" className="pt-4">
-                        <TitleDocumentsView 
-                            folders={folders}
-                            onAddFolder={handleAddFolder}
-                            onDeleteFolder={handleDeleteFolder}
-                            onAddFile={handleAddFileToFolder}
-                            onDeleteFile={handleDeleteFileFromFolder}
-                        />
-                    </TabsContent>
-                    <TabsContent value="transactions" className="pt-4">
-                        <TransactionHistory projectId={projectId} />
-                    </TabsContent>
-                    <TabsContent value="sketch" className="pt-4">
-                        <SiteSketchManager projectId={projectId} />
-                    </TabsContent>
-                    <TabsContent value="notes" className="pt-4">
-                        <Notes projectId={projectId} surveyNumbers={surveyNumbers} />
-                    </TabsContent>
-                     <TabsContent value="legal" className="pt-4">
-                        <LegalNotes projectId={projectId} surveyNumbers={surveyNumbers} />
-                    </TabsContent>
-                </Tabs>
-            </div>
+            <Tabs defaultValue="lineage" className="w-full">
+                <TabsList className="grid w-full grid-cols-6">
+                    <TabsTrigger value="lineage">Lineage</TabsTrigger>
+                    <TabsTrigger value="payments">Payments</TabsTrigger>
+                    <TabsTrigger value="documents">Documents</TabsTrigger>
+                    <TabsTrigger value="transactions">History</TabsTrigger>
+                    <TabsTrigger value="sketch">Site Sketch</TabsTrigger>
+                    <TabsTrigger value="notes">Notes</TabsTrigger>
+                </TabsList>
+                <TabsContent value="lineage" className="pt-4">
+                    {/* The LineageView component will need to be updated to pass a function that updates Firestore */}
+                    <LineageView owners={owners} allSurveyRecords={allSurveyRecords} updateOwners={updateAndPersistOwners} />
+                </TabsContent>
+                <TabsContent value="payments" className="pt-4">
+                    <AdvancePaymentGrid
+                        familyHeads={owners}
+                        financialTransactions={financialTransactions}
+                        onUpdateFinancials={updateAndPersistFinancials}
+                    />
+                </TabsContent>
+                <TabsContent value="documents" className="pt-4">
+                    <TitleDocumentsView
+                        folders={folders}
+                        onAddFolder={handleAddFolder}
+                        onDeleteFolder={handleDeleteFolder}
+                        onAddFile={handleAddFileToFolder}
+                        onDeleteFile={handleDeleteFileFromFolder}
+                    />
+                </TabsContent>
+                <TabsContent value="transactions" className="pt-4">
+                    <TransactionHistory projectId={projectId} />
+                </TabsContent>
+                <TabsContent value="sketch" className="pt-4">
+                    <SiteSketchManager projectId={projectId} />
+                </TabsContent>
+                <TabsContent value="notes" className="pt-4">
+                    <Notes projectId={projectId} surveyNumbers={surveyNumbers} />
+                </TabsContent>
+                 <TabsContent value="legal" className="pt-4">
+                    <LegalNotes projectId={projectId} surveyNumbers={surveyNumbers} />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

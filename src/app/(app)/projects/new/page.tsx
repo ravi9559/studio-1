@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, FC } from 'react';
@@ -8,19 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, ArrowLeft, UserPlus, Milestone } from "lucide-react";
+import { PlusCircle, Trash2, ArrowLeft, UserPlus, Milestone, Loader2 } from "lucide-react";
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import type { Project, Person, SurveyRecord, LandClassification, Transaction ,Folder  } from '@/types';
+import type { Project, Person, SurveyRecord, LandClassification, Transaction, Folder } from '@/types'; // Import Folder type
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { createDefaultFolders } from '@/lib/project-template'; 
+import { createDefaultFolders } from '@/lib/project-template';
 
 // Firestore imports
 import { addDoc, collection } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context'; // Import useAuth to get the db instance
 
-
-
+// const PROJECTS_STORAGE_KEY = 'projects'; // No longer needed for local storage
 
 const AddHeirForm: FC<{
     parentId: string;
@@ -152,33 +150,7 @@ export default function CreateProjectPage() {
         setTransactions(transactions.filter((_, i) => i !== index));
     };
 
-    // const handleSaveProject = (e: React.FormEvent) => {
-    //     e.preventDefault();
-    //     if (!projectName || !projectSiteId || !projectLocation || !familyHead.name || familyHead.landRecords.length === 0) {
-    //         toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill all required fields.' });
-    //         return;
-    //     }
-
-    //     const newProjectId = `proj-${Date.now()}`;
-    //     const newProject: Project = { id: newProjectId, name: projectName, siteId: projectSiteId, location: projectLocation };
-    //     const finalTransactions: Transaction[] = transactions.map((tx, i) => ({ ...tx, id: `tx-${newProjectId}-${i}` }));
-        
-    //     try {
-    //         const allProjects: Project[] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]');
-    //         localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([...allProjects, newProject]));
-    //         localStorage.setItem(`lineage-data-${newProjectId}`, JSON.stringify([familyHead]));
-    //         localStorage.setItem(`transactions-${newProjectId}`, JSON.stringify(finalTransactions));
-    //         localStorage.setItem(`document-folders-${newProjectId}`, JSON.stringify(createDefaultFolders([familyHead])));
-            
-    //         toast({ title: 'Project Created', description: `Project "${projectName}" has been successfully created.` });
-    //         router.push('/dashboard');
-    //     } catch (error) {
-    //         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save the new project.' });
-    //     }
-    // };  
-
-
-     const handleSaveProject = async (e: React.FormEvent) => {
+    const handleSaveProject = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!projectName || !projectSiteId || !projectLocation || !familyHead.name || familyHead.landRecords.length === 0) {
             toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill all required fields.' });
@@ -285,7 +257,13 @@ export default function CreateProjectPage() {
                 </Card>
                 
                 <div className="flex justify-end pt-4">
-                    <Button type="submit" size="lg">Save Project</Button>
+                    <Button type="submit" size="lg" disabled={isLoading}>
+                        {isLoading ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                        ) : (
+                            "Save Project"
+                        )}
+                    </Button>
                 </div>
             </form>
         </div>
